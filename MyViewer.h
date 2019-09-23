@@ -71,7 +71,8 @@ private:
   // Visualization
   void setupCamera();
   Vec meanMapColor(double d) const;
-  void drawControlNet() const;
+  void drawBezierControlNet() const;
+  void drawTSplineControlNet() const;
   void drawAxes() const;
   void drawAxesWithNames() const;
   static Vec intersectLines(const Vec &ap, const Vec &ad, const Vec &bp, const Vec &bd);
@@ -90,9 +91,10 @@ private:
 
   // Bezier
   size_t degree[2];
-  std::vector<Vec> control_points;
+  std::vector<Vec> bezier_control_points;
 
   //TSpline
+  std::vector<std::vector<Vec>> tspline_control_points;
   std::vector<std::vector<float>> si_array;
   std::vector<std::vector<float>> ti_array;
   std::vector<float> weights;
