@@ -348,10 +348,10 @@ bool MyViewer::openBezier(const std::string &filename) {
     f.exceptions(std::ios::failbit | std::ios::badbit);
     f >> n >> m;
     degree[0] = n++; degree[1] = m++;
-    control_points.resize(n * m);
+    bezier_control_points.resize(n * m);
     for (size_t i = 0, index = 0; i < n; ++i)
       for (size_t j = 0; j < m; ++j, ++index)
-        f >> control_points[index][0] >> control_points[index][1] >> control_points[index][2];
+        f >> bezier_control_points[index][0] >> bezier_control_points[index][1] >> bezier_control_points[index][2];
   } catch(std::ifstream::failure &) {
     return false;
   }
@@ -369,7 +369,7 @@ bool MyViewer::saveBezier(const std::string &filename) {
     std::ofstream f(filename.c_str());
     f.exceptions(std::ios::failbit | std::ios::badbit);
     f << degree[0] << ' ' << degree[1] << std::endl;
-    for (const auto &p : control_points)
+    for (const auto &p : bezier_control_points)
       f << p[0] << ' ' << p[1] << ' ' << p[2] << std::endl;
   } catch(std::ifstream::failure &) {
     return false;
@@ -378,17 +378,21 @@ bool MyViewer::saveBezier(const std::string &filename) {
 }
 
 bool MyViewer::openTSpline(const std::string &filename) {
-	size_t n;
+	size_t n, m;
 	try {
 		std::ifstream f(filename.c_str());
 		f.exceptions(std::ios::failbit | std::ios::badbit);
-		f >> n;
-		control_points.resize(n);
-		for (size_t i = 0, index = 0; i < n; ++i) {
-			f >> control_points[index][0] >> control_points[index][1] >> control_points[index][2];
-			f >> si_array[index][0] >> si_array[index][1] >> si_array[index][2] >> si_array[index][3] >> si_array[index][4];
-			f >> ti_array[index][0] >> ti_array[index][1] >> ti_array[index][2] >> ti_array[index][3] >> ti_array[index][4];
-			f >> weights[index];
+		f >> n >> m;
+		tspline_control_points.resize(n);
+		for (size_t i = 0; i < n; ++i){
+
+
+			for (size_t j = 0; j < m; ++j) {
+				f >> tspline_control_points[i][j][0] >> tspline_control_points[i][j][1] >> tspline_control_points[i][j][2];
+				f >> si_array[index][0] >> si_array[index][1] >> si_array[index][2] >> si_array[index][3] >> si_array[index][4];
+				f >> ti_array[index][0] >> ti_array[index][1] >> ti_array[index][2] >> ti_array[index][3] >> ti_array[index][4];
+				f >> weights[index];
+			}
 		}
 	}
 	catch (std::ifstream::failure &) {
@@ -401,30 +405,17 @@ bool MyViewer::openTSpline(const std::string &filename) {
 }
 
 bool MyViewer::saveTSpline(const std::string &filename) {
-	if (model_type != ModelType::BEZIER_SURFACE && model_type != ModelType::TSPLINE_SURFACE)
+	if (model_type != ModelType::TSPLINE_SURFACE)
 		return false;
 	
-	if (model_type == ModelType::BEZIER_SURFACE) {
+	if (model_type == ModelType::TSPLINE_SURFACE) {
 		try {
 			std::ofstream f(filename.c_str());
 			f.exceptions(std::ios::failbit | std::ios::badbit);
-			f << degree[0] << ' ' << degree[1] << std::endl;
-			for (const auto &p : control_points)
-				f << p[0] << ' ' << p[1] << ' ' << p[2] << std::endl;
-		}
-		catch (std::ifstream::failure &) {
-			return false;
-		}
-		return true;
-	}
-	else {
-		try {
-			std::ofstream f(filename.c_str());
-			f.exceptions(std::ios::failbit | std::ios::badbit);
-			size_t n = control_points.size();
+			size_t n = tspline_control_points.size();
 			f << n << std::endl;
 			for (size_t i = 0, index = 0; i < n; ++i) {
-				f << control_points[index][0] << control_points[index][1] << control_points[index][2] << std::endl;
+				f << tspline_control_points[index][0] << tspline_control_points[index][1] << tspline_control_points[index][2] << std::endl;
 				f << si_array[index][0] << si_array[index][1] << si_array[index][2] << si_array[index][3] << si_array[index][4] << std::endl;
 				f << ti_array[index][0] << ti_array[index][1] << ti_array[index][2] << ti_array[index][3] << ti_array[index][4] << std::endl;
 				f << weights[index] << std::endl;
@@ -461,7 +452,9 @@ void MyViewer::init() {
 
 void MyViewer::draw() {
   if (model_type == ModelType::BEZIER_SURFACE && show_control_points)
-    drawControlNet();
+    drawBezierControlNet();
+  if (model_type == ModelType::TSPLINE_SURFACE && show_control_points)
+	  drawTSplineControlNet();
 
   glPolygonMode(GL_FRONT_AND_BACK, !show_solid && show_wireframe ? GL_LINE : GL_FILL);
   glEnable(GL_POLYGON_OFFSET_FILL);
@@ -522,7 +515,7 @@ void MyViewer::draw() {
     drawAxes();
 }
 
-void MyViewer::drawControlNet() const {
+void MyViewer::drawBezierControlNet() const {
   glDisable(GL_LIGHTING);
   glLineWidth(3.0);
   glColor3d(0.3, 0.3, 1.0);
@@ -532,7 +525,7 @@ void MyViewer::drawControlNet() const {
       glBegin(GL_LINE_STRIP);
       for (size_t j = 0; j <= degree[1-k]; ++j) {
         size_t const index = k ? j * m + i : i * m + j;
-        const auto &p = control_points[index];
+        const auto &p = bezier_control_points[index];
         glVertex3dv(p);
       }
       glEnd();
@@ -541,11 +534,37 @@ void MyViewer::drawControlNet() const {
   glPointSize(8.0);
   glColor3d(1.0, 0.0, 1.0);
   glBegin(GL_POINTS);
-  for (const auto &p : control_points)
+  for (const auto &p : bezier_control_points)
     glVertex3dv(p);
   glEnd();
   glPointSize(1.0);
   glEnable(GL_LIGHTING);
+}
+
+void MyViewer::drawTSplineControlNet() const {
+	glDisable(GL_LIGHTING);
+	glLineWidth(3.0);
+	glColor3d(0.3, 0.3, 1.0);
+	size_t m = degree[1] + 1;
+	for (size_t k = 0; k < 2; ++k)
+		for (size_t i = 0; i <= degree[k]; ++i) {
+			glBegin(GL_LINE_STRIP);
+			for (size_t j = 0; j <= degree[1 - k]; ++j) {
+				size_t const index = k ? j * m + i : i * m + j;
+				const auto &p = tspline_control_points[index];
+				glVertex3dv(p);
+			}
+			glEnd();
+		}
+	glLineWidth(1.0);
+	glPointSize(8.0);
+	glColor3d(1.0, 0.0, 1.0);
+	glBegin(GL_POINTS);
+	for (const auto &p : tspline_control_points)
+		glVertex3dv(p);
+	glEnd();
+	glPointSize(1.0);
+	glEnable(GL_LIGHTING);
 }
 
 void MyViewer::drawAxes() const {
@@ -577,8 +596,8 @@ void MyViewer::drawWithNames() {
   case ModelType::BEZIER_SURFACE:
     if (!show_control_points)
       return;
-    for (size_t i = 0, ie = control_points.size(); i < ie; ++i) {
-      Vec const &p = control_points[i];
+    for (size_t i = 0, ie = bezier_control_points.size(); i < ie; ++i) {
+      Vec const &p = bezier_control_points[i];
       glPushName(i);
       glRasterPos3fv(p);
       glPopName();
@@ -621,7 +640,7 @@ void MyViewer::postSelection(const QPoint &p) {
   if (model_type == ModelType::MESH)
     axes.position = Vec(mesh.point(MyMesh::VertexHandle(sel)).data());
   if (model_type == ModelType::BEZIER_SURFACE)
-    axes.position = control_points[sel];
+    axes.position = bezier_control_points[sel];
   double depth = camera()->projectedCoordinatesOf(axes.position)[2];
   Vec q1 = camera()->unprojectedCoordinatesOf(Vec(0.0, 0.0, depth));
   Vec q2 = camera()->unprojectedCoordinatesOf(Vec(width(), height(), depth));
@@ -735,7 +754,7 @@ void MyViewer::generateMesh() {
       Vec p(0.0, 0.0, 0.0);
       for (size_t k = 0, index = 0; k <= n; ++k)
         for (size_t l = 0; l <= m; ++l, ++index)
-          p += control_points[index] * coeff_u[k] * coeff_v[l];
+          p += bezier_control_points[index] * coeff_u[k] * coeff_v[l];
       handles.push_back(mesh.add_vertex(Vector(static_cast<double *>(p))));
     }
   }
@@ -777,7 +796,7 @@ void MyViewer::mouseMoveEvent(QMouseEvent *e) {
     mesh.set_point(MyMesh::VertexHandle(selected_vertex),
                    Vector(static_cast<double *>(axes.position)));
   if (model_type == ModelType::BEZIER_SURFACE)
-    control_points[selected_vertex] = axes.position;
+    bezier_control_points[selected_vertex] = axes.position;
   updateMesh();
   update();
 }
