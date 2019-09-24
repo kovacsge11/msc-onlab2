@@ -575,12 +575,15 @@ void MyViewer::drawTSplineControlNet() const {
 			}		
 		}
 	}
+
+
 	glLineWidth(1.0);
 	glPointSize(8.0);
 	glColor3d(1.0, 0.0, 1.0);
 	glBegin(GL_POINTS);
-	for (const auto &p : tspline_control_points)
-		glVertex3dv(p);
+	for (const auto &pn : tspline_control_points)
+		for (const auto &pm : pn)
+			glVertex3dv(pm);
 	glEnd();
 	glPointSize(1.0);
 	glEnable(GL_LIGHTING);
