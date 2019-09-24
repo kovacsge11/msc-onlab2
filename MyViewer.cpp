@@ -378,16 +378,20 @@ bool MyViewer::saveBezier(const std::string &filename) {
 }
 
 bool MyViewer::openTSpline(const std::string &filename) {
-	size_t n, m;
+	size_t n, m, cpnum;
 	try {
 		std::ifstream f(filename.c_str());
 		f.exceptions(std::ios::failbit | std::ios::badbit);
-		f >> n >> m;
+		f >> n >> cpnum;
+		si_array.resize(cpnum);
+		ti_array.resize(cpnum);
+		weights.resize(cpnum);
 		tspline_control_points.resize(n);
-		for (size_t i = 0; i < n; ++i){
+		for (size_t i = 0, index = 0; i < n; ++i){
+			f >> m;
+			tspline_control_points[i].resize(m);
 
-
-			for (size_t j = 0; j < m; ++j) {
+			for (size_t j = 0; j < m; ++j, ++index) {
 				f >> tspline_control_points[i][j][0] >> tspline_control_points[i][j][1] >> tspline_control_points[i][j][2];
 				f >> si_array[index][0] >> si_array[index][1] >> si_array[index][2] >> si_array[index][3] >> si_array[index][4];
 				f >> ti_array[index][0] >> ti_array[index][1] >> ti_array[index][2] >> ti_array[index][3] >> ti_array[index][4];
@@ -413,12 +417,18 @@ bool MyViewer::saveTSpline(const std::string &filename) {
 			std::ofstream f(filename.c_str());
 			f.exceptions(std::ios::failbit | std::ios::badbit);
 			size_t n = tspline_control_points.size();
-			f << n << std::endl;
+			size_t cpnum = weights.size();
+			f << n << cpnum << std::endl;
 			for (size_t i = 0, index = 0; i < n; ++i) {
-				f << tspline_control_points[index][0] << tspline_control_points[index][1] << tspline_control_points[index][2] << std::endl;
-				f << si_array[index][0] << si_array[index][1] << si_array[index][2] << si_array[index][3] << si_array[index][4] << std::endl;
-				f << ti_array[index][0] << ti_array[index][1] << ti_array[index][2] << ti_array[index][3] << ti_array[index][4] << std::endl;
-				f << weights[index] << std::endl;
+				size_t m = tspline_control_points[i].size();
+				f << m;
+
+				for (size_t j = 0; j < m; ++j, ++index) {
+					f << tspline_control_points[i][j][0] << tspline_control_points[i][j][1] << tspline_control_points[i][j][2] << std::endl;
+					f << si_array[index][0] << si_array[index][1] << si_array[index][2] << si_array[index][3] << si_array[index][4] << std::endl;
+					f << ti_array[index][0] << ti_array[index][1] << ti_array[index][2] << ti_array[index][3] << ti_array[index][4] << std::endl;
+					f << weights[index] << std::endl;
+				}
 			}
 		}
 		catch (std::ifstream::failure &) {
@@ -546,16 +556,25 @@ void MyViewer::drawTSplineControlNet() const {
 	glLineWidth(3.0);
 	glColor3d(0.3, 0.3, 1.0);
 	size_t m = degree[1] + 1;
-	for (size_t k = 0; k < 2; ++k)
-		for (size_t i = 0; i <= degree[k]; ++i) {
-			glBegin(GL_LINE_STRIP);
-			for (size_t j = 0; j <= degree[1 - k]; ++j) {
-				size_t const index = k ? j * m + i : i * m + j;
-				const auto &p = tspline_control_points[index];
-				glVertex3dv(p);
+	for (size_t i = 0, index = 0; i <= tspline_control_points.size(); ++i) {
+		bool first = true;
+		for (size_t j = 0; j <= tspline_control_points[i].size(); ++j, ++index) {
+			if (first) {
+				glBegin(GL_LINE_STRIP);
+				first = false;
 			}
-			glEnd();
+			const auto &p = tspline_control_points[i][j];
+			glVertex3dv(p);
+			if (j == tspline_control_points[i].size()) {
+				first = true;
+				glEnd();
+			}
+			else if (si_array[index][3] != si_array[index+1][2]) {
+				first = true;
+				glEnd();
+			}		
 		}
+	}
 	glLineWidth(1.0);
 	glPointSize(8.0);
 	glColor3d(1.0, 0.0, 1.0);
