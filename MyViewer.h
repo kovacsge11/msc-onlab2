@@ -68,6 +68,9 @@ private:
   static void bernsteinAll(size_t n, double u, std::vector<double> &coeff);
   void generateMesh();
 
+  //TSpline
+  float cubicBSplineBasis(bool is_s, float param, int cpt_indx);
+
   // Visualization
   void setupCamera();
   Vec meanMapColor(double d) const;
