@@ -788,6 +788,21 @@ void MyViewer::bernsteinAll(size_t n, double u, std::vector<double> &coeff) {
   }
 }
 
+float MyViewer::cubicBSplineBasis(bool is_s, float param, int cpt_indx) {
+	std::vector<float> knot_array = is_s ? si_array[cpt_indx] : ti_array[cpt_indx];
+	float N_00 = (knot_array[0] <= param && param < knot_array[1]) ? 1 : 0;
+	float N_10 = (knot_array[1] <= param && param < knot_array[2]) ? 1 : 0;
+	float N_20 = (knot_array[2] <= param && param < knot_array[3]) ? 1 : 0;
+	float N_30 = (knot_array[3] <= param && param < knot_array[4]) ? 1 : 0;
+	float N_01 = N_00 * (param - knot_array[0]) / (knot_array[1] - knot_array[0]) + N_10 * (knot_array[2] - param) / (knot_array[2] - knot_array[1]);
+	float N_11 = N_10 * (param - knot_array[1]) / (knot_array[2] - knot_array[1]) + N_20 * (knot_array[3] - param) / (knot_array[3] - knot_array[2]);
+	float N_21 = N_20 * (param - knot_array[2]) / (knot_array[3] - knot_array[2]) + N_30 * (knot_array[4] - param) / (knot_array[4] - knot_array[3]);
+	float N_02 = N_01 * (param - knot_array[0]) / (knot_array[2] - knot_array[0]) + N_11 * (knot_array[3] - param) / (knot_array[3] - knot_array[1]);
+	float N_12 = N_11 * (param - knot_array[1]) / (knot_array[3] - knot_array[1]) + N_21 * (knot_array[4] - param) / (knot_array[4] - knot_array[2]);
+	float N_03 = N_02 * (param - knot_array[0]) / (knot_array[3] - knot_array[0]) + N_12 * (knot_array[4] - param) / (knot_array[4] - knot_array[1]);
+	return N_03;
+}
+
 void MyViewer::generateMesh() {
   size_t resolution = 30;
 
