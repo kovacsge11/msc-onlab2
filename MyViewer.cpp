@@ -306,7 +306,7 @@ void MyViewer::updateVertexNormals() {
 
 void MyViewer::updateMesh(bool update_mean_range) {
   if (model_type == ModelType::BEZIER_SURFACE)
-    generateMesh();
+    generateBezierMesh();
   mesh.request_face_normals(); mesh.request_vertex_normals();
   mesh.update_face_normals(); //mesh.update_vertex_normals();
   updateVertexNormals();
@@ -803,7 +803,7 @@ float MyViewer::cubicBSplineBasis(bool is_s, float param, int cpt_indx) {
 	return N_03;
 }
 
-void MyViewer::generateMesh() {
+void MyViewer::generateBezierMesh() {
   size_t resolution = 30;
 
   mesh.clear();
@@ -837,6 +837,48 @@ void MyViewer::generateMesh() {
       tri.push_back(handles[(i + 1) * resolution + j + 1]);
       mesh.add_face(tri);
     }
+}
+
+void MyViewer::generateTSplineMesh() {
+	size_t resolution = 30;
+	//Assuming that the last point is the one with both the biggest s and biggest t -->cause surface cpts: rectangle
+	float biggest_s = si_array[-1][2];
+	float biggest_t = ti_array[-1][2];
+	//Assuming that the first point is the one with both the smallest s and smallest t
+	float smallest_s = si_array[0][2];
+	float smallest_t = ti_array[0][2];
+
+	mesh.clear();
+	std::vector<MyMesh::VertexHandle> handles, tri;
+
+	//TODO
+	std::vector<double> coeff_u, coeff_v;
+	for (size_t i = 0; i < resolution; ++i) {
+		double u = (double)i / (double)(resolution - 1);
+		bernsteinAll(n, u, coeff_u);
+		for (size_t j = 0; j < resolution; ++j) {
+			double v = (double)j / (double)(resolution - 1);
+			bernsteinAll(m, v, coeff_v);
+			Vec p(0.0, 0.0, 0.0);
+			for (size_t k = 0, index = 0; k <= n; ++k)
+				for (size_t l = 0; l <= m; ++l, ++index)
+					p += bezier_control_points[index] * coeff_u[k] * coeff_v[l];
+			handles.push_back(mesh.add_vertex(Vector(static_cast<double *>(p))));
+		}
+	}
+	for (size_t i = 0; i < resolution - 1; ++i)
+		for (size_t j = 0; j < resolution - 1; ++j) {
+			tri.clear();
+			tri.push_back(handles[i * resolution + j]);
+			tri.push_back(handles[i * resolution + j + 1]);
+			tri.push_back(handles[(i + 1) * resolution + j]);
+			mesh.add_face(tri);
+			tri.clear();
+			tri.push_back(handles[(i + 1) * resolution + j]);
+			tri.push_back(handles[i * resolution + j + 1]);
+			tri.push_back(handles[(i + 1) * resolution + j + 1]);
+			mesh.add_face(tri);
+		}
 }
 
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {
