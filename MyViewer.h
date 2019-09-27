@@ -66,10 +66,11 @@ private:
 
   // Bezier
   static void bernsteinAll(size_t n, double u, std::vector<double> &coeff);
-  void generateMesh();
+  void generateBezierMesh();
 
   //TSpline
   float cubicBSplineBasis(bool is_s, float param, int cpt_indx);
+  void generateTSplineMesh();
 
   // Visualization
   void setupCamera();
