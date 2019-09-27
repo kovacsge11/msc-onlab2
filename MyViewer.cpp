@@ -560,45 +560,59 @@ void MyViewer::drawTSplineControlNet() const {
 	glDisable(GL_LIGHTING);
 	glLineWidth(3.0);
 	glColor3d(0.3, 0.3, 1.0);
-	size_t m = degree[1] + 1;
-	//Drawing controlnet in one direction
-	for (size_t i = 0, index = 0; i <= tspline_control_points.size(); ++i) {
+
+	size_t cpnum = tspline_control_points.size();
+	size_t ia_size = IA.size();
+	//Drawing controlnet in row direction
+	for (size_t i = 1; i < ia_size; ++i) {
 		bool first = true;
-		for (size_t j = 0; j <= tspline_control_points[i].size(); ++j, ++index) {
+		for (size_t j = IA[i-1]; j < IA[i]; ++j) {
 			if (first) {
 				glBegin(GL_LINE_STRIP);
 				first = false;
 			}
-			const auto &p = tspline_control_points[i][j];
+			int col_index = JA[j];
+			const auto &p = tspline_control_points[j];
 			glVertex3dv(p);
-			if (j == tspline_control_points[i].size()) {
+			//If last in row or is not connected with next in row
+			if ((si_array[j][3] == si_array[j][2]) || (si_array[j][3] != si_array[j + 1][2])) {
 				first = true;
 				glEnd();
 			}
-			else if (si_array[index][3] != si_array[index+1][2]) {
-				first = true;
-				glEnd();
-			}		
 		}
 	}
 
-	//Drawing in other direction
+	//Drawing in column direction
+	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	bool first = true;
-	for (size_t i = 0, index = 0; i <= tspline_control_points.size(); ++i) {
-		if (first) {
-			glBegin(GL_LINE_STRIP);
-			first = false;
+	for (size_t i = 0; i < col_num; ++i) {
+		bool first = true;
+		int previous_index = -1;
+		for (size_t j = 0; j < cpnum; ++j) {
+			if (JA[j] == i) {
+				if (first) {
+					glBegin(GL_LINE_STRIP);
+					first = false;
+				}
+				const auto &p = tspline_control_points[j];
+				glVertex3dv(p);
+				//If last in column or is not connected with next in column
+				if ((ti_array[j][3] == ti_array[j][2]) || (previous_index >= 0 && ti_array[j][2] != ti_array[previous_index][3])) {
+					first = true;
+					glEnd();
+				}
+				previous_index = j;
+			}
 		}
-		glVertex3dv
 	}
+
 	//Drawing points
 	glLineWidth(1.0);
 	glPointSize(8.0);
 	glColor3d(1.0, 0.0, 1.0);
 	glBegin(GL_POINTS);
 	for (const auto &pn : tspline_control_points)
-		for (const auto &pm : pn)
-			glVertex3dv(pm);
+		glVertex3dv(pn);
 	glEnd();
 	glPointSize(1.0);
 	glEnable(GL_LIGHTING);
