@@ -788,18 +788,18 @@ void MyViewer::bernsteinAll(size_t n, double u, std::vector<double> &coeff) {
   }
 }
 
-float MyViewer::cubicBSplineBasis(bool is_s, float param, int cpt_indx) {
-	std::vector<float> knot_array = is_s ? si_array[cpt_indx] : ti_array[cpt_indx];
-	float N_00 = (knot_array[0] <= param && param < knot_array[1]) ? 1 : 0;
-	float N_10 = (knot_array[1] <= param && param < knot_array[2]) ? 1 : 0;
-	float N_20 = (knot_array[2] <= param && param < knot_array[3]) ? 1 : 0;
-	float N_30 = (knot_array[3] <= param && param < knot_array[4]) ? 1 : 0;
-	float N_01 = N_00 * (param - knot_array[0]) / (knot_array[1] - knot_array[0]) + N_10 * (knot_array[2] - param) / (knot_array[2] - knot_array[1]);
-	float N_11 = N_10 * (param - knot_array[1]) / (knot_array[2] - knot_array[1]) + N_20 * (knot_array[3] - param) / (knot_array[3] - knot_array[2]);
-	float N_21 = N_20 * (param - knot_array[2]) / (knot_array[3] - knot_array[2]) + N_30 * (knot_array[4] - param) / (knot_array[4] - knot_array[3]);
-	float N_02 = N_01 * (param - knot_array[0]) / (knot_array[2] - knot_array[0]) + N_11 * (knot_array[3] - param) / (knot_array[3] - knot_array[1]);
-	float N_12 = N_11 * (param - knot_array[1]) / (knot_array[3] - knot_array[1]) + N_21 * (knot_array[4] - param) / (knot_array[4] - knot_array[2]);
-	float N_03 = N_02 * (param - knot_array[0]) / (knot_array[3] - knot_array[0]) + N_12 * (knot_array[4] - param) / (knot_array[4] - knot_array[1]);
+double MyViewer::cubicBSplineBasis(bool is_s, double param, int cpt_indx) {
+	std::vector<double> knot_array = is_s ? si_array[cpt_indx] : ti_array[cpt_indx];
+	double N_00 = (knot_array[0] <= param && param < knot_array[1]) ? 1 : 0;
+	double N_10 = (knot_array[1] <= param && param < knot_array[2]) ? 1 : 0;
+	double N_20 = (knot_array[2] <= param && param < knot_array[3]) ? 1 : 0;
+	double N_30 = (knot_array[3] <= param && param < knot_array[4]) ? 1 : 0;
+	double N_01 = N_00 * (param - knot_array[0]) / (knot_array[1] - knot_array[0]) + N_10 * (knot_array[2] - param) / (knot_array[2] - knot_array[1]);
+	double N_11 = N_10 * (param - knot_array[1]) / (knot_array[2] - knot_array[1]) + N_20 * (knot_array[3] - param) / (knot_array[3] - knot_array[2]);
+	double N_21 = N_20 * (param - knot_array[2]) / (knot_array[3] - knot_array[2]) + N_30 * (knot_array[4] - param) / (knot_array[4] - knot_array[3]);
+	double N_02 = N_01 * (param - knot_array[0]) / (knot_array[2] - knot_array[0]) + N_11 * (knot_array[3] - param) / (knot_array[3] - knot_array[1]);
+	double N_12 = N_11 * (param - knot_array[1]) / (knot_array[3] - knot_array[1]) + N_21 * (knot_array[4] - param) / (knot_array[4] - knot_array[2]);
+	double N_03 = N_02 * (param - knot_array[0]) / (knot_array[3] - knot_array[0]) + N_12 * (knot_array[4] - param) / (knot_array[4] - knot_array[1]);
 	return N_03;
 }
 
@@ -841,28 +841,32 @@ void MyViewer::generateBezierMesh() {
 
 void MyViewer::generateTSplineMesh() {
 	size_t resolution = 30;
+	size_t cpnum = weights.size();
 	//Assuming that the last point is the one with both the biggest s and biggest t -->cause surface cpts: rectangle
-	float biggest_s = si_array[-1][2];
-	float biggest_t = ti_array[-1][2];
+	double biggest_s = si_array[-1][2];
+	double biggest_t = ti_array[-1][2];
 	//Assuming that the first point is the one with both the smallest s and smallest t
-	float smallest_s = si_array[0][2];
-	float smallest_t = ti_array[0][2];
+	double smallest_s = si_array[0][2];
+	double smallest_t = ti_array[0][2];
+	double s_range = biggest_s - smallest_s;
+	double t_range = biggest_t - smallest_t;
 
 	mesh.clear();
 	std::vector<MyMesh::VertexHandle> handles, tri;
 
-	//TODO
-	std::vector<double> coeff_u, coeff_v;
+	std::vector<double> coeff_s, coeff_t;
 	for (size_t i = 0; i < resolution; ++i) {
-		double u = (double)i / (double)(resolution - 1);
-		bernsteinAll(n, u, coeff_u);
+		double s = s_range * (double)i / (double)(resolution - 1);
 		for (size_t j = 0; j < resolution; ++j) {
-			double v = (double)j / (double)(resolution - 1);
-			bernsteinAll(m, v, coeff_v);
+			double t = t_range * (double)j / (double)(resolution - 1);
 			Vec p(0.0, 0.0, 0.0);
-			for (size_t k = 0, index = 0; k <= n; ++k)
-				for (size_t l = 0; l <= m; ++l, ++index)
-					p += bezier_control_points[index] * coeff_u[k] * coeff_v[l];
+			double nominator = 0.0;
+			for (size_t k = 0; k < cpnum; ++k) {
+				double B_k = cubicBSplineBasis(true,s,k) * cubicBSplineBasis(false,t,k);
+				p += tspline_control_points[k] * B_k;
+				nominator += weights[k] * B_k;
+			}
+			p /= nominator;
 			handles.push_back(mesh.add_vertex(Vector(static_cast<double *>(p))));
 		}
 	}
