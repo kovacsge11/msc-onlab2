@@ -69,7 +69,7 @@ private:
   void generateBezierMesh();
 
   //TSpline
-  float cubicBSplineBasis(bool is_s, float param, int cpt_indx);
+  double cubicBSplineBasis(bool is_s, double param, int cpt_indx);
   void generateTSplineMesh();
 
   // Visualization
@@ -104,9 +104,9 @@ private:
   std::vector<int> IA;
   std::vector<int> JA;
 
-  std::vector<std::vector<float>> si_array;
-  std::vector<std::vector<float>> ti_array;
-  std::vector<float> weights;
+  std::vector<std::vector<double>> si_array;
+  std::vector<std::vector<double>> ti_array;
+  std::vector<double> weights;
 
   // Visualization
   double mean_min, mean_max, cutoff_ratio;
