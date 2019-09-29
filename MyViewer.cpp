@@ -307,6 +307,8 @@ void MyViewer::updateVertexNormals() {
 void MyViewer::updateMesh(bool update_mean_range) {
   if (model_type == ModelType::BEZIER_SURFACE)
     generateBezierMesh();
+  if (model_type == ModelType::TSPLINE_SURFACE)
+	  generateTSplineMesh();
   mesh.request_face_normals(); mesh.request_vertex_normals();
   mesh.update_face_normals(); //mesh.update_vertex_normals();
   updateVertexNormals();
@@ -392,6 +394,8 @@ bool MyViewer::openTSpline(const std::string &filename) {
 		ti_array.resize(cpnum);
 		weights.resize(cpnum);
 		for (size_t i = 0; i < cpnum; ++i){
+			si_array[i].resize(5);
+			ti_array[i].resize(5);
 			f >> tspline_control_points[i][0] >> tspline_control_points[i][1] >> tspline_control_points[i][2];
 			f >> si_array[i][0] >> si_array[i][1] >> si_array[i][2] >> si_array[i][3] >> si_array[i][4];
 			f >> ti_array[i][0] >> ti_array[i][1] >> ti_array[i][2] >> ti_array[i][3] >> ti_array[i][4];
@@ -422,14 +426,14 @@ bool MyViewer::saveTSpline(const std::string &filename) {
 			f.exceptions(std::ios::failbit | std::ios::badbit);
 			size_t ia_size = IA.size();
 			size_t cpnum = weights.size();
-			f << cpnum << ia_size << std::endl;
+			f << cpnum << ' ' << ia_size << std::endl;
 			for (size_t i = 0; i < cpnum; ++i) {
-				f << tspline_control_points[i][0] << tspline_control_points[i][1] << tspline_control_points[i][2] << std::endl;
-				f << si_array[i][0] << si_array[i][1] << si_array[i][2] << si_array[i][3] << si_array[i][4] << std::endl;
-				f << ti_array[i][0] << ti_array[i][1] << ti_array[i][2] << ti_array[i][3] << ti_array[i][4] << std::endl;
+				f << tspline_control_points[i][0] << ' ' << tspline_control_points[i][1] << ' ' << tspline_control_points[i][2] << std::endl;
+				f << si_array[i][0] << ' ' << si_array[i][1] << ' ' << si_array[i][2] << ' ' << si_array[i][3] << ' ' << si_array[i][4] << std::endl;
+				f << ti_array[i][0] << ' ' << ti_array[i][1] << ' ' << ti_array[i][2] << ' ' << ti_array[i][3] << ' ' << ti_array[i][4] << std::endl;
 				f << weights[i] << std::endl;
 				//Save JA too
-				f << JA[i];
+				f << JA[i] << std::endl;
 			}
 			//Finally, save IA
 			for (size_t i = 0; i < ia_size; i++) {
@@ -629,6 +633,7 @@ void MyViewer::drawAxes() const {
   glEnd();
 }
 
+//TODO??
 void MyViewer::drawWithNames() {
   if (axes.shown)
     return drawAxesWithNames();
@@ -654,6 +659,16 @@ void MyViewer::drawWithNames() {
       glPopName();
     }
     break;
+  case ModelType::TSPLINE_SURFACE:
+	  if (!show_control_points)
+		  return;
+	  for (size_t i = 0, ie = tspline_control_points.size(); i < ie; ++i) {
+		  Vec const &p = tspline_control_points[i];
+		  glPushName(i);
+		  glRasterPos3fv(p);
+		  glPopName();
+	  }
+	  break;
   }
 }
 
@@ -670,6 +685,8 @@ void MyViewer::drawAxesWithNames() const {
   glPopName();
 }
 
+
+//TODO
 void MyViewer::postSelection(const QPoint &p) {
   int sel = selectedName();
   if (sel == -1) {
@@ -692,6 +709,8 @@ void MyViewer::postSelection(const QPoint &p) {
     axes.position = Vec(mesh.point(MyMesh::VertexHandle(sel)).data());
   if (model_type == ModelType::BEZIER_SURFACE)
     axes.position = bezier_control_points[sel];
+  if (model_type == ModelType::TSPLINE_SURFACE)
+	  axes.position = tspline_control_points[sel];
   double depth = camera()->projectedCoordinatesOf(axes.position)[2];
   Vec q1 = camera()->unprojectedCoordinatesOf(Vec(0.0, 0.0, depth));
   Vec q2 = camera()->unprojectedCoordinatesOf(Vec(width(), height(), depth));
@@ -794,12 +813,24 @@ double MyViewer::cubicBSplineBasis(bool is_s, double param, int cpt_indx) {
 	double N_10 = (knot_array[1] <= param && param < knot_array[2]) ? 1 : 0;
 	double N_20 = (knot_array[2] <= param && param < knot_array[3]) ? 1 : 0;
 	double N_30 = (knot_array[3] <= param && param < knot_array[4]) ? 1 : 0;
-	double N_01 = N_00 * (param - knot_array[0]) / (knot_array[1] - knot_array[0]) + N_10 * (knot_array[2] - param) / (knot_array[2] - knot_array[1]);
-	double N_11 = N_10 * (param - knot_array[1]) / (knot_array[2] - knot_array[1]) + N_20 * (knot_array[3] - param) / (knot_array[3] - knot_array[2]);
-	double N_21 = N_20 * (param - knot_array[2]) / (knot_array[3] - knot_array[2]) + N_30 * (knot_array[4] - param) / (knot_array[4] - knot_array[3]);
-	double N_02 = N_01 * (param - knot_array[0]) / (knot_array[2] - knot_array[0]) + N_11 * (knot_array[3] - param) / (knot_array[3] - knot_array[1]);
-	double N_12 = N_11 * (param - knot_array[1]) / (knot_array[3] - knot_array[1]) + N_21 * (knot_array[4] - param) / (knot_array[4] - knot_array[2]);
-	double N_03 = N_02 * (param - knot_array[0]) / (knot_array[3] - knot_array[0]) + N_12 * (knot_array[4] - param) / (knot_array[4] - knot_array[1]);
+	double N_01_1 = (knot_array[1] != knot_array[0]) ? N_00 * (param - knot_array[0]) / (knot_array[1] - knot_array[0]) : 0;
+	double N_01_2 = (knot_array[2] != knot_array[1]) ? N_10 * (knot_array[2] - param) / (knot_array[2] - knot_array[1]) : 0;
+	double N_01 = N_01_1 + N_01_2;
+	double N_11_1 = (knot_array[2] != knot_array[1]) ? N_10 * (param - knot_array[1]) / (knot_array[2] - knot_array[1]) : 0;
+	double N_11_2 = (knot_array[3] != knot_array[2]) ? N_20 * (knot_array[3] - param) / (knot_array[3] - knot_array[2]) : 0;
+	double N_11 = N_11_1 + N_11_2;
+	double N_21_1 = (knot_array[3] != knot_array[2]) ? N_20 * (param - knot_array[2]) / (knot_array[3] - knot_array[2]) : 0;
+	double N_21_2 = (knot_array[4] != knot_array[3]) ? N_30 * (knot_array[4] - param) / (knot_array[4] - knot_array[3]) : 0;
+	double N_21 = N_21_1 + N_21_2;
+	double N_02_1 = (knot_array[2] != knot_array[0]) ? N_01 * (param - knot_array[0]) / (knot_array[2] - knot_array[0]) : 0;
+	double N_02_2 = (knot_array[3] != knot_array[1]) ? N_11 * (knot_array[3] - param) / (knot_array[3] - knot_array[1]) : 0;
+	double N_02 = N_02_1 + N_02_2;
+	double N_12_1 = (knot_array[3] != knot_array[1]) ? N_11 * (param - knot_array[1]) / (knot_array[3] - knot_array[1]) : 0;
+	double N_12_2 = (knot_array[4] != knot_array[2]) ? N_21 * (knot_array[4] - param) / (knot_array[4] - knot_array[2]) : 0;
+	double N_12 = N_12_1 + N_12_2;
+	double N_03_1 = (knot_array[3] != knot_array[0]) ? N_02 * (param - knot_array[0]) / (knot_array[3] - knot_array[0]) : 0;
+	double N_03_2 = (knot_array[4] != knot_array[1]) ? N_12 * (knot_array[4] - param) / (knot_array[4] - knot_array[1]) : 0;
+	double N_03 = N_03_1 + N_03_2;
 	return N_03;
 }
 
@@ -843,22 +874,31 @@ void MyViewer::generateTSplineMesh() {
 	size_t resolution = 30;
 	size_t cpnum = weights.size();
 	//Assuming that the last point is the one with both the biggest s and biggest t -->cause surface cpts: rectangle
-	double biggest_s = si_array[-1][2];
-	double biggest_t = ti_array[-1][2];
+	double biggest_s = si_array[cpnum-1][2];
+	double biggest_t = ti_array[cpnum-1][2];
 	//Assuming that the first point is the one with both the smallest s and smallest t
 	double smallest_s = si_array[0][2];
 	double smallest_t = ti_array[0][2];
 	double s_range = biggest_s - smallest_s;
 	double t_range = biggest_t - smallest_t;
+	//A small offset, cause point generation doesn't work on edge of topology(true?)
+	double s_epsilon = s_range / (double)((resolution-1)*(resolution - 1));
+	double t_epsilon = t_range / (double)((resolution - 1)*(resolution - 1));
+	smallest_s += s_epsilon;
+	smallest_t += t_epsilon;
+	biggest_s -= s_epsilon;
+	biggest_t -= t_epsilon;
+	s_range -= 2 * s_epsilon;
+	t_range -= 2 * t_epsilon;
 
 	mesh.clear();
 	std::vector<MyMesh::VertexHandle> handles, tri;
 
 	std::vector<double> coeff_s, coeff_t;
 	for (size_t i = 0; i < resolution; ++i) {
-		double s = s_range * (double)i / (double)(resolution - 1);
+		double s = smallest_s + (s_range * (double)i / (double)(resolution - 1));
 		for (size_t j = 0; j < resolution; ++j) {
-			double t = t_range * (double)j / (double)(resolution - 1);
+			double t = smallest_t + (t_range * (double)j / (double)(resolution - 1));
 			Vec p(0.0, 0.0, 0.0);
 			double nominator = 0.0;
 			for (size_t k = 0; k < cpnum; ++k) {
@@ -866,7 +906,7 @@ void MyViewer::generateTSplineMesh() {
 				p += tspline_control_points[k] * B_k;
 				nominator += weights[k] * B_k;
 			}
-			p /= nominator;
+			if(abs(nominator) > 0.0) p /= nominator;
 			handles.push_back(mesh.add_vertex(Vector(static_cast<double *>(p))));
 		}
 	}
@@ -885,6 +925,8 @@ void MyViewer::generateTSplineMesh() {
 		}
 }
 
+
+//TODO
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {
   if (!axes.shown ||
       (axes.selected_axis < 0 && !(e->modifiers() & Qt::ControlModifier)) ||
@@ -909,6 +951,8 @@ void MyViewer::mouseMoveEvent(QMouseEvent *e) {
                    Vector(static_cast<double *>(axes.position)));
   if (model_type == ModelType::BEZIER_SURFACE)
     bezier_control_points[selected_vertex] = axes.position;
+  if (model_type == ModelType::TSPLINE_SURFACE)
+	  tspline_control_points[selected_vertex] = axes.position;
   updateMesh();
   update();
 }
