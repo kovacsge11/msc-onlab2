@@ -808,30 +808,23 @@ void MyViewer::bernsteinAll(size_t n, double u, std::vector<double> &coeff) {
 }
 
 double MyViewer::cubicBSplineBasis(bool is_s, double param, int cpt_indx) {
-	std::vector<double> knot_array = is_s ? si_array[cpt_indx] : ti_array[cpt_indx];
-	double N_00 = (knot_array[0] <= param && param < knot_array[1]) ? 1 : 0;
-	double N_10 = (knot_array[1] <= param && param < knot_array[2]) ? 1 : 0;
-	double N_20 = (knot_array[2] <= param && param < knot_array[3]) ? 1 : 0;
-	double N_30 = (knot_array[3] <= param && param < knot_array[4]) ? 1 : 0;
-	double N_01_1 = (knot_array[1] != knot_array[0]) ? N_00 * (param - knot_array[0]) / (knot_array[1] - knot_array[0]) : 0;
-	double N_01_2 = (knot_array[2] != knot_array[1]) ? N_10 * (knot_array[2] - param) / (knot_array[2] - knot_array[1]) : 0;
-	double N_01 = N_01_1 + N_01_2;
-	double N_11_1 = (knot_array[2] != knot_array[1]) ? N_10 * (param - knot_array[1]) / (knot_array[2] - knot_array[1]) : 0;
-	double N_11_2 = (knot_array[3] != knot_array[2]) ? N_20 * (knot_array[3] - param) / (knot_array[3] - knot_array[2]) : 0;
-	double N_11 = N_11_1 + N_11_2;
-	double N_21_1 = (knot_array[3] != knot_array[2]) ? N_20 * (param - knot_array[2]) / (knot_array[3] - knot_array[2]) : 0;
-	double N_21_2 = (knot_array[4] != knot_array[3]) ? N_30 * (knot_array[4] - param) / (knot_array[4] - knot_array[3]) : 0;
-	double N_21 = N_21_1 + N_21_2;
-	double N_02_1 = (knot_array[2] != knot_array[0]) ? N_01 * (param - knot_array[0]) / (knot_array[2] - knot_array[0]) : 0;
-	double N_02_2 = (knot_array[3] != knot_array[1]) ? N_11 * (knot_array[3] - param) / (knot_array[3] - knot_array[1]) : 0;
-	double N_02 = N_02_1 + N_02_2;
-	double N_12_1 = (knot_array[3] != knot_array[1]) ? N_11 * (param - knot_array[1]) / (knot_array[3] - knot_array[1]) : 0;
-	double N_12_2 = (knot_array[4] != knot_array[2]) ? N_21 * (knot_array[4] - param) / (knot_array[4] - knot_array[2]) : 0;
-	double N_12 = N_12_1 + N_12_2;
-	double N_03_1 = (knot_array[3] != knot_array[0]) ? N_02 * (param - knot_array[0]) / (knot_array[3] - knot_array[0]) : 0;
-	double N_03_2 = (knot_array[4] != knot_array[1]) ? N_12 * (knot_array[4] - param) / (knot_array[4] - knot_array[1]) : 0;
-	double N_03 = N_03_1 + N_03_2;
-	return N_03;
+	const auto &knots = is_s ? si_array[cpt_indx] : ti_array[cpt_indx];
+	double u = param;
+	size_t p = 3, i;
+	if (u < knots.front() || u > knots.back())
+		return 0.0;
+	if (u == knots.back())
+		i = knots.size() - 1;
+	else
+		i = (std::upper_bound(knots.begin(), knots.end(), u) - knots.begin()) - 1;
+	std::vector<double> coeff; coeff.resize(p + 1, 0.0);
+	coeff[i] = 1.0;
+	for (size_t j = 1; j <= p; ++j)
+		for (size_t k = 0; k <= p - j; ++k)
+			coeff[k] =
+			(coeff[k] ? coeff[k] * (u - knots[k]) / (knots[k + j] - knots[k]) : 0.0) +
+			(coeff[k + 1] ? coeff[k + 1] * (knots[k + j + 1] - u) / (knots[k + j + 1] - knots[k + 1]) : 0.0);
+	return coeff[0];
 }
 
 void MyViewer::generateBezierMesh() {

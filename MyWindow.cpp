@@ -67,7 +67,7 @@ MyWindow::~MyWindow() {
 void MyWindow::open() {
   auto filename =
     QFileDialog::getOpenFileName(this, tr("Open File"), last_directory,
-                                 tr("Readable files (*.obj *.ply *.stl *.bzr);;"
+                                 tr("Readable files (*.obj *.ply *.stl *.bzr *.tsp);;"
                                     "Mesh (*.obj *.ply *.stl);;"
                                     "Bézier surface (*.bzr);;"
                                     "TSpline surface (*.tsp);;"
