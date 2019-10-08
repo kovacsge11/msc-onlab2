@@ -17,6 +17,6 @@ I bind two consecutive points in a row or column if the fourth element of the kn
 
 **WARNING** need to check, whether this implementation doesn't include unnecessary edges.
 
-**Rule 1** is also always going to apply to my implementation thanks to the fact that I'm representing my topologies in sparse matrices. In my topologies two points can only be connected if they are in the same row or same column. This way **Rule 1** always applies.
+**Rule 1** is also always going to apply to my implementation thanks to the fact that I'm representing my topologies in sparse matrices. In my topologies two points can only be connected if they are in the same row or same column. This way **Rule 1** always applies, because the endpoints of any two opposing edges have same knot coordinate (the other coordinate than the one which is the same with the other endpoint of their according edge) as the opposing endpoint of the other edge.
 
-**TODO** maybe explain it more thoroughly
+
