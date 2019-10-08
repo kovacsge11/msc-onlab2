@@ -14,3 +14,5 @@ I based my implementation on [T-spline simplification and local refinement by Se
 >Knot vectors si (4) and ti (5) for the blending function of Pi are determined as follows. (si2; ti2) are the knot coordinates of Pi. Consider a ray in parameter space R(a) = (si2 +a; ti2). Then si3 and si4 are the s coordinates of the first two s-edges intersected by the ray (not including the initial (si2; ti2)). By s-edge, we mean a vertical line segment of constant s. The other knots in si and ti are found in like manner.
 
 I bind two consecutive points in a row or column if the fourth element of the knot vector of the first point in order is the knot value of the point itself = the third element of its knot vector (for rows and columns accordingly). This way **Rule 2** is always going to apply to my implementation.
+
+**WARNING** need to check, whether this implementation doesn't include unnecessary edges.
