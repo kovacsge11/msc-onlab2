@@ -473,7 +473,7 @@ void MyViewer::draw() {
   if (model_type == ModelType::BEZIER_SURFACE && show_control_points)
     drawBezierControlNet();
   if (model_type == ModelType::TSPLINE_SURFACE && show_control_points)
-	  drawTSplineControlNet();
+	  drawTSplineControlNet(false,-1);
 
   glPolygonMode(GL_FRONT_AND_BACK, !show_solid && show_wireframe ? GL_LINE : GL_FILL);
   glEnable(GL_POLYGON_OFFSET_FILL);
@@ -560,7 +560,7 @@ void MyViewer::drawBezierControlNet() const {
   glEnable(GL_LIGHTING);
 }
 
-void MyViewer::drawTSplineControlNet() const {
+void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const {
 	glDisable(GL_LIGHTING);
 	glLineWidth(3.0);
 	glColor3d(0.3, 0.3, 1.0);
@@ -572,16 +572,18 @@ void MyViewer::drawTSplineControlNet() const {
 		bool first = true;
 		for (size_t j = IA[i-1]; j < IA[i]; ++j) {
 			if (first) {
+				if (with_names) glPushName(names_index++);
 				glBegin(GL_LINE_STRIP);
 				first = false;
 			}
 			int col_index = JA[j];
 			const auto &p = tspline_control_points[j];
 			glVertex3dv(p);
-			//If last in row or is not connected with next in row
+			//If last in row or is not connected with next in row /this way the topology is surely true to rule 2/
 			if ((si_array[j][3] == si_array[j][2]) || (si_array[j][3] != si_array[j + 1][2])) {
 				first = true;
 				glEnd();
+				if (with_names) glPopName();
 			}
 		}
 	}
@@ -595,15 +597,17 @@ void MyViewer::drawTSplineControlNet() const {
 		for (size_t j = 0; j < cpnum; ++j) {
 			if (JA[j] == i) {
 				if (first) {
+					if (with_names) glPushName(names_index++);
 					glBegin(GL_LINE_STRIP);
 					first = false;
 				}
 				const auto &p = tspline_control_points[j];
 				glVertex3dv(p);
-				//If last in column or is not connected with next in column
+				//If last in column or is not connected with next in column /this way the topology is surely true to rule 2/
 				if ((ti_array[j][3] == ti_array[j][2]) || (previous_index >= 0 && ti_array[j][2] != ti_array[previous_index][3])) {
 					first = true;
 					glEnd();
+					if (with_names) glPopName();
 				}
 				previous_index = j;
 			}
@@ -633,7 +637,6 @@ void MyViewer::drawAxes() const {
   glEnd();
 }
 
-//TODO??
 void MyViewer::drawWithNames() {
   if (axes.shown)
     return drawAxesWithNames();
@@ -668,6 +671,7 @@ void MyViewer::drawWithNames() {
 		  glRasterPos3fv(p);
 		  glPopName();
 	  }
+	  drawTSplineControlNet(true, tspline_control_points.size());
 	  break;
   }
 }
@@ -686,7 +690,6 @@ void MyViewer::drawAxesWithNames() const {
 }
 
 
-//TODO
 void MyViewer::postSelection(const QPoint &p) {
   int sel = selectedName();
   if (sel == -1) {
@@ -703,20 +706,26 @@ void MyViewer::postSelection(const QPoint &p) {
       axes.shown = false;
     return;
   }
-
+  bool edge = false;
   selected_vertex = sel;
   if (model_type == ModelType::MESH)
     axes.position = Vec(mesh.point(MyMesh::VertexHandle(sel)).data());
   if (model_type == ModelType::BEZIER_SURFACE)
     axes.position = bezier_control_points[sel];
   if (model_type == ModelType::TSPLINE_SURFACE)
-	  axes.position = tspline_control_points[sel];
-  double depth = camera()->projectedCoordinatesOf(axes.position)[2];
-  Vec q1 = camera()->unprojectedCoordinatesOf(Vec(0.0, 0.0, depth));
-  Vec q2 = camera()->unprojectedCoordinatesOf(Vec(width(), height(), depth));
-  axes.size = (q1 - q2).norm() / 10.0;
-  axes.shown = true;
-  axes.selected_axis = -1;
+	  if (sel >= tspline_control_points.size()) edge = true;
+	  else axes.position = tspline_control_points[sel];
+  if (!edge) {
+	  double depth = camera()->projectedCoordinatesOf(axes.position)[2];
+	  Vec q1 = camera()->unprojectedCoordinatesOf(Vec(0.0, 0.0, depth));
+	  Vec q2 = camera()->unprojectedCoordinatesOf(Vec(width(), height(), depth));
+	  axes.size = (q1 - q2).norm() / 10.0;
+	  axes.shown = true;
+	  axes.selected_axis = -1;
+  }
+  else {
+	  
+  }
 }
 
 void MyViewer::keyPressEvent(QKeyEvent *e) {
@@ -918,8 +927,10 @@ void MyViewer::generateTSplineMesh() {
 		}
 }
 
+/*void MyViewer::blendFuncRefine(double s, double t) {
+	//for()
+}*/
 
-//TODO
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {
   if (!axes.shown ||
       (axes.selected_axis < 0 && !(e->modifiers() & Qt::ControlModifier)) ||

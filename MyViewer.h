@@ -76,7 +76,7 @@ private:
   void setupCamera();
   Vec meanMapColor(double d) const;
   void drawBezierControlNet() const;
-  void drawTSplineControlNet() const;
+  void drawTSplineControlNet(bool with_names, int start_index) const;
   void drawAxes() const;
   void drawAxesWithNames() const;
   static Vec intersectLines(const Vec &ap, const Vec &ad, const Vec &bp, const Vec &bd);
