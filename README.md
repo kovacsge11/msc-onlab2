@@ -15,7 +15,7 @@ I based my implementation on [T-spline simplification and local refinement by Se
 
 I bind two consecutive points in a row or column if the fourth element of the knot vector of the first point in order is the knot value of the point itself = the third element of its knot vector (for rows and columns accordingly). This way **Rule 2** is always going to apply to my implementation.
 
-**WARNING** need to check, whether this implementation doesn't include unnecessary edges.
+(Although **Rule 2** doesn't explicitly say whether a T-junction should be connected with opposing single point on edge, according to page 12-13 of [this presentation](http://cg.iit.bme.hu/portal/sites/default/files/oktatott-targyak/3d-geometria-2/t-spline%20feluletek%20.pptx) it should, so my implementation is correct in the aspect of **Rule 2**)
 
 **Rule 1** is also always going to apply to my implementation thanks to the fact that I'm representing my topologies in sparse matrices. In my topologies two points can only be connected if they are in the same row or same column. This way **Rule 1** always applies, because the endpoints of any two opposing edges have same knot coordinate (the other coordinate than the one which is the same with the other endpoint of their according edge) as the opposing endpoint of the other edge.
 
