@@ -571,19 +571,25 @@ void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const {
 	for (size_t i = 1; i < ia_size; ++i) {
 		bool first = true;
 		for (size_t j = IA[i-1]; j < IA[i]; ++j) {
-			if (first) {
-				if (with_names) glPushName(names_index++);
-				glBegin(GL_LINE_STRIP);
-				first = false;
-			}
-			int col_index = JA[j];
 			const auto &p = tspline_control_points[j];
-			glVertex3dv(p);
 			//If last in row or is not connected with next in row /this way the topology is surely true to rule 2/
 			if ((si_array[j][3] == si_array[j][2]) || (si_array[j][3] != si_array[j + 1][2])) {
+				if (first) break;
 				first = true;
+				glVertex3dv(p);
 				glEnd();
 				if (with_names) glPopName();
+			} else {
+				if (first) {
+					first = false;
+				} else {
+					glVertex3dv(p);
+					glEnd();
+					if (with_names) glPopName();
+				}
+				if (with_names) glPushName(names_index++);
+				glBegin(GL_LINES);
+				glVertex3dv(p);
 			}
 		}
 	}
@@ -596,18 +602,25 @@ void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const {
 		int previous_index = -1;
 		for (size_t j = 0; j < cpnum; ++j) {
 			if (JA[j] == i) {
-				if (first) {
-					if (with_names) glPushName(names_index++);
-					glBegin(GL_LINE_STRIP);
-					first = false;
-				}
 				const auto &p = tspline_control_points[j];
-				glVertex3dv(p);
 				//If last in column or is not connected with next in column /this way the topology is surely true to rule 2/
 				if ((ti_array[j][3] == ti_array[j][2]) || (previous_index >= 0 && ti_array[j][2] != ti_array[previous_index][3])) {
+					if (first) break;
 					first = true;
+					glVertex3dv(p);
 					glEnd();
 					if (with_names) glPopName();
+				} else {
+					if (first) {
+						first = false;
+					} else {
+						glVertex3dv(p);
+						glEnd();
+						if (with_names) glPopName();
+					}
+					if (with_names) glPushName(names_index++);
+					glBegin(GL_LINES);
+					glVertex3dv(p);
 				}
 				previous_index = j;
 			}
