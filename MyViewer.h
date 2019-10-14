@@ -72,6 +72,7 @@ private:
   //TSpline
   double cubicBSplineBasis(bool is_s, double param, int cpt_indx);
   void generateTSplineMesh();
+  void updateEdgeTopology();
 
   // Visualization
   void setupCamera();
@@ -108,6 +109,8 @@ private:
   std::vector<std::vector<double>> si_array;
   std::vector<std::vector<double>> ti_array;
   std::vector<double> weights;
+  //In order to handle edges
+  std::vector<std::pair<int,int>> edges;
 
   // Visualization
   double mean_min, mean_max, cutoff_ratio;

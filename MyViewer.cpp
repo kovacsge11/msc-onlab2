@@ -469,6 +469,63 @@ void MyViewer::init() {
   glTexImage1D(GL_TEXTURE_1D, 0, GL_RGB, 2, 0, GL_RGB, GL_UNSIGNED_BYTE_3_3_2, &slicing_img);
 }
 
+void MyViewer::updateEdgeTopology() {
+	edges.clear();
+	size_t cpnum = tspline_control_points.size();
+	size_t ia_size = IA.size();
+	//Storing controlnet in row direction
+	for (size_t i = 1; i < ia_size; ++i) {
+		bool first = true;
+		for (size_t j = IA[i - 1]; j < IA[i]; ++j) {
+			//If last in row or is not connected with next in row /this way the topology is surely true to rule 2/
+			if ((si_array[j][3] == si_array[j][2]) || (si_array[j][3] != si_array[j + 1][2])) {
+				if (first) break;
+				first = true;
+				std::pair<int, int> ind_pair = std::pair<int, int>(j - 1, j);
+				edges.push_back(ind_pair);
+			}
+			else {
+				if (first) {
+					first = false;
+				}
+				else {
+					std::pair<int, int> ind_pair = std::pair<int, int>(j - 1, j);
+					edges.push_back(ind_pair);
+				}
+			}
+		}
+	}
+
+	//Drawing in column direction
+	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
+	bool first = true;
+	for (size_t i = 0; i < col_num; ++i) {
+		bool first = true;
+		int previous_index = -1;
+		for (size_t j = 0; j < cpnum; ++j) {
+			if (JA[j] == i) {
+				//If last in column or is not connected with next in column /this way the topology is surely true to rule 2/
+				if ((ti_array[j][3] == ti_array[j][2]) || (previous_index >= 0 && ti_array[j][2] != ti_array[previous_index][3])) {
+					if (first) break;
+					first = true;
+					std::pair<int, int> ind_pair = std::pair<int, int>(previous_index, j);
+					edges.push_back(ind_pair);
+				}
+				else {
+					if (first) {
+						first = false;
+					}
+					else {
+						std::pair<int, int> ind_pair = std::pair<int, int>(previous_index, j);
+						edges.push_back(ind_pair);
+					}
+				}
+				previous_index = j;
+			}
+		}
+	}
+}
+
 void MyViewer::draw() {
   if (model_type == ModelType::BEZIER_SURFACE && show_control_points)
     drawBezierControlNet();
@@ -560,71 +617,17 @@ void MyViewer::drawBezierControlNet() const {
   glEnable(GL_LIGHTING);
 }
 
-void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const {
+void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const{
 	glDisable(GL_LIGHTING);
 	glLineWidth(3.0);
 	glColor3d(0.3, 0.3, 1.0);
-
-	size_t cpnum = tspline_control_points.size();
-	size_t ia_size = IA.size();
-	//Drawing controlnet in row direction
-	for (size_t i = 1; i < ia_size; ++i) {
-		bool first = true;
-		for (size_t j = IA[i-1]; j < IA[i]; ++j) {
-			const auto &p = tspline_control_points[j];
-			//If last in row or is not connected with next in row /this way the topology is surely true to rule 2/
-			if ((si_array[j][3] == si_array[j][2]) || (si_array[j][3] != si_array[j + 1][2])) {
-				if (first) break;
-				first = true;
-				glVertex3dv(p);
-				glEnd();
-				if (with_names) glPopName();
-			} else {
-				if (first) {
-					first = false;
-				} else {
-					glVertex3dv(p);
-					glEnd();
-					if (with_names) glPopName();
-				}
-				if (with_names) glPushName(names_index++);
-				glBegin(GL_LINES);
-				glVertex3dv(p);
-			}
-		}
-	}
-
-	//Drawing in column direction
-	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
-	bool first = true;
-	for (size_t i = 0; i < col_num; ++i) {
-		bool first = true;
-		int previous_index = -1;
-		for (size_t j = 0; j < cpnum; ++j) {
-			if (JA[j] == i) {
-				const auto &p = tspline_control_points[j];
-				//If last in column or is not connected with next in column /this way the topology is surely true to rule 2/
-				if ((ti_array[j][3] == ti_array[j][2]) || (previous_index >= 0 && ti_array[j][2] != ti_array[previous_index][3])) {
-					if (first) break;
-					first = true;
-					glVertex3dv(p);
-					glEnd();
-					if (with_names) glPopName();
-				} else {
-					if (first) {
-						first = false;
-					} else {
-						glVertex3dv(p);
-						glEnd();
-						if (with_names) glPopName();
-					}
-					if (with_names) glPushName(names_index++);
-					glBegin(GL_LINES);
-					glVertex3dv(p);
-				}
-				previous_index = j;
-			}
-		}
+	for (auto& ind_pair : edges) {
+		if(with_names) glPushName(names_index++);
+		glBegin(GL_LINES);
+		glVertex3dv(tspline_control_points[ind_pair.first]);
+		glVertex3dv(tspline_control_points[ind_pair.second]);
+		glEnd();
+		if(with_names) glPopName();
 	}
 
 	//Drawing points
@@ -712,9 +715,6 @@ void MyViewer::endSelection(const QPoint &p) {
 		setSelectedName(-1);
 	else
 	{
-		// Interpret results: each object created values in the selectBuffer().
-		// See the glSelectBuffer() man page for details on the buffer structure.
-		// The following code depends on your selectBuffer() structure.
 		if (model_type == ModelType::TSPLINE_SURFACE) {
 			for (int i = 0; i < nbHits; ++i)
 				//If a point is selected, too
@@ -744,13 +744,14 @@ void MyViewer::postSelection(const QPoint &p) {
     return;
   }
   bool edge = false;
+  int cpnum = tspline_control_points.size();
   selected_vertex = sel;
   if (model_type == ModelType::MESH)
     axes.position = Vec(mesh.point(MyMesh::VertexHandle(sel)).data());
   if (model_type == ModelType::BEZIER_SURFACE)
     axes.position = bezier_control_points[sel];
   if (model_type == ModelType::TSPLINE_SURFACE)
-	  if (sel >= tspline_control_points.size()) edge = true;
+	  if (sel >= cpnum) edge = true;
 	  else axes.position = tspline_control_points[sel];
   if (!edge) {
 	  double depth = camera()->projectedCoordinatesOf(axes.position)[2];
@@ -761,7 +762,14 @@ void MyViewer::postSelection(const QPoint &p) {
 	  axes.selected_axis = -1;
   }
   else {
-	  
+	  bool found;
+	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
+	  std::pair<int, int> index_pair = edges[sel - cpnum];
+	  std::vector<double> new_si, new_ti;
+	  //If in same column
+	  if (si_array[index_pair.first][2] == si_array[index_pair.second][2]) {
+
+	  }
   }
 }
 
