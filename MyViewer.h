@@ -40,6 +40,7 @@ protected:
   virtual void init() override;
   virtual void draw() override;
   virtual void drawWithNames() override;
+  virtual void endSelection(const QPoint & p) override;
   virtual void postSelection(const QPoint &p) override;
   virtual void keyPressEvent(QKeyEvent *e) override;
   virtual void mouseMoveEvent(QMouseEvent *e) override;

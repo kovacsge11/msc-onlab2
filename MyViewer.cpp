@@ -702,6 +702,30 @@ void MyViewer::drawAxesWithNames() const {
   glPopName();
 }
 
+void MyViewer::endSelection(const QPoint &p) {
+	
+	glFlush();
+	// Get the number of objects that were seen through the pick matrix frustum.
+	// Resets GL_RENDER mode.
+	GLint nbHits = glRenderMode(GL_RENDER);
+	if (nbHits <= 0)
+		setSelectedName(-1);
+	else
+	{
+		// Interpret results: each object created values in the selectBuffer().
+		// See the glSelectBuffer() man page for details on the buffer structure.
+		// The following code depends on your selectBuffer() structure.
+		if (model_type == ModelType::TSPLINE_SURFACE) {
+			for (int i = 0; i < nbHits; ++i)
+				//If a point is selected, too
+				if ((selectBuffer())[i * 4 + 3] < tspline_control_points.size()) {
+					setSelectedName((selectBuffer())[i * 4 + 3]);
+					return;
+				}
+			setSelectedName((selectBuffer())[3]);
+		}
+	}
+}
 
 void MyViewer::postSelection(const QPoint &p) {
   int sel = selectedName();
