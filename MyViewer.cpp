@@ -766,10 +766,27 @@ void MyViewer::postSelection(const QPoint &p) {
 	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
 	  std::vector<double> new_si, new_ti;
-	  //If in same column
-	  if (si_array[index_pair.first][2] == si_array[index_pair.second][2]) {
-
+	  int new_index;
+	  double new_s, new_t;
+	  //If in same row, otherwise they must be in same column
+	  if (ti_array[index_pair.first][2] == ti_array[index_pair.second][2]) {
+		  new_s = (si_array[index_pair.first][2] + si_array[index_pair.second][2]) / 2.0;
+		  new_si = { si_array[index_pair.first][1], si_array[index_pair.first][2], new_s, si_array[index_pair.second][2], si_array[index_pair.second][3]};
+		  new_t = ti_array[index_pair.first][2];
+		  new_ti = ;
+		  new_index = index_pair.second;
 	  }
+	  else {
+		  new_s = si_array[index_pair.first][2];
+		  new_si = ;
+		  new_t = (ti_array[index_pair.first][2] + ti_array[index_pair.second][2]) / 2.0;
+		  new_ti = { ti_array[index_pair.first][1], ti_array[index_pair.first][2], new_t, ti_array[index_pair.second][2], ti_array[index_pair.second][3] };
+		  new_index = ;
+	  }
+	  si_array.insert(new_index, new_si);
+	  ti_array.insert(new_index, new_ti);
+	  tspline_control_points.insert(new_index, selectedPoint);
+	  //TODO update sparse matrix
   }
 }
 
