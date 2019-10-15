@@ -411,6 +411,7 @@ bool MyViewer::openTSpline(const std::string &filename) {
 		return false;
 	}
 	model_type = ModelType::TSPLINE_SURFACE;
+	updateEdgeTopology();
 	updateMesh();
 	setupCamera();
 	return true;
@@ -624,8 +625,10 @@ void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const{
 	for (auto& ind_pair : edges) {
 		if(with_names) glPushName(names_index++);
 		glBegin(GL_LINES);
-		glVertex3dv(tspline_control_points[ind_pair.first]);
-		glVertex3dv(tspline_control_points[ind_pair.second]);
+		const auto &p1 = tspline_control_points[ind_pair.first];
+		const auto &p2 = tspline_control_points[ind_pair.second];
+		glVertex3dv(p1);
+		glVertex3dv(p2);
 		glEnd();
 		if(with_names) glPopName();
 	}
@@ -766,7 +769,7 @@ void MyViewer::postSelection(const QPoint &p) {
 	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
 	  std::vector<double> new_si, new_ti;
-	  int new_index;
+	  /*int new_index;
 	  double new_s, new_t;
 	  //If in same row, otherwise they must be in same column
 	  if (ti_array[index_pair.first][2] == ti_array[index_pair.second][2]) {
@@ -787,6 +790,7 @@ void MyViewer::postSelection(const QPoint &p) {
 	  ti_array.insert(new_index, new_ti);
 	  tspline_control_points.insert(new_index, selectedPoint);
 	  //TODO update sparse matrix
+	  */
   }
 }
 
