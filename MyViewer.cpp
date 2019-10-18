@@ -769,28 +769,132 @@ void MyViewer::postSelection(const QPoint &p) {
 	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
 	  std::vector<double> new_si, new_ti;
-	  /*int new_index;
+	  int new_index;
 	  double new_s, new_t;
 	  //If in same row, otherwise they must be in same column
 	  if (ti_array[index_pair.first][2] == ti_array[index_pair.second][2]) {
 		  new_s = (si_array[index_pair.first][2] + si_array[index_pair.second][2]) / 2.0;
 		  new_si = { si_array[index_pair.first][1], si_array[index_pair.first][2], new_s, si_array[index_pair.second][2], si_array[index_pair.second][3]};
 		  new_t = ti_array[index_pair.first][2];
-		  new_ti = ;
 		  new_index = index_pair.second;
+
+		  //Finding new ti
+		  new_ti.clear();
+		  int act_row = 0;
+		  for (; IA[act_row] <= index_pair.first; act_row++) {
+		  }
+
+		  //Check t-s downwards
+		  int i = act_row-1;
+		  int temp_ind = i == 0 ? 0 : IA[--i]; //start index of row (of first)-1
+		  int num_found = 0;
+		  while (num_found < 2) {
+			  if (temp_ind == 0) {
+				  new_ti.push_back(ti_array[0][2]);
+				  num_found++;
+			  }
+			  else {
+				  double temp_s;
+				  for (; si_array[temp_ind][2] <= new_s; temp_ind++) {
+				  }
+				  if (si_array[temp_ind-1][2] < new_s){
+					  //check whether there is an edge connecting temp_ind-1 and temp_ind,
+					  //meaning that a vertical ray started from the new point would cut it,
+					  //and so the t of them should be stored in new_ti
+					  bool found = false;
+					  for (int j = 0; j < edges.size(), !found;j++) {
+						  auto p = edges[j];
+						  if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+							  new_ti.push_back(ti_array[temp_ind - 1][2]);
+							  num_found++;
+							  found = true;
+						  }
+					  }
+				  }
+				  else {
+					  new_ti.push_back(ti_array[temp_ind-1][2]);
+					  num_found++;
+				  }
+				  temp_ind = IA[--i];
+			  }
+		  }
+
+		  new_ti.push_back(new_t);
+
+		  //Check t-s upwards
+		  i = act_row-1;
+		  int temp_ind = i == IA.size()-2 ? IA[-2] : IA[++i]; //start index of row (of first)+1
+		  int num_found = 0;
+		  while (num_found < 2) {
+			  if (temp_ind == IA[-2]) {
+				  new_ti.push_back(ti_array[temp_ind][2]);
+				  num_found++;
+			  }
+			  else {
+				  double temp_s;
+				  for (; si_array[temp_ind][2] <= new_s; temp_ind++) {
+				  }
+				  if (si_array[temp_ind - 1][2] < new_s) {
+					  //check whether there is an edge connecting temp_ind-1 and temp_ind,
+					  //meaning that a vertical ray started from the new point would cut it,
+					  //and so the t of them should be stored in new_ti
+					  bool found = false;
+					  for (int j = 0; j < edges.size(), !found; j++) {
+						  auto p = edges[j];
+						  if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+							  new_ti.push_back(ti_array[temp_ind - 1][2]);
+							  num_found++;
+							  found = true;
+						  }
+					  }
+				  }
+				  else {
+					  new_ti.push_back(ti_array[temp_ind - 1][2]);
+					  num_found++;
+				  }
+				  temp_ind = IA[++i];
+			  }
+		  }
 	  }
 	  else {
 		  new_s = si_array[index_pair.first][2];
 		  new_si = ;
 		  new_t = (ti_array[index_pair.first][2] + ti_array[index_pair.second][2]) / 2.0;
 		  new_ti = { ti_array[index_pair.first][1], ti_array[index_pair.first][2], new_t, ti_array[index_pair.second][2], ti_array[index_pair.second][3] };
-		  new_index = ;
+		  
+		  //Finding new index
+		  int i = 0;
+		  for (; IA[i] <= index_pair.first; i++) {
+		  }
+		  int temp_ind = IA[i]; //start index of row (of first)+1
+		  while (i < IA.size-1) {
+			  if (ti_array[temp_ind][2] > new_t) {
+				  new_index = temp_ind;
+				  i = IA.size; //to finish iterating
+			  }
+			  else if (ti_array[temp_ind][2] < new_t) temp_ind = IA[++i]; //go to next row
+			  else {
+				  //iterate through this row
+				  for (; temp_ind < IA[i + 1], si_array[temp_ind][2] < new_s; temp_ind++) {
+				  }
+				  if (temp_ind == IA[i + 1] || si_array[temp_ind][2] > new_s) {
+					  new_index = temp_ind;
+					  i = IA.size; //to finish iterating
+				  }
+				  else return; //point already exists
+			  }
+		  }
+		  //If single point between last and second to last row
+		  if (i == IA.size - 1) new_index = temp_ind;
+
+		  //Finding new si
+
 	  }
 	  si_array.insert(new_index, new_si);
 	  ti_array.insert(new_index, new_ti);
 	  tspline_control_points.insert(new_index, selectedPoint);
 	  //TODO update sparse matrix
-	  */
+	  
   }
 }
 
