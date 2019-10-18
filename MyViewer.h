@@ -73,6 +73,7 @@ private:
   double cubicBSplineBasis(bool is_s, double param, int cpt_indx);
   void generateTSplineMesh();
   void updateEdgeTopology();
+  std::vector<int> indecesOfColumn(int colindex);
 
   // Visualization
   void setupCamera();

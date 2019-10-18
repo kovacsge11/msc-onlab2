@@ -730,6 +730,14 @@ void MyViewer::endSelection(const QPoint &p) {
 	}
 }
 
+std::vector<int> MyViewer::indecesOfColumn(int colindex) {
+	std::vector<int> ret_vec;
+	ret_vec.clear;
+	for (int i = 0; i < JA.size(); i++) {
+		if (JA[i] == colindex) ret_vec.push_back(i);
+	}
+}
+
 void MyViewer::postSelection(const QPoint &p) {
   int sel = selectedName();
   if (sel == -1) {
@@ -765,6 +773,8 @@ void MyViewer::postSelection(const QPoint &p) {
 	  axes.selected_axis = -1;
   }
   else {
+	  //TODO update other si-s and ti-s affected too
+
 	  bool found;
 	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
@@ -794,7 +804,6 @@ void MyViewer::postSelection(const QPoint &p) {
 				  num_found++;
 			  }
 			  else {
-				  double temp_s;
 				  for (; si_array[temp_ind][2] <= new_s; temp_ind++) {
 				  }
 				  if (si_array[temp_ind-1][2] < new_s){
@@ -827,11 +836,10 @@ void MyViewer::postSelection(const QPoint &p) {
 		  int num_found = 0;
 		  while (num_found < 2) {
 			  if (temp_ind == IA[-2]) {
-				  new_ti.push_back(ti_array[temp_ind][2]);
+				  new_ti.push_back(ti_array[-1][2]);
 				  num_found++;
 			  }
 			  else {
-				  double temp_s;
 				  for (; si_array[temp_ind][2] <= new_s; temp_ind++) {
 				  }
 				  if (si_array[temp_ind - 1][2] < new_s) {
@@ -858,7 +866,6 @@ void MyViewer::postSelection(const QPoint &p) {
 	  }
 	  else {
 		  new_s = si_array[index_pair.first][2];
-		  new_si = ;
 		  new_t = (ti_array[index_pair.first][2] + ti_array[index_pair.second][2]) / 2.0;
 		  new_ti = { ti_array[index_pair.first][1], ti_array[index_pair.first][2], new_t, ti_array[index_pair.second][2], ti_array[index_pair.second][3] };
 		  
@@ -888,6 +895,81 @@ void MyViewer::postSelection(const QPoint &p) {
 		  if (i == IA.size - 1) new_index = temp_ind;
 
 		  //Finding new si
+		  new_si.clear();
+		  int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
+		  int act_col = JA[index_pair.first];
+
+		  //Check s-s downwards
+		  int i = act_col==0 ? act_col : act_col-1;
+		  int num_found = 0;
+		  while (num_found < 2) {
+			  if (i == 0) {
+				  new_si.push_back(si_array[0][2]);
+				  num_found++;
+			  }
+			  else {
+				  auto is_of_col = indecesOfColumn(i);
+				  int j = 0;
+				  for (; ti_array[is_of_col[j]][2] <= new_t; j++) {
+				  }
+				  if (ti_array[is_of_col[j-1]][2] < new_t) {
+					  //check whether there is an edge connecting temp_ind-1 and temp_ind,
+					  //meaning that a vertical ray started from the new point would cut it,
+					  //and so the t of them should be stored in new_ti
+					  bool found = false;
+					  for (int k = 0; k < edges.size(), !found; k++) {
+						  auto p = edges[k];
+						  if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+							  new_si.push_back(si_array[is_of_col[j - 1]][2]);
+							  num_found++;
+							  found = true;
+						  }
+					  }
+				  }
+				  else {
+					  new_si.push_back(si_array[is_of_col[j - 1]][2]);
+					  num_found++;
+				  }
+				  --i;
+			  }
+		  }
+
+		  new_si.push_back(new_s);
+
+		  //Check s-s upwards
+		  int i = act_col == col_num-1 ? col_num-1 : act_col + 1;
+		  int num_found = 0;
+		  while (num_found < 2) {
+			  if (i == col_num-1) {
+				  new_si.push_back(si_array[-1][2]);
+				  num_found++;
+			  }
+			  else {
+				  auto is_of_col = indecesOfColumn(i);
+				  int j = 0;
+				  for (; ti_array[is_of_col[j]][2] <= new_t; j++) {
+				  }
+				  if (ti_array[is_of_col[j - 1]][2] < new_t) {
+					  //check whether there is an edge connecting temp_ind-1 and temp_ind,
+					  //meaning that a vertical ray started from the new point would cut it,
+					  //and so the t of them should be stored in new_ti
+					  bool found = false;
+					  for (int k = 0; k < edges.size(), !found; k++) {
+						  auto p = edges[k];
+						  if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+							  new_si.push_back(si_array[is_of_col[j - 1]][2]);
+							  num_found++;
+							  found = true;
+						  }
+					  }
+				  }
+				  else {
+					  new_si.push_back(si_array[is_of_col[j - 1]][2]);
+					  num_found++;
+				  }
+				  ++i;
+			  }
+		  }
 
 	  }
 	  si_array.insert(new_index, new_si);
