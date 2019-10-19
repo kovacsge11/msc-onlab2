@@ -501,27 +501,25 @@ void MyViewer::updateEdgeTopology() {
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	bool first = true;
 	for (size_t i = 0; i < col_num; ++i) {
-		bool first = true;
-		int previous_index = -1;
-		for (size_t j = 0; j < cpnum; ++j) {
-			if (JA[j] == i) {
-				//If last in column or is not connected with next in column /this way the topology is surely true to rule 2/
-				if ((ti_array[j][3] == ti_array[j][2]) || (previous_index >= 0 && ti_array[j][2] != ti_array[previous_index][3])) {
-					if (first) break;
+		std::vector<int> col_indices = indicesOfColumn(i);
+		for (size_t j = 0; j < col_indices.size(); ++j) {
+			//If last or first in column or is not connected with next in column /this way the topology is surely true to rule 2/
+			if (j==col_indices.size()-1 || j==0 || (ti_array[col_indices[j]][2] != ti_array[col_indices[j-1]][3])) {
+				if (!first) {
 					first = true;
-					std::pair<int, int> ind_pair = std::pair<int, int>(previous_index, j);
+					std::pair<int, int> ind_pair = std::pair<int, int>(col_indices[j - 1], col_indices[j]);
 					edges.push_back(ind_pair);
 				}
-				else {
-					if (first) {
-						first = false;
-					}
-					else {
-						std::pair<int, int> ind_pair = std::pair<int, int>(previous_index, j);
-						edges.push_back(ind_pair);
-					}
+				else { first = false; }
+			}
+			else {
+				if (first) {
+					first = false;
 				}
-				previous_index = j;
+				else {
+					std::pair<int, int> ind_pair = std::pair<int, int>(col_indices[j - 1], col_indices[j]);
+					edges.push_back(ind_pair);
+				}
 			}
 		}
 	}
@@ -732,10 +730,11 @@ void MyViewer::endSelection(const QPoint &p) {
 
 std::vector<int> MyViewer::indicesOfColumn(int colindex) {
 	std::vector<int> ret_vec;
-	ret_vec.clear;
+	ret_vec.clear();
 	for (int i = 0; i < JA.size(); i++) {
 		if (JA[i] == colindex) ret_vec.push_back(i);
 	}
+	return ret_vec;
 }
 
 void MyViewer::postSelection(const QPoint &p) {
@@ -774,8 +773,9 @@ void MyViewer::postSelection(const QPoint &p) {
   }
   else {
 	  bool found;
-	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
+	  //Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
+	  Vec selectedPoint = (tspline_control_points[index_pair.first] + tspline_control_points[index_pair.second]) / 2.0;
 	  std::vector<double> new_si, new_ti;
 	  int new_index;
 	  double new_s, new_t;
@@ -799,7 +799,7 @@ void MyViewer::postSelection(const QPoint &p) {
 		  int num_found = 0;
 		  while (num_found < 2) {
 			  if (temp_ind == 0) {
-				  new_ti.push_back(ti_array[0][2]);
+				  new_ti.insert(new_ti.begin(), ti_array[0][2]);
 				  num_found++;
 			  }
 			  else {
@@ -813,14 +813,14 @@ void MyViewer::postSelection(const QPoint &p) {
 					  for (int j = 0; j < edges.size(), !found;j++) {
 						  auto p = edges[j];
 						  if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
-							  new_ti.push_back(ti_array[temp_ind - 1][2]);
+							  new_ti.insert(new_ti.begin(), ti_array[temp_ind - 1][2]);
 							  num_found++;
 							  found = true;
 						  }
 					  }
 				  }
 				  else {
-					  new_ti.push_back(ti_array[temp_ind-1][2]);
+					  new_ti.insert(new_ti.begin(), ti_array[temp_ind-1][2]);
 					  num_found++;
 				  }
 				  temp_ind = IA[--i];
@@ -831,10 +831,10 @@ void MyViewer::postSelection(const QPoint &p) {
 
 		  //Check t-s upwards
 		  i = act_row;
-		  int temp_ind = i == IA.size()-2 ? IA[-2] : IA[++i]; //start index of row (of first)+1
-		  int num_found = 0;
+		  temp_ind = i == IA.size()-2 ? IA[IA.size()-2] : IA[++i]; //start index of row (of first)+1
+		  num_found = 0;
 		  while (num_found < 2) {
-			  if (temp_ind == IA[-2]) {
+			  if (temp_ind == IA[IA.size()-2]) {
 				  new_ti.push_back(ti_array[-1][2]);
 				  num_found++;
 			  }
@@ -915,10 +915,10 @@ void MyViewer::postSelection(const QPoint &p) {
 		  for (; IA[i] <= index_pair.first; i++) {
 		  }
 		  int temp_ind = IA[i]; //start index of row (of first)+1
-		  while (i < IA.size-1) {
+		  while (i < IA.size()-1) {
 			  if (ti_array[temp_ind][2] > new_t) {
 				  new_index = temp_ind;
-				  i = IA.size; //to finish iterating
+				  i = IA.size(); //to finish iterating
 			  }
 			  else if (ti_array[temp_ind][2] < new_t) temp_ind = IA[++i]; //go to next row
 			  else {
@@ -927,13 +927,13 @@ void MyViewer::postSelection(const QPoint &p) {
 				  }
 				  if (temp_ind == IA[i + 1] || si_array[temp_ind][2] > new_s) {
 					  new_index = temp_ind;
-					  i = IA.size; //to finish iterating
+					  i = IA.size(); //to finish iterating
 				  }
 				  else return; //point already exists
 			  }
 		  }
 		  //If single point between last and second to last row
-		  if (i == IA.size - 1) new_index = temp_ind;
+		  if (i == IA.size() - 1) new_index = temp_ind;
 
 		  //Finding new si
 		  new_si.clear();
@@ -942,15 +942,15 @@ void MyViewer::postSelection(const QPoint &p) {
 		  act_col = JA[index_pair.first];
 
 		  //Check s-s downwards
-		  int i = act_col==0 ? act_col : act_col-1;
+		  i = act_col==0 ? act_col : act_col-1;
 		  int num_found = 0;
 		  while (num_found < 2) {
 			  if (i == 0) {
-				  new_si.push_back(si_array[0][2]);
+				  new_si.insert(new_si.begin(),si_array[0][2]);
 				  num_found++;
 			  }
 			  else {
-				  auto is_of_col = indicesOfColumn(i);
+				  std::vector<int> is_of_col = indicesOfColumn(i);
 				  int j = 0;
 				  for (; ti_array[is_of_col[j]][2] <= new_t; j++) {
 				  }
@@ -962,14 +962,14 @@ void MyViewer::postSelection(const QPoint &p) {
 					  for (int k = 0; k < edges.size(), !found; k++) {
 						  auto p = edges[k];
 						  if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
-							  new_si.push_back(si_array[is_of_col[j - 1]][2]);
+							  new_si.insert(new_si.begin(), si_array[is_of_col[j - 1]][2]);
 							  num_found++;
 							  found = true;
 						  }
 					  }
 				  }
 				  else {
-					  new_si.push_back(si_array[is_of_col[j - 1]][2]);
+					  new_si.insert(new_si.begin(), si_array[is_of_col[j - 1]][2]);
 					  num_found++;
 				  }
 				  --i;
@@ -979,15 +979,15 @@ void MyViewer::postSelection(const QPoint &p) {
 		  new_si.push_back(new_s);
 
 		  //Check s-s upwards
-		  int i = act_col == col_num-1 ? col_num-1 : act_col + 1;
-		  int num_found = 0;
+		  i = act_col == col_num-1 ? col_num-1 : act_col + 1;
+		  num_found = 0;
 		  while (num_found < 2) {
 			  if (i == col_num-1) {
-				  new_si.push_back(si_array[-1][2]);
+				  new_si.push_back(si_array[cpnum-1][2]);
 				  num_found++;
 			  }
 			  else {
-				  auto is_of_col = indicesOfColumn(i);
+				  std::vector<int> is_of_col = indicesOfColumn(i);
 				  int j = 0;
 				  for (; ti_array[is_of_col[j]][2] <= new_t; j++) {
 				  }
@@ -1049,20 +1049,20 @@ void MyViewer::postSelection(const QPoint &p) {
 		  for (; IA[upper_row] <= index_pair.second; upper_row++) {
 		  }
 		  upper_row--;
-		  bool found = false;
+		  found = false;
 		  while (!found) {
 			  //If low_col in same col as new point -- floating point comparison
 			  if (ti_array[IA[lower_row]][2] == new_t) {
-				  IA[lower_row]++;
+				  IA[lower_row+1]++;
 				  found = true;
 			  }
-			  //If new row must be inserted in JA
+			  //If new row must be inserted in IA
 			  else {
 				  if (lower_row + 1 == upper_row) {
-					  for (int j = lower_row+1; j < IA.size(); j++) {
+					  for (int j = lower_row+2; j < IA.size(); j++) {
 						  IA[j] += 1;
 					  }
-					  IA.insert(IA.begin() + lower_row+1, IA[lower_row]+1);
+					  IA.insert(IA.begin() + lower_row + 2, IA[lower_row + 1] + 1);
 					  found = true;
 				  }
 				  else { lower_row++; }
