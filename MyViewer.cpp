@@ -501,6 +501,7 @@ void MyViewer::updateEdgeTopology() {
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	bool first = true;
 	for (size_t i = 0; i < col_num; ++i) {
+		first = true;
 		std::vector<int> col_indices = indicesOfColumn(i);
 		for (size_t j = 0; j < col_indices.size(); ++j) {
 			//If last or first in column or is not connected with next in column /this way the topology is surely true to rule 2/
@@ -835,7 +836,7 @@ void MyViewer::postSelection(const QPoint &p) {
 		  num_found = 0;
 		  while (num_found < 2) {
 			  if (temp_ind == IA[IA.size()-2]) {
-				  new_ti.push_back(ti_array[-1][2]);
+				  new_ti.push_back(ti_array[cpnum-1][2]);
 				  num_found++;
 			  }
 			  else {
