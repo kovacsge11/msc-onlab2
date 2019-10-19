@@ -730,7 +730,7 @@ void MyViewer::endSelection(const QPoint &p) {
 	}
 }
 
-std::vector<int> MyViewer::indecesOfColumn(int colindex) {
+std::vector<int> MyViewer::indicesOfColumn(int colindex) {
 	std::vector<int> ret_vec;
 	ret_vec.clear;
 	for (int i = 0; i < JA.size(); i++) {
@@ -788,12 +788,13 @@ void MyViewer::postSelection(const QPoint &p) {
 
 		  //Finding new ti
 		  new_ti.clear();
+		  
 		  int act_row = 0;
 		  for (; IA[act_row] <= index_pair.first; act_row++) {
 		  }
-
+		  act_row--;
 		  //Check t-s downwards
-		  int i = act_row-1;
+		  int i = act_row;
 		  int temp_ind = i == 0 ? 0 : IA[--i]; //start index of row (of first)-1
 		  int num_found = 0;
 		  while (num_found < 2) {
@@ -829,7 +830,7 @@ void MyViewer::postSelection(const QPoint &p) {
 		  new_ti.push_back(new_t);
 
 		  //Check t-s upwards
-		  i = act_row-1;
+		  i = act_row;
 		  int temp_ind = i == IA.size()-2 ? IA[-2] : IA[++i]; //start index of row (of first)+1
 		  int num_found = 0;
 		  while (num_found < 2) {
@@ -875,6 +876,34 @@ void MyViewer::postSelection(const QPoint &p) {
 			  si_array[index_pair.second + 1][1] = si_array[index_pair.second][2];
 			  si_array[index_pair.second + 1][0] = new_s;
 		  }
+
+		  //Updating IA and JA matrices too
+		  //Update IA
+		  for (int i = act_row + 1; i < IA.size(); i++) {
+			  IA[i] += 1;
+		  }
+		  //Update JA too
+		  int lower_col = JA[index_pair.first];
+		  int upper_col = JA[index_pair.second];
+		  bool found = false;
+		  while(!found) {
+			  //If low_col in same col as new point -- floating point comparison
+			  if (si_array[indicesOfColumn(lower_col)[0]][2] == new_s) {
+				  JA.insert(JA.begin() + new_index, lower_col);
+				  found = true;
+			  }
+			  //If new col must be inserted in JA
+			  else{
+				  if (lower_col + 1 == upper_col) {
+					  for (int j = 0; j < JA.size(); j++) {
+						  if (JA[j] > lower_col) JA[j] += 1;
+					  }
+					  JA.insert(JA.begin() + new_index, lower_col + 1);
+					  found = true;
+				  }
+				  else { lower_col++; }
+			  }
+		  }
 	  }
 	  else {
 		  new_s = si_array[index_pair.first][2];
@@ -908,8 +937,9 @@ void MyViewer::postSelection(const QPoint &p) {
 
 		  //Finding new si
 		  new_si.clear();
+		  int act_col;
 		  int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
-		  int act_col = JA[index_pair.first];
+		  act_col = JA[index_pair.first];
 
 		  //Check s-s downwards
 		  int i = act_col==0 ? act_col : act_col-1;
@@ -920,7 +950,7 @@ void MyViewer::postSelection(const QPoint &p) {
 				  num_found++;
 			  }
 			  else {
-				  auto is_of_col = indecesOfColumn(i);
+				  auto is_of_col = indicesOfColumn(i);
 				  int j = 0;
 				  for (; ti_array[is_of_col[j]][2] <= new_t; j++) {
 				  }
@@ -957,7 +987,7 @@ void MyViewer::postSelection(const QPoint &p) {
 				  num_found++;
 			  }
 			  else {
-				  auto is_of_col = indecesOfColumn(i);
+				  auto is_of_col = indicesOfColumn(i);
 				  int j = 0;
 				  for (; ti_array[is_of_col[j]][2] <= new_t; j++) {
 				  }
@@ -986,7 +1016,7 @@ void MyViewer::postSelection(const QPoint &p) {
 		  //Update neighbouring ti-s
 		  ti_array[index_pair.first][3] = new_t;
 		  ti_array[index_pair.first][4] = ti_array[index_pair.second][2];
-		  auto ts_of_actcol = indecesOfColumn(act_col);
+		  auto ts_of_actcol = indicesOfColumn(act_col);
 		  //Find the index of index_pair.first in its column
 		  bool found = false;
 		  int k = 0;
@@ -1007,12 +1037,42 @@ void MyViewer::postSelection(const QPoint &p) {
 			  ti_array[ts_of_actcol[k+2]][0] = new_t;
 		  }
 
+		  //Updating IA and JA matrices too
+		  //Update JA
+		  JA.insert(JA.begin()+new_index,act_col);
+		  //Update IA too
+		  int lower_row = 0;
+		  for (; IA[lower_row] <= index_pair.first; lower_row++) {
+		  }
+		  lower_row--;
+		  int upper_row = lower_row;
+		  for (; IA[upper_row] <= index_pair.second; upper_row++) {
+		  }
+		  upper_row--;
+		  bool found = false;
+		  while (!found) {
+			  //If low_col in same col as new point -- floating point comparison
+			  if (ti_array[IA[lower_row]][2] == new_t) {
+				  IA[lower_row]++;
+				  found = true;
+			  }
+			  //If new row must be inserted in JA
+			  else {
+				  if (lower_row + 1 == upper_row) {
+					  for (int j = lower_row+1; j < IA.size(); j++) {
+						  IA[j] += 1;
+					  }
+					  IA.insert(IA.begin() + lower_row+1, IA[lower_row]+1);
+					  found = true;
+				  }
+				  else { lower_row++; }
+			  }
+		  }
 	  }
-	  si_array.insert(new_index, new_si);
-	  ti_array.insert(new_index, new_ti);
-	  tspline_control_points.insert(new_index, selectedPoint);
-	  //TODO update sparse matrix
-	  
+	  si_array.insert(si_array.begin() + new_index, new_si);
+	  ti_array.insert(ti_array.begin() + new_index, new_ti);
+	  tspline_control_points.insert(tspline_control_points.begin() + new_index, selectedPoint);
+	  updateEdgeTopology();
   }
 }
 
