@@ -773,8 +773,6 @@ void MyViewer::postSelection(const QPoint &p) {
 	  axes.selected_axis = -1;
   }
   else {
-	  //TODO update other si-s and ti-s affected too
-
 	  bool found;
 	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
@@ -862,6 +860,20 @@ void MyViewer::postSelection(const QPoint &p) {
 				  }
 				  temp_ind = IA[++i];
 			  }
+		  }
+
+		  //Update neighbouring si-s
+		  si_array[index_pair.first][3] = new_s;
+		  si_array[index_pair.first][4] = si_array[index_pair.second][2];
+		  if (index_pair.first != 0 && ti_array[index_pair.first][2] == ti_array[index_pair.first - 1][2]) {
+			  si_array[index_pair.first-1][3] = si_array[index_pair.first][2];
+			  si_array[index_pair.first-1][4] = new_s;
+		  }
+		  si_array[index_pair.second][1] = new_s;
+		  si_array[index_pair.second][0] = si_array[index_pair.first][2];
+		  if (index_pair.second != cpnum-1 && ti_array[index_pair.second][2] == ti_array[index_pair.first + 1][2]) {
+			  si_array[index_pair.second + 1][1] = si_array[index_pair.second][2];
+			  si_array[index_pair.second + 1][0] = new_s;
 		  }
 	  }
 	  else {
@@ -969,6 +981,30 @@ void MyViewer::postSelection(const QPoint &p) {
 				  }
 				  ++i;
 			  }
+		  }
+
+		  //Update neighbouring ti-s
+		  ti_array[index_pair.first][3] = new_t;
+		  ti_array[index_pair.first][4] = ti_array[index_pair.second][2];
+		  auto ts_of_actcol = indecesOfColumn(act_col);
+		  //Find the index of index_pair.first in its column
+		  bool found = false;
+		  int k = 0;
+		  for (; k < ts_of_actcol.size(), !found;k++) {
+			  if (ts_of_actcol[k] == index_pair.first) {
+				  found = true;
+				  k--;
+			  }
+		  }
+		  if (k != 0) {
+			  ti_array[ts_of_actcol[k-1]][3] = ti_array[ts_of_actcol[k]][2];
+			  ti_array[ts_of_actcol[k-1]][4] = new_t;
+		  }
+		  ti_array[index_pair.second][1] = new_t;
+		  ti_array[index_pair.second][0] = ti_array[index_pair.first][2];
+		  if (k+1 != ts_of_actcol.size()-1) {
+			  ti_array[ts_of_actcol[k+2]][1] = ti_array[ts_of_actcol[k+1]][2];
+			  ti_array[ts_of_actcol[k+2]][0] = new_t;
 		  }
 
 	  }
