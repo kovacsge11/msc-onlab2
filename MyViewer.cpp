@@ -1055,6 +1055,9 @@ void MyViewer::postSelection(const QPoint &p) {
 			  //If low_col in same col as new point -- floating point comparison
 			  if (ti_array[IA[lower_row]][2] == new_t) {
 				  IA[lower_row+1]++;
+				  for (int j = lower_row + 2; j < IA.size(); j++) {
+					  IA[j] += 1;
+				  }
 				  found = true;
 			  }
 			  //If new row must be inserted in IA
