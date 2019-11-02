@@ -1297,7 +1297,7 @@ int MyViewer::actRow(int index) {
 //TODO organize postSelection blocks into these 4 checkfunctions
 bool MyViewer::checkTsDown(int index) {
 	int act_row = actRow(index);
-	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row
+	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	while (num_found < 2) {
 		if (temp_ind == 0) {
@@ -1321,7 +1321,7 @@ bool MyViewer::checkTsDown(int index) {
 					}
 				}
 			}
-			else {
+			else if(si_array[temp_ind - 1][2] == si_array[index][2]){
 				if (ti_array[index][num_found] != ti_array[temp_ind - 1][2]) return false;
 				num_found++;
 			}
@@ -1333,7 +1333,7 @@ bool MyViewer::checkTsDown(int index) {
 
 bool MyViewer::checkTsUp(int index) {
 	int act_row = actRow(index);
-	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row (of first)+1
+	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
 	while (num_found < 2) {
@@ -1358,7 +1358,8 @@ bool MyViewer::checkTsUp(int index) {
 					}
 				}
 			}
-			else {
+			//TODO problem: check the case when first of row has bigger s -> now it looks at point with index that-1 in this comparison
+			else if(si_array[temp_ind - 1][2] == si_array[index][2]){
 				if (ti_array[index][3+num_found] != ti_array[temp_ind - 1][2]) return false;
 				num_found++;
 			}
@@ -1396,7 +1397,7 @@ bool MyViewer::checkSsDown(int index) {
 					}
 				}
 			}
-			else {
+			else if(ti_array[is_of_col[j - 1]][2] == ti_array[index][2]){
 				if(si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
 				num_found++;
 			}
@@ -1436,7 +1437,7 @@ bool MyViewer::checkSsUp(int index) {
 					}
 				}
 			}
-			else {
+			else if (ti_array[is_of_col[j - 1]][2] == ti_array[index][2]) {
 				if (si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
 				num_found++;
 			}
