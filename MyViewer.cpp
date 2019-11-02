@@ -1073,6 +1073,8 @@ void MyViewer::postSelection(const QPoint &p) {
 			  }
 		  }
 	  }
+	  double weight = 1.0; //TODO other weight value??
+	  weights.insert(weights.begin() + new_index, weight);
 	  si_array.insert(si_array.begin() + new_index, new_si);
 	  ti_array.insert(ti_array.begin() + new_index, new_ti);
 	  tspline_control_points.insert(tspline_control_points.begin() + new_index, selectedPoint);
