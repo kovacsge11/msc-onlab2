@@ -387,6 +387,7 @@ bool MyViewer::openTSpline(const std::string &filename) {
 		std::ifstream f(filename.c_str());
 		f.exceptions(std::ios::failbit | std::ios::badbit);
 		f >> cpnum >> ia_size;
+		if (cpnum <= 0 || ia_size <= 0) return false;
 		/*tspline_control_points.clear();
 		IA.clear();
 		JA.clear();
@@ -797,10 +798,7 @@ void MyViewer::postSelection(const QPoint &p) {
 		  //Finding new ti
 		  new_ti.clear();
 		  
-		  int act_row = 0;
-		  for (; IA[act_row] <= index_pair.first; act_row++) {
-		  }
-		  act_row--;
+		  int act_row = actRow(index_pair.first);
 		  //Check t-s downwards
 		  int i = act_row;
 		  int temp_ind = i == 0 ? 0 : IA[--i]; //start index of row (of first)-1
@@ -1288,13 +1286,173 @@ void MyViewer::generateTSplineMesh() {
 		}
 }
 
+int MyViewer::actRow(int index) {
+	int act_row = 0;
+	for (; IA[act_row] <= index; act_row++) {
+	}
+	act_row--;
+	return act_row;
+}
+
+//TODO organize postSelection blocks into these 4 checkfunctions
+bool MyViewer::checkTsDown(int index) {
+	int act_row = actRow(index);
+	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row
+	int num_found = 0;
+	while (num_found < 2) {
+		if (temp_ind == 0) {
+			if (ti_array[index][num_found] != ti_array[0][2]) return false;
+			num_found++;
+		}
+		else {
+			for (; si_array[temp_ind][2] <= si_array[index][2]; temp_ind++) {
+			}
+			if (si_array[temp_ind - 1][2] < si_array[index][2]) {
+				//check whether there is an edge connecting temp_ind-1 and temp_ind,
+				//meaning that a vertical ray started from the new point would cut it,
+				//and so the t of them should be stored in new_ti
+				bool found = false;
+				for (int j = 0; j < edges.size(), !found; j++) {
+					auto p = edges[j];
+					if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+						if (ti_array[index][num_found] != ti_array[temp_ind - 1][2]) return false;
+						num_found++;
+						found = true;
+					}
+				}
+			}
+			else {
+				if (ti_array[index][num_found] != ti_array[temp_ind - 1][2]) return false;
+				num_found++;
+			}
+			temp_ind = IA[--act_row];
+		}
+	}
+	return true;
+}
+
+bool MyViewer::checkTsUp(int index) {
+	int act_row = actRow(index);
+	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row (of first)+1
+	int num_found = 0;
+	int cpnum = tspline_control_points.size();
+	while (num_found < 2) {
+		if (temp_ind == IA[IA.size() - 2]) {
+			if (ti_array[index][3+num_found] != ti_array[cpnum-1][2]) return false;
+			num_found++;
+		}
+		else {
+			for (; si_array[temp_ind][2] <= si_array[index][2]; temp_ind++) {
+			}
+			if (si_array[temp_ind - 1][2] < si_array[index][2]) {
+				//check whether there is an edge connecting temp_ind-1 and temp_ind,
+				//meaning that a vertical ray started from the new point would cut it,
+				//and so the t of them should be stored in new_ti
+				bool found = false;
+				for (int j = 0; j < edges.size(), !found; j++) {
+					auto p = edges[j];
+					if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+						if (ti_array[index][3+num_found] != ti_array[temp_ind - 1][2]) return false;
+						num_found++;
+						found = true;
+					}
+				}
+			}
+			else {
+				if (ti_array[index][3+num_found] != ti_array[temp_ind - 1][2]) return false;
+				num_found++;
+			}
+			temp_ind = IA[++act_row];
+		}
+	}
+	return true;
+}
+
+bool MyViewer::checkSsDown(int index) {
+	int act_col = JA[index];
+	int i = act_col == 0 ? act_col : act_col - 1;
+	int num_found = 0;
+	while (num_found < 2) {
+		if (i == 0) {
+			if (si_array[index][num_found] != si_array[0][2]) return false;
+			num_found++;
+		}
+		else {
+			std::vector<int> is_of_col = indicesOfColumn(i);
+			int j = 0;
+			for (; ti_array[is_of_col[j]][2] <= ti_array[index][2]; j++) {
+			}
+			if (ti_array[is_of_col[j - 1]][2] < ti_array[index][2]) {
+				//check whether there is an edge connecting temp_ind-1 and temp_ind,
+				//meaning that a vertical ray started from the new point would cut it,
+				//and so the t of them should be stored in new_ti
+				bool found = false;
+				for (int k = 0; k < edges.size(), !found; k++) {
+					auto p = edges[k];
+					if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+						if(si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
+						num_found++;
+						found = true;
+					}
+				}
+			}
+			else {
+				if(si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
+				num_found++;
+			}
+			--i;
+		}
+	}
+	return true;
+}
+
+bool MyViewer::checkSsUp(int index) {
+	int act_col = JA[index];
+	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
+	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
+	int num_found = 0;
+	int cpnum = tspline_control_points.size();
+	while (num_found < 2) {
+		if (i == col_num - 1) {
+			if (si_array[index][3 + num_found] != si_array[cpnum - 1][2]) return false;
+			num_found++;
+		}
+		else {
+			std::vector<int> is_of_col = indicesOfColumn(i);
+			int j = 0;
+			for (; ti_array[is_of_col[j]][2] <= ti_array[index][2]; j++) {
+			}
+			if (ti_array[is_of_col[j - 1]][2] < ti_array[index][2]) {
+				//check whether there is an edge connecting temp_ind-1 and temp_ind,
+				//meaning that a vertical ray started from the new point would cut it,
+				//and so the t of them should be stored in new_ti
+				bool found = false;
+				for (int k = 0; k < edges.size(), !found; k++) {
+					auto p = edges[k];
+					if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+						if (si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
+						num_found++;
+						found = true;
+					}
+				}
+			}
+			else {
+				if (si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
+				num_found++;
+			}
+			++i;
+		}
+	}
+	return true;
+}
+
 bool MyViewer::checkTSplineCorrectness() {
 	int cpnum = tspline_control_points.size();
 	//Check correctness of IA
 	int ia_size = IA.size();
 	if (IA[0] != 0) return false;
 	if (IA[ia_size - 1] != cpnum) return false;
-	//Check monotony of IA
+	//Check strict monotony of IA
 	for (int i = 1; i < ia_size; i++) {
 		if (IA[i - 1] >= IA[i]) return false;
 	}
@@ -1306,7 +1464,25 @@ bool MyViewer::checkTSplineCorrectness() {
 	for (int i = 0; i < max_col; i++) {
 		if (std::find(JA.begin(), JA.end(), i) == JA.end()) return false;
 	}
-	//Check 
+	//Check monotony of sis and tis
+	for (auto si : si_array) {
+		if (!std::is_sorted(si.begin(), si.end())) return false;
+	}
+	for (auto ti : ti_array) {
+		if (!std::is_sorted(ti.begin(), ti.end())) return false;
+	}
+
+	//Check correctness of topology
+	for (int i = 0; i < cpnum; i++) {
+		if (!checkTsDown(i)) return false;
+		if (!checkTsUp(i)) return false;
+		if (!checkSsDown(i)) return false;
+		if (!checkSsUp(i)) return false;
+	}
+
+	//TODO weights must be positive??
+
+	return true;
 }
 
 /*void MyViewer::blendFuncRefine(double s, double t) {

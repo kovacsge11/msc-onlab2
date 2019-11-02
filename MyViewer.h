@@ -75,6 +75,11 @@ private:
   void updateEdgeTopology();
   bool checkTSplineCorrectness();
   std::vector<int> indicesOfColumn(int colindex);
+  int actRow(int index);
+  bool checkTsDown(int index);
+  bool checkTsUp(int index);
+  bool checkSsDown(int index);
+  bool checkSsUp(int index);
 
   // Visualization
   void setupCamera();
