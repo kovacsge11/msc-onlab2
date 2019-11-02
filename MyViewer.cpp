@@ -387,6 +387,12 @@ bool MyViewer::openTSpline(const std::string &filename) {
 		std::ifstream f(filename.c_str());
 		f.exceptions(std::ios::failbit | std::ios::badbit);
 		f >> cpnum >> ia_size;
+		/*tspline_control_points.clear();
+		IA.clear();
+		JA.clear();
+		si_array.clear();
+		ti_array.clear();
+		weights.clear();*/
 		tspline_control_points.resize(cpnum);
 		IA.resize(ia_size);
 		JA.resize(cpnum);
@@ -410,6 +416,7 @@ bool MyViewer::openTSpline(const std::string &filename) {
 	catch (std::ifstream::failure &) {
 		return false;
 	}
+	if (!checkTSplineCorrectness()) return false;
 	model_type = ModelType::TSPLINE_SURFACE;
 	updateEdgeTopology();
 	updateMesh();
@@ -1279,6 +1286,27 @@ void MyViewer::generateTSplineMesh() {
 			tri.push_back(handles[(i + 1) * resolution + j + 1]);
 			mesh.add_face(tri);
 		}
+}
+
+bool MyViewer::checkTSplineCorrectness() {
+	int cpnum = tspline_control_points.size();
+	//Check correctness of IA
+	int ia_size = IA.size();
+	if (IA[0] != 0) return false;
+	if (IA[ia_size - 1] != cpnum) return false;
+	//Check monotony of IA
+	for (int i = 1; i < ia_size; i++) {
+		if (IA[i - 1] >= IA[i]) return false;
+	}
+	//Check JA - whether smallest element is 0
+	int min_col = *std::min_element(JA.begin(), JA.end());
+	if (min_col != 0) return false;
+	//Check JA - whether it contains all numbers from 0 to max_col
+	int max_col = *std::max_element(JA.begin(), JA.end());
+	for (int i = 0; i < max_col; i++) {
+		if (std::find(JA.begin(), JA.end(), i) == JA.end()) return false;
+	}
+	//Check 
 }
 
 /*void MyViewer::blendFuncRefine(double s, double t) {

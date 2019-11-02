@@ -73,6 +73,7 @@ private:
   double cubicBSplineBasis(bool is_s, double param, int cpt_indx);
   void generateTSplineMesh();
   void updateEdgeTopology();
+  bool checkTSplineCorrectness();
   std::vector<int> indicesOfColumn(int colindex);
 
   // Visualization
