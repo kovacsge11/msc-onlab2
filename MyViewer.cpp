@@ -1295,17 +1295,18 @@ int MyViewer::actRow(int index) {
 }
 
 //TODO organize postSelection blocks into these 4 checkfunctions
+//TODO correct elseif-else branches there too
 bool MyViewer::checkTsDown(int index) {
 	int act_row = actRow(index);
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	while (num_found < 2) {
 		if (temp_ind == 0) {
-			if (ti_array[index][num_found] != ti_array[0][2]) return false;
+			if (ti_array[index][1-num_found] != ti_array[0][2]) return false;
 			num_found++;
 		}
 		else {
-			for (; si_array[temp_ind][2] <= si_array[index][2]; temp_ind++) {
+			for (; si_array[temp_ind][2] <= si_array[index][2] && actRow(temp_ind) == act_row; temp_ind++) {
 			}
 			if (si_array[temp_ind - 1][2] < si_array[index][2]) {
 				//check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -1315,14 +1316,15 @@ bool MyViewer::checkTsDown(int index) {
 				for (int j = 0; j < edges.size(), !found; j++) {
 					auto p = edges[j];
 					if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
-						if (ti_array[index][num_found] != ti_array[temp_ind - 1][2]) return false;
+						if (ti_array[index][1-num_found] != ti_array[temp_ind - 1][2]) return false;
 						num_found++;
 						found = true;
 					}
 				}
 			}
-			else if(si_array[temp_ind - 1][2] == si_array[index][2]){
-				if (ti_array[index][num_found] != ti_array[temp_ind - 1][2]) return false;
+			else if (act_row != actRow(temp_ind - 1)) {} //First of actual row has greater s than point with index "index"
+			else {
+				if (ti_array[index][1-num_found] != ti_array[temp_ind - 1][2]) return false;
 				num_found++;
 			}
 			temp_ind = IA[--act_row];
@@ -1342,7 +1344,7 @@ bool MyViewer::checkTsUp(int index) {
 			num_found++;
 		}
 		else {
-			for (; si_array[temp_ind][2] <= si_array[index][2]; temp_ind++) {
+			for (; si_array[temp_ind][2] <= si_array[index][2] && actRow(temp_ind) == act_row; temp_ind++) {
 			}
 			if (si_array[temp_ind - 1][2] < si_array[index][2]) {
 				//check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -1357,10 +1359,10 @@ bool MyViewer::checkTsUp(int index) {
 						found = true;
 					}
 				}
-			}
-			//TODO problem: check the case when first of row has bigger s -> now it looks at point with index that-1 in this comparison
-			else if(si_array[temp_ind - 1][2] == si_array[index][2]){
-				if (ti_array[index][3+num_found] != ti_array[temp_ind - 1][2]) return false;
+			} //First of actual row has greater s than point with index "index"
+			else if(act_row != actRow(temp_ind-1)){}
+			else {
+				if (ti_array[index][3 + num_found] != ti_array[temp_ind - 1][2]) return false;
 				num_found++;
 			}
 			temp_ind = IA[++act_row];
@@ -1375,15 +1377,16 @@ bool MyViewer::checkSsDown(int index) {
 	int num_found = 0;
 	while (num_found < 2) {
 		if (i == 0) {
-			if (si_array[index][num_found] != si_array[0][2]) return false;
+			if (si_array[index][1-num_found] != si_array[0][2]) return false;
 			num_found++;
 		}
 		else {
 			std::vector<int> is_of_col = indicesOfColumn(i);
 			int j = 0;
-			for (; ti_array[is_of_col[j]][2] <= ti_array[index][2]; j++) {
+			for (; ti_array[is_of_col[j]][2] <= ti_array[index][2] && j < is_of_col.size(); j++) {
 			}
-			if (ti_array[is_of_col[j - 1]][2] < ti_array[index][2]) {
+			if(j==0){}
+			else if (ti_array[is_of_col[j - 1]][2] < ti_array[index][2]) {
 				//check whether there is an edge connecting temp_ind-1 and temp_ind,
 				//meaning that a vertical ray started from the new point would cut it,
 				//and so the t of them should be stored in new_ti
@@ -1391,14 +1394,14 @@ bool MyViewer::checkSsDown(int index) {
 				for (int k = 0; k < edges.size(), !found; k++) {
 					auto p = edges[k];
 					if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
-						if(si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
+						if(si_array[index][1-num_found] != si_array[is_of_col[j - 1]][2]) return false;
 						num_found++;
 						found = true;
 					}
 				}
 			}
-			else if(ti_array[is_of_col[j - 1]][2] == ti_array[index][2]){
-				if(si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
+			else {
+				if(si_array[index][1-num_found] != si_array[is_of_col[j - 1]][2]) return false;
 				num_found++;
 			}
 			--i;
@@ -1421,9 +1424,10 @@ bool MyViewer::checkSsUp(int index) {
 		else {
 			std::vector<int> is_of_col = indicesOfColumn(i);
 			int j = 0;
-			for (; ti_array[is_of_col[j]][2] <= ti_array[index][2]; j++) {
+			for (; ti_array[is_of_col[j]][2] <= ti_array[index][2] && j < is_of_col.size(); j++) {
 			}
-			if (ti_array[is_of_col[j - 1]][2] < ti_array[index][2]) {
+			if (j == 0) {}
+			else if (ti_array[is_of_col[j - 1]][2] < ti_array[index][2]) {
 				//check whether there is an edge connecting temp_ind-1 and temp_ind,
 				//meaning that a vertical ray started from the new point would cut it,
 				//and so the t of them should be stored in new_ti
@@ -1431,14 +1435,14 @@ bool MyViewer::checkSsUp(int index) {
 				for (int k = 0; k < edges.size(), !found; k++) {
 					auto p = edges[k];
 					if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
-						if (si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
+						if (si_array[index][3+num_found] != si_array[is_of_col[j - 1]][2]) return false;
 						num_found++;
 						found = true;
 					}
 				}
 			}
-			else if (ti_array[is_of_col[j - 1]][2] == ti_array[index][2]) {
-				if (si_array[index][num_found] != si_array[is_of_col[j - 1]][2]) return false;
+			else {
+				if (si_array[index][3+num_found] != si_array[is_of_col[j - 1]][2]) return false;
 				num_found++;
 			}
 			++i;
