@@ -74,6 +74,7 @@ private:
   void generateTSplineMesh();
   void updateEdgeTopology();
   bool checkTSplineCorrectness();
+  bool checkTSplineTopology();
   std::vector<int> indicesOfColumn(int colindex);
   int actRow(int index);
   bool checkTsDown(int index);
