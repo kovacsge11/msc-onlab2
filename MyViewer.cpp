@@ -1304,6 +1304,7 @@ bool MyViewer::checkTsDown(int index) {
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	while (num_found < 2) {
+		//Check whether actual row is the first one
 		if (temp_ind == 0) {
 			if (ti_array[index][1-num_found] != ti_array[0][2]) return false;
 			num_found++;
@@ -1312,8 +1313,11 @@ bool MyViewer::checkTsDown(int index) {
 			for (; si_array[temp_ind][2] <= si_array[index][2] && actRow(temp_ind) == act_row; temp_ind++) {
 			}
 			if (si_array[temp_ind - 1][2] < si_array[index][2]) {
-				//check if not the case of last in row having smaller s than the point with index "index"
+				//Check if not the case of last in row having smaller s than the point with index "index"
 				if (si_array[temp_ind][2] > si_array[index][2]) {
+					//check whether there is an edge connecting temp_ind-1 and temp_ind,
+					//meaning that a vertical ray started from our point would cut it,
+					//and so the t of them should be the 1-num_found-th element of ti array of our point
 					bool found = false;
 					for (int j = 0; j < edges.size(), !found; j++) {
 						auto p = edges[j];
@@ -1324,9 +1328,10 @@ bool MyViewer::checkTsDown(int index) {
 						}
 					}
 				}
-			}
-			else if (act_row != actRow(temp_ind - 1)) {} //First of actual row has greater s than point with index "index"
+			} //First of actual row has greater s than our point
+			else if (act_row != actRow(temp_ind - 1)) {}
 			else {
+				//This case occurs when si_array[temp_ind - 1][2] == si_array[index][2]
 				if (ti_array[index][1-num_found] != ti_array[temp_ind - 1][2]) return false;
 				num_found++;
 			}
@@ -1342,6 +1347,7 @@ bool MyViewer::checkTsUp(int index) {
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
 	while (num_found < 2) {
+		//Check whether actual row is the last one
 		if (temp_ind == IA[IA.size() - 2]) {
 			if (ti_array[index][3+num_found] != ti_array[cpnum-1][2]) return false;
 			num_found++;
@@ -1350,8 +1356,11 @@ bool MyViewer::checkTsUp(int index) {
 			for (; si_array[temp_ind][2] <= si_array[index][2] && actRow(temp_ind) == act_row; temp_ind++) {
 			}
 			if (si_array[temp_ind - 1][2] < si_array[index][2]) {
-				//check if not the case of last in row having smaller s than the point with index "index"
+				//Check if not the case of last in row having smaller s than our point
 				if (si_array[temp_ind][2] > si_array[index][2]) {
+					//Check whether there is an edge connecting temp_ind-1 and temp_ind,
+					//meaning that a vertical ray started from our point would cut it,
+					//and so the t of them should be the 3+num_found-th element of ti array of our point
 					bool found = false;
 					for (int j = 0; j < edges.size(), !found; j++) {
 						auto p = edges[j];
@@ -1362,9 +1371,10 @@ bool MyViewer::checkTsUp(int index) {
 						}
 					}
 				}
-			} //First of actual row has greater s than point with index "index"
+			} //First of actual row has greater s than our point
 			else if(act_row != actRow(temp_ind-1)){}
 			else {
+				//This case occurs when si_array[temp_ind - 1][2] == si_array[index][2]
 				if (ti_array[index][3 + num_found] != ti_array[temp_ind - 1][2]) return false;
 				num_found++;
 			}
@@ -1380,6 +1390,7 @@ bool MyViewer::checkSsDown(int index) {
 	int num_found = 0;
 	while (num_found < 2) {
 		if (i == 0) {
+			//Check whether actual column is the first one
 			if (si_array[index][1-num_found] != si_array[0][2]) return false;
 			num_found++;
 		}
@@ -1388,10 +1399,14 @@ bool MyViewer::checkSsDown(int index) {
 			int j = 0;
 			for (;  j < is_of_col.size() && ti_array[is_of_col[j]][2] <= ti_array[index][2]; j++) {
 			}
+			//If first in act_col has bigger t than our point
 			if(j==0){}
 			else if (ti_array[is_of_col[j - 1]][2] < ti_array[index][2]) {
-				//check if not the case of last in col having smaller t than the point with index "index"
+				//Check if not the case of last in col having smaller t than our point
 				if (ti_array[is_of_col[j]][2] > ti_array[index][2]) {
+					//Check whether there is an edge connecting temp_ind-1 and temp_ind,
+					//meaning that a vertical ray started from our point would cut it,
+					//and so the s of them should be the 1-num_found-th element of si array of our point
 					bool found = false;
 					for (int k = 0; k < edges.size(), !found; k++) {
 						auto p = edges[k];
@@ -1404,6 +1419,7 @@ bool MyViewer::checkSsDown(int index) {
 				}
 			}
 			else {
+				//This case occurs when ti_array[is_of_col[j-1]][2] == ti_array[index][2]
 				if(si_array[index][1-num_found] != si_array[is_of_col[j - 1]][2]) return false;
 				num_found++;
 			}
@@ -1420,6 +1436,7 @@ bool MyViewer::checkSsUp(int index) {
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
 	while (num_found < 2) {
+		//Check whether actual column is the last one
 		if (i == col_num - 1) {
 			if (si_array[index][3 + num_found] != si_array[cpnum - 1][2]) return false;
 			num_found++;
@@ -1429,10 +1446,14 @@ bool MyViewer::checkSsUp(int index) {
 			int j = 0;
 			for (; j < is_of_col.size() && ti_array[is_of_col[j]][2] <= ti_array[index][2]; j++) {
 			}
+			//If first in act_col has bigger t than our point
 			if (j == 0) {}
 			else if (ti_array[is_of_col[j - 1]][2] < ti_array[index][2]) {
-				//check if not the case of last in col having smaller t than the point with index "index"
+				//Check if not the case of last in col having smaller t than our point
 				if (ti_array[is_of_col[j]][2] > ti_array[index][2]) {
+					//Check whether there is an edge connecting temp_ind-1 and temp_ind,
+					//meaning that a vertical ray started from our point would cut it,
+					//and so the s of them should be the 3+num_found-th element of si array of our point
 					bool found = false;
 					for (int k = 0; k < edges.size(), !found; k++) {
 						auto p = edges[k];
@@ -1445,6 +1466,7 @@ bool MyViewer::checkSsUp(int index) {
 				}
 			}
 			else {
+				//This case occurs when ti_array[is_of_col[j-1]][2] == ti_array[index][2]
 				if (si_array[index][3+num_found] != si_array[is_of_col[j - 1]][2]) return false;
 				num_found++;
 			}
