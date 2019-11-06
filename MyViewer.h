@@ -77,10 +77,10 @@ private:
   bool checkTSplineTopology();
   std::vector<int> indicesOfColumn(int colindex);
   int actRow(int index);
-  bool checkTsDown(int index);
-  bool checkTsUp(int index);
-  bool checkSsDown(int index);
-  bool checkSsUp(int index);
+  bool tsDown(int index, bool isCheck, std::vector<double> new_ti, double new_s);
+  bool tsUp(int index, bool isCheck, std::vector<double> new_ti, double new_s);
+  bool ssDown(int index, bool isCheck, std::vector<double> new_si, double new_t);
+  bool ssUp(int index, bool isCheck, std::vector<double> new_si, double new_t);
 
   // Visualization
   void setupCamera();
