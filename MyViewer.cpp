@@ -810,23 +810,28 @@ void MyViewer::postSelection(const QPoint &p) {
 				  num_found++;
 			  }
 			  else {
-				  for (; si_array[temp_ind][2] <= new_s; temp_ind++) {
+				  for (; si_array[temp_ind][2] <= new_s && actRow(temp_ind) == i; temp_ind++) {
 				  }
 				  if (si_array[temp_ind-1][2] < new_s){
-					  //check whether there is an edge connecting temp_ind-1 and temp_ind,
-					  //meaning that a vertical ray started from the new point would cut it,
-					  //and so the t of them should be stored in new_ti
-					  bool found = false;
-					  for (int j = 0; j < edges.size(), !found;j++) {
-						  auto p = edges[j];
-						  if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
-							  new_ti.insert(new_ti.begin(), ti_array[temp_ind - 1][2]);
-							  num_found++;
-							  found = true;
+					  //Check if not the case of last in row having smaller s than new_s
+					  if (si_array[temp_ind][2] > new_s) {
+						  //check whether there is an edge connecting temp_ind-1 and temp_ind,
+						  //meaning that a vertical ray started from the new point would cut it,
+						  //and so the t of them should be stored in new_ti
+						  bool found = false;
+						  for (int j = 0; j < edges.size(), !found; j++) {
+							  auto p = edges[j];
+							  if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+								  new_ti.insert(new_ti.begin(), ti_array[temp_ind - 1][2]);
+								  num_found++;
+								  found = true;
+							  }
 						  }
 					  }
-				  }
+				  } //First of actual row has greater s than our point
+				  else if (i != actRow(temp_ind - 1)) {}
 				  else {
+					  //This case occurs when si_array[temp_ind - 1][2] == new_s
 					  new_ti.insert(new_ti.begin(), ti_array[temp_ind-1][2]);
 					  num_found++;
 				  }
@@ -846,23 +851,28 @@ void MyViewer::postSelection(const QPoint &p) {
 				  num_found++;
 			  }
 			  else {
-				  for (; si_array[temp_ind][2] <= new_s; temp_ind++) {
+				  for (; si_array[temp_ind][2] <= new_s && actRow(temp_ind) == i; temp_ind++) {
 				  }
 				  if (si_array[temp_ind - 1][2] < new_s) {
-					  //check whether there is an edge connecting temp_ind-1 and temp_ind,
-					  //meaning that a vertical ray started from the new point would cut it,
-					  //and so the t of them should be stored in new_ti
-					  bool found = false;
-					  for (int j = 0; j < edges.size(), !found; j++) {
-						  auto p = edges[j];
-						  if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
-							  new_ti.push_back(ti_array[temp_ind - 1][2]);
-							  num_found++;
-							  found = true;
+					  //Check if not the case of last in row having smaller s than new_s
+					  if (si_array[temp_ind][2] > new_s) {
+						  //check whether there is an edge connecting temp_ind-1 and temp_ind,
+						  //meaning that a vertical ray started from the new point would cut it,
+						  //and so the t of them should be stored in new_ti
+						  bool found = false;
+						  for (int j = 0; j < edges.size(), !found; j++) {
+							  auto p = edges[j];
+							  if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+								  new_ti.push_back(ti_array[temp_ind - 1][2]);
+								  num_found++;
+								  found = true;
+							  }
 						  }
 					  }
-				  }
+				  } //First of actual row has greater s than our point
+				  else if (i != actRow(temp_ind - 1)) {}
 				  else {
+					  //This case occurs when si_array[temp_ind - 1][2] == new_s
 					  new_ti.push_back(ti_array[temp_ind - 1][2]);
 					  num_found++;
 				  }
@@ -959,23 +969,29 @@ void MyViewer::postSelection(const QPoint &p) {
 			  else {
 				  std::vector<int> is_of_col = indicesOfColumn(i);
 				  int j = 0;
-				  for (; ti_array[is_of_col[j]][2] <= new_t; j++) {
+				  for (; j < is_of_col.size() && ti_array[is_of_col[j]][2] <= new_t; j++) {
 				  }
+				  //If first in act_col has bigger t than new_t
+				  if (j == 0) {}
 				  if (ti_array[is_of_col[j-1]][2] < new_t) {
-					  //check whether there is an edge connecting temp_ind-1 and temp_ind,
-					  //meaning that a vertical ray started from the new point would cut it,
-					  //and so the t of them should be stored in new_ti
-					  bool found = false;
-					  for (int k = 0; k < edges.size(), !found; k++) {
-						  auto p = edges[k];
-						  if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
-							  new_si.insert(new_si.begin(), si_array[is_of_col[j - 1]][2]);
-							  num_found++;
-							  found = true;
+					  //Check if not the case of last in col having smaller t than new_t
+					  if (ti_array[is_of_col[j]][2] > new_t) {
+						  //check whether there is an edge connecting temp_ind-1 and temp_ind,
+						  //meaning that a vertical ray started from the new point would cut it,
+						  //and so the t of them should be stored in new_ti
+						  bool found = false;
+						  for (int k = 0; k < edges.size(), !found; k++) {
+							  auto p = edges[k];
+							  if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+								  new_si.insert(new_si.begin(), si_array[is_of_col[j - 1]][2]);
+								  num_found++;
+								  found = true;
+							  }
 						  }
 					  }
 				  }
 				  else {
+					  //This case occurs when ti_array[is_of_col[j-1]][2] == new_t
 					  new_si.insert(new_si.begin(), si_array[is_of_col[j - 1]][2]);
 					  num_found++;
 				  }
@@ -996,23 +1012,29 @@ void MyViewer::postSelection(const QPoint &p) {
 			  else {
 				  std::vector<int> is_of_col = indicesOfColumn(i);
 				  int j = 0;
-				  for (; ti_array[is_of_col[j]][2] <= new_t; j++) {
+				  for (; j < is_of_col.size() && ti_array[is_of_col[j]][2] <= new_t; j++) {
 				  }
+				  //If first in act_col has bigger t than new_t
+				  if (j == 0) {}
 				  if (ti_array[is_of_col[j - 1]][2] < new_t) {
-					  //check whether there is an edge connecting temp_ind-1 and temp_ind,
-					  //meaning that a vertical ray started from the new point would cut it,
-					  //and so the t of them should be stored in new_ti
-					  bool found = false;
-					  for (int k = 0; k < edges.size(), !found; k++) {
-						  auto p = edges[k];
-						  if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
-							  new_si.push_back(si_array[is_of_col[j - 1]][2]);
-							  num_found++;
-							  found = true;
+					  //Check if not the case of last in col having smaller t than new_t
+					  if (ti_array[is_of_col[j]][2] > new_t) {
+						  //check whether there is an edge connecting temp_ind-1 and temp_ind,
+						  //meaning that a vertical ray started from the new point would cut it,
+						  //and so the t of them should be stored in new_ti
+						  bool found = false;
+						  for (int k = 0; k < edges.size(), !found; k++) {
+							  auto p = edges[k];
+							  if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+								  new_si.push_back(si_array[is_of_col[j - 1]][2]);
+								  num_found++;
+								  found = true;
+							  }
 						  }
 					  }
 				  }
 				  else {
+					  //This case occurs when ti_array[is_of_col[j-1]][2] == new_t
 					  new_si.push_back(si_array[is_of_col[j - 1]][2]);
 					  num_found++;
 				  }
