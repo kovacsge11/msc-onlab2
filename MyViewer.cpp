@@ -940,7 +940,7 @@ void MyViewer::postSelection(const QPoint &p) {
 			  else if (ti_array[temp_ind][2] < new_t) temp_ind = IA[++i]; //go to next row
 			  else {
 				  //iterate through this row
-				  for (; temp_ind < IA[i + 1], si_array[temp_ind][2] < new_s; temp_ind++) {
+				  for (; temp_ind < IA[i + 1] && si_array[temp_ind][2] < new_s; temp_ind++) {
 				  }
 				  if (temp_ind == IA[i + 1] || si_array[temp_ind][2] > new_s) {
 					  new_index = temp_ind;
