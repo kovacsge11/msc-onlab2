@@ -889,7 +889,7 @@ void MyViewer::postSelection(const QPoint &p) {
 		  }
 		  si_array[index_pair.second][1] = new_s;
 		  si_array[index_pair.second][0] = si_array[index_pair.first][2];
-		  if (index_pair.second != cpnum-1 && ti_array[index_pair.second][2] == ti_array[index_pair.first + 1][2]) {
+		  if (index_pair.second != cpnum-1 && ti_array[index_pair.second][2] == ti_array[index_pair.second + 1][2]) {
 			  si_array[index_pair.second + 1][1] = si_array[index_pair.second][2];
 			  si_array[index_pair.second + 1][0] = new_s;
 		  }
@@ -1079,25 +1079,24 @@ void MyViewer::postSelection(const QPoint &p) {
 		  }
 		  upper_row--;
 		  found = false;
-		  while (!found) {
+		  while (!found && lower_row <= upper_row) {
 			  //If low_col in same col as new point -- floating point comparison
 			  if (ti_array[IA[lower_row]][2] == new_t) {
-				  IA[lower_row+1]++;
-				  for (int j = lower_row + 2; j < IA.size(); j++) {
+				  for (int j = lower_row + 1; j < IA.size(); j++) {
 					  IA[j] += 1;
 				  }
 				  found = true;
 			  }
 			  //If new row must be inserted in IA
-			  else {
-				  if (lower_row + 1 == upper_row) {
-					  for (int j = lower_row+2; j < IA.size(); j++) {
-						  IA[j] += 1;
-					  }
-					  IA.insert(IA.begin() + lower_row + 2, IA[lower_row + 1] + 1);
-					  found = true;
+			  else if (ti_array[IA[lower_row]][2] > new_t) {
+				  for (int j = lower_row; j < IA.size(); j++) {
+					  IA[j] += 1;
 				  }
-				  else { lower_row++; }
+				  IA.insert(IA.begin() + lower_row, IA[lower_row] - 1);
+				  found = true;
+			  }
+			  else {
+				  lower_row++;
 			  }
 		  }
 	  }
