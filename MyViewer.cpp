@@ -400,6 +400,7 @@ bool MyViewer::openTSpline(const std::string &filename) {
 		si_array.resize(cpnum);
 		ti_array.resize(cpnum);
 		weights.resize(cpnum);
+		blend_multipliers.resize(cpnum);
 		for (size_t i = 0; i < cpnum; ++i){
 			si_array[i].resize(5);
 			ti_array[i].resize(5);
@@ -409,6 +410,9 @@ bool MyViewer::openTSpline(const std::string &filename) {
 			f >> weights[i];
 			//Filling up JA vector as well
 			f >> JA[i];
+			//Initializing blend function multipliers
+			blend_multipliers[i].first = 1.0;
+			blend_multipliers[i].second = 1.0;
 		}
 		//Finally filling up IA vector
 		for (size_t i = 0; i < ia_size; i++)
@@ -747,6 +751,14 @@ std::vector<int> MyViewer::indicesOfColumn(int colindex) {
 	return ret_vec;
 }
 
+void MyViewer::insertPoint() {
+
+}
+
+void MyViewer::checkViolation2() {
+
+}
+
 void MyViewer::postSelection(const QPoint &p) {
   int sel = selectedName();
   if (sel == -1) {
@@ -802,6 +814,17 @@ void MyViewer::postSelection(const QPoint &p) {
 		  new_ti.clear();
 		  
 		  int act_row = actRow(index_pair.first);
+
+		  //Refinement of blending functions-calculating multipliers
+		  std::pair<std::vector<int>, std::vector<double>> refined_res = refineBlend(new_s, act_row, true);
+		  for (int i = 0; i < refined_res.first.size(); i++) {
+			  if (refined_res.first[i] == -1) {
+				  std::pair<double, double> insert_pair(refined_res.second[i],1.0);
+				  blend_multipliers.insert(blend_multipliers.begin() + new_index, insert_pair);
+			  }
+			  else blend_multipliers[refined_res.first[i]].first = refined_res.second[i];
+		  }
+
 		  //Check t-s downwards
 		  int i = act_row;
 		  int temp_ind = i == 0 ? 0 : IA[--i]; //start index of row (of first)-1
@@ -882,6 +905,8 @@ void MyViewer::postSelection(const QPoint &p) {
 			  }
 		  }
 
+		  
+
 		  //Update neighbouring si-s
 		  si_array[index_pair.first][3] = new_s;
 		  si_array[index_pair.first][4] = si_array[index_pair.second][2];
@@ -959,6 +984,16 @@ void MyViewer::postSelection(const QPoint &p) {
 		  int act_col;
 		  int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 		  act_col = JA[index_pair.first];
+
+		  //Refinement of blending functions-calculating multipliers
+		  std::pair<std::vector<int>, std::vector<double>> refined_res = refineBlend(new_t, act_col, false);
+		  for (int i = 0; i < refined_res.first.size(); i++) {
+			  if (refined_res.first[i] == -1) {
+				  std::pair<double, double> insert_pair(1.0, refined_res.second[i]);
+				  blend_multipliers.insert(blend_multipliers.begin() + new_index, insert_pair);
+			  }
+			  else blend_multipliers[refined_res.first[i]].second = refined_res.second[i];
+		  }
 
 		  //Check s-s downwards
 		  i = act_col==0 ? act_col : act_col-1;
@@ -1372,7 +1407,7 @@ void MyViewer::generateTSplineMesh() {
 			Vec p(0.0, 0.0, 0.0);
 			double nominator = 0.0;
 			for (size_t k = 0; k < cpnum; ++k) {
-				double B_k = cubicBSplineBasis(s,si_array[k]) * cubicBSplineBasis(t, ti_array[k]);
+				double B_k = blend_multipliers[k].first * cubicBSplineBasis(s,si_array[k]) * blend_multipliers[k].second * cubicBSplineBasis(t, ti_array[k]);
 				p += tspline_control_points[k] * B_k;
 				nominator += weights[k] * B_k;
 			}
