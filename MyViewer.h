@@ -70,7 +70,7 @@ private:
   void generateBezierMesh();
 
   //TSpline
-  double cubicBSplineBasis(bool is_s, double param, int cpt_indx);
+  double cubicBSplineBasis(double param, std::vector<double> knots);
   void generateTSplineMesh();
   void updateEdgeTopology();
   bool checkTSplineCorrectness();
@@ -81,6 +81,7 @@ private:
   bool checkTsUp(int index);
   bool checkSsDown(int index);
   bool checkSsUp(int index);
+  std::pair<std::vector<int>, std::vector<double>> refineBlend(double new_value, int row_col_ind, bool is_row);
 
   // Visualization
   void setupCamera();

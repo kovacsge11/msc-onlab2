@@ -782,9 +782,11 @@ void MyViewer::postSelection(const QPoint &p) {
 	  axes.selected_axis = -1;
   }
   else {
-	  bool found;
 	  //Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
+	  /*bool found;
+	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
+	  if (!found) return;*/
 	  Vec selectedPoint = (tspline_control_points[index_pair.first] + tspline_control_points[index_pair.second]) / 2.0;
 	  std::vector<double> new_si, new_ti;
 	  int new_index;
@@ -1106,7 +1108,93 @@ void MyViewer::postSelection(const QPoint &p) {
 	  ti_array.insert(ti_array.begin() + new_index, new_ti);
 	  tspline_control_points.insert(tspline_control_points.begin() + new_index, selectedPoint);
 	  updateEdgeTopology();
+	  updateMesh();
+	  update();
   }
+}
+
+std::pair<std::vector<int>, std::vector<double>> MyViewer::refineBlend(double new_value, int row_col_ind, bool is_row) {
+	//Get the indices of points, whose blending function is going to be refined
+	std::vector<int> indices;
+	indices.clear();
+	int new_ind; //index of insertion in the indices vector
+	if (is_row) {
+		int start_ind = IA[row_col_ind];
+		int end_ind = IA[row_col_ind] - 1;
+		//if(new_value <= si_array[start_ind][2] || new_value >= si_array[end_ind][2]) -- throw error
+		for (int i = start_ind+1; i <= end_ind; i++) {
+			if (new_value < si_array[i][2]) {
+				//If insertion after first in row, new_ind = 1
+				new_ind = (i == start_ind + 1) ? 1:2;
+				if (i - 2 >= start_ind)indices.push_back(i-2);
+				indices.push_back(i - 1);
+				indices.push_back(i);
+				if (i + 1 <= end_ind)indices.push_back(i + 1);
+			}
+		}
+	}
+	else {
+		std::vector<int> col_inds = indicesOfColumn(row_col_ind);
+		//if(new_value <= ti_array[col_inds[0]][2] || new_value >= ti_array[col_inds[col_inds.size()-1]][2]) -- throw error
+		for (int i = 1; i < col_inds.size(); i++) {
+			if (new_value < ti_array[i][2]) {
+				//If insertion after first in col, new_ind = 1
+				new_ind = (i == 1) ? 1 : 2;
+				if (i >= 2)indices.push_back(col_inds[i - 2]);
+				indices.push_back(col_inds[i - 1]);
+				indices.push_back(col_inds[i]);
+				if (i + 1 < col_inds.size())indices.push_back(col_inds[i + 1]);
+			}
+		}
+	}
+
+	//Calculate multipliers
+	std::vector<double> multipliers;
+	multipliers.resize(indices.size()+1);
+	for (auto i : multipliers) i = 0.0;
+	std::vector<double> knot_vector;
+	for (int i = 0; i < indices.size(); i++) {
+		// knot_vector.clear();
+		knot_vector = (is_row) ? si_array[indices[i]] : ti_array[indices[i]];
+		//First in indices
+		if(i==0){
+			if (new_ind == 2) {
+				multipliers[0] += 1.0;
+				multipliers[1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+			else {
+				multipliers[0] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+		}
+		//Last in indices
+		else if (i == indices.size() - 1) {
+			if (i - new_ind == 2) {
+				multipliers[i] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[i+1] += 1.0;
+			}
+			else {
+				multipliers[i] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[i+1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+		}
+		else {
+			if (i < new_ind) {
+				multipliers[i] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[i+1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+			else {
+				multipliers[i-1] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[i] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+		}
+	}
+	
+	indices.insert(indices.begin() + new_ind, -1);
+	std::pair<std::vector<int>, std::vector<double>> ret_pair;
+	ret_pair.first = indices;
+	ret_pair.second = multipliers;
+	return ret_pair;
 }
 
 void MyViewer::keyPressEvent(QKeyEvent *e) {
@@ -1197,8 +1285,7 @@ void MyViewer::bernsteinAll(size_t n, double u, std::vector<double> &coeff) {
   }
 }
 
-double MyViewer::cubicBSplineBasis(bool is_s, double param, int cpt_indx) {
-	const auto &knots = is_s ? si_array[cpt_indx] : ti_array[cpt_indx];
+double MyViewer::cubicBSplineBasis(double param, std::vector<double> knots) {
 	double u = param;
 	size_t p = 3, i;
 	if (u < knots.front() || u > knots.back())
@@ -1285,7 +1372,7 @@ void MyViewer::generateTSplineMesh() {
 			Vec p(0.0, 0.0, 0.0);
 			double nominator = 0.0;
 			for (size_t k = 0; k < cpnum; ++k) {
-				double B_k = cubicBSplineBasis(true,s,k) * cubicBSplineBasis(false,t,k);
+				double B_k = cubicBSplineBasis(s,si_array[k]) * cubicBSplineBasis(t, ti_array[k]);
 				p += tspline_control_points[k] * B_k;
 				nominator += weights[k] * B_k;
 			}
