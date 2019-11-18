@@ -751,12 +751,65 @@ std::vector<int> MyViewer::indicesOfColumn(int colindex) {
 	return ret_vec;
 }
 
-void MyViewer::insertPoint() {
+void MyViewer::insertPoint(Vec point, ) {
 
 }
 
-void MyViewer::checkViolation2() {
+void MyViewer::compareForViolation2(std::vector<double> compared_vec, std::vector<double> compare_to_vec, int compare_to_ind, bool vertical) {
+	//Compare upwards
+	if (compared_vec[3] < compare_to_vec[3]) {
+		//Insert point at si_array[compare_to_ind][2],compared_vec[3] if vertical
+		//at compared_vec[3],ti_array[compare_to_ind][2] if not
 
+		//TODO what if here compared_vec[4] < compare_to_vec[4] too
+	}
+	else if (compared_vec[3] > compare_to_vec[3] && compared_vec[3] < compare_to_vec[4]) {
+		//Insert point at si_array[compare_to_ind][2],compared_vec[3] if vertical
+		//at compared_vec[3],ti_array[compare_to_ind][2] if not
+	}
+	else if (compared_vec[4] < compare_to_vec[4]) {
+		//Insert point at si_array[compare_to_ind][2],compared_vec[4] if vertical
+		//at compared_vec[4],ti_array[compare_to_ind][2] if not
+	}
+
+	//Compare downwards
+	if (compared_vec[1] > compare_to_vec[1]) {
+		//Insert point at si_array[compare_to_ind][2],compared_vec[1] if vertical
+		//at compared_vec[1],ti_array[compare_to_ind][2] if not
+
+		//TODO what if here compared_vec[0] > compare_to_vec[0] too
+	}
+	else if (compared_vec[1] < compare_to_vec[1] && compared_vec[1] > compare_to_vec[0]) {
+		//Insert point at si_array[compare_to_ind][2],compared_vec[1] if vertical
+		//at compared_vec[1],ti_array[compare_to_ind][2] if not
+	}
+	else if (compared_vec[0] > compare_to_vec[0]) {
+		//Insert point at si_array[compare_to_ind][2],compared_vec[0] if vertical
+		//at compared_vec[0],ti_array[compare_to_ind][2] if not
+	}
+}
+
+//TODO should call refineBlend by violation 1?
+
+void MyViewer::checkViolation2(std::vector<int> indices, int new_ind, bool is_row) {
+	for (int i = 0; i < indices.size();i++) {
+		if (i < new_ind) {
+			if (is_row) {
+				compareForViolation2(ti_array[indices[i]], ti_array[indices[i+1]]);
+			}
+			else if (!is_row) {
+				compareForViolation2(si_array[indices[i]], si_array[indices[i + 1]]);
+			}
+		}
+		else if (i > new_ind) {
+			if (is_row) {
+				compareForViolation2(ti_array[indices[i]], ti_array[indices[i - 1]]);
+			}
+			else if (!is_row) {
+				compareForViolation2(si_array[indices[i]], si_array[indices[i - 1]]);
+			}
+		}
+	}
 }
 
 void MyViewer::postSelection(const QPoint &p) {

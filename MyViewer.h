@@ -82,6 +82,8 @@ private:
   bool checkSsDown(int index);
   bool checkSsUp(int index);
   std::pair<std::vector<int>, std::vector<double>> refineBlend(double new_value, int row_col_ind, bool is_row);
+  void checkViolation2(std::vector<int> indices, int new_ind, bool is_row);
+  void compareForViolation2(std::vector<double> compared_vec, std::vector<double> compare_to_vec);
 
   // Visualization
   void setupCamera();
