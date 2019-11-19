@@ -751,65 +751,201 @@ std::vector<int> MyViewer::indicesOfColumn(int colindex) {
 	return ret_vec;
 }
 
-void MyViewer::insertPoint(Vec point, ) {
-
+std::pair<bool, int> MyViewer::getRow(double t) {
+	int i = 0;
+	for (; ti_array[IA[i]][2] < t; i++) {
+	}
+	//Returns with true,i if row exists, false otherwise
+	return std::pair<bool, int>(!(ti_array[IA[i]][2] > t),i);
 }
 
-void MyViewer::compareForViolation2(std::vector<double> compared_vec, std::vector<double> compare_to_vec, int compare_to_ind, bool vertical) {
-	//Compare upwards
-	if (compared_vec[3] < compare_to_vec[3]) {
-		//Insert point at si_array[compare_to_ind][2],compared_vec[3] if vertical
-		//at compared_vec[3],ti_array[compare_to_ind][2] if not
+//TODO getIndex function that can give back index based on s,t - bool,int pair in return
+//true if point exists already
+std::pair<bool, int> MyViewer::getIndex(double s, double t) {
+	int new_index;
+	auto row = getRow(t);
+	if(row.first)
 
-		//TODO what if here compared_vec[4] < compare_to_vec[4] too
+	int temp_ind = IA[i]; //start index of row (of first)+1
+	while (i < IA.size() - 1) {
+		if (ti_array[temp_ind][2] > t) {
+			new_index = temp_ind;
+			i = IA.size(); //to finish iterating
+		}
+		else if (ti_array[temp_ind][2] < t) temp_ind = IA[++i]; //go to next row
+		else {
+			//iterate through this row
+			for (; temp_ind < IA[i + 1] && si_array[temp_ind][2] < s; temp_ind++) {
+			}
+			if (temp_ind == IA[i + 1] || si_array[temp_ind][2] > s) {
+				new_index = temp_ind;
+				i = IA.size(); //to finish iterating
+			}
+			else return; //point already exists
+		}
 	}
-	else if (compared_vec[3] > compare_to_vec[3] && compared_vec[3] < compare_to_vec[4]) {
-		//Insert point at si_array[compare_to_ind][2],compared_vec[3] if vertical
-		//at compared_vec[3],ti_array[compare_to_ind][2] if not
-	}
-	else if (compared_vec[4] < compare_to_vec[4]) {
-		//Insert point at si_array[compare_to_ind][2],compared_vec[4] if vertical
-		//at compared_vec[4],ti_array[compare_to_ind][2] if not
-	}
-
-	//Compare downwards
-	if (compared_vec[1] > compare_to_vec[1]) {
-		//Insert point at si_array[compare_to_ind][2],compared_vec[1] if vertical
-		//at compared_vec[1],ti_array[compare_to_ind][2] if not
-
-		//TODO what if here compared_vec[0] > compare_to_vec[0] too
-	}
-	else if (compared_vec[1] < compare_to_vec[1] && compared_vec[1] > compare_to_vec[0]) {
-		//Insert point at si_array[compare_to_ind][2],compared_vec[1] if vertical
-		//at compared_vec[1],ti_array[compare_to_ind][2] if not
-	}
-	else if (compared_vec[0] > compare_to_vec[0]) {
-		//Insert point at si_array[compare_to_ind][2],compared_vec[0] if vertical
-		//at compared_vec[0],ti_array[compare_to_ind][2] if not
-	}
+	//If single point between last and second to last row
+	if (i == IA.size() - 1) new_index = temp_ind; 
 }
 
-//TODO should call refineBlend by violation 1?
+bool MyViewer::checkForViol1() {
+	/*
+	bool violated = false;
+	for i in blendfunctions{
+		std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,1);
+		if (ts_down.first) refine blend func of point i by inserting at ts_down.second.first+1 value ts_down.second.second
+			violated = true;
+			to do this:
+			c,d = refineBlend(ti_array[i], ts_down.second.first+1, ts_down.second.second)
+			two insertions: first: refining the actual->d to blendMultipliers[i]
+			second: getIndex of (si_array[i][2],ts_down.second.second) if inserting below the middle point
+					getIndex of (si_array[i][2],ti_array[i][1]) if inserting with 2 below the middle point
+					with the proper index see if point has blend
+											  else if the existing blend is the same as new one
+												if not store new one as well somehow
+												if so +c to blendMultipliers[index]
+		std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i,1);
+		if (ts_up.first) refine blend func of point i by inserting at ts_up.second.first+1 value ts_up.second.second
+			violated = true;
+		std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i,1);
+		if (ss_down.first) refine blend func of point i by inserting at ss_down.second.first+1 value ss_down.second.second
+			violated = true;
+		std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i,1);
+		if (ss_up.first) refine blend func of point i by inserting at ss_up.second.first+1 value ss_up.second.second
+			violated = true;
+	}
+	return violated;
+	*/
+}
 
-void MyViewer::checkViolation2(std::vector<int> indices, int new_ind, bool is_row) {
-	for (int i = 0; i < indices.size();i++) {
-		if (i < new_ind) {
-			if (is_row) {
-				compareForViolation2(ti_array[indices[i]], ti_array[indices[i+1]]);
-			}
-			else if (!is_row) {
-				compareForViolation2(si_array[indices[i]], si_array[indices[i + 1]]);
-			}
-		}
-		else if (i > new_ind) {
-			if (is_row) {
-				compareForViolation2(ti_array[indices[i]], ti_array[indices[i - 1]]);
-			}
-			else if (!is_row) {
-				compareForViolation2(si_array[indices[i]], si_array[indices[i - 1]]);
+bool MyViewer::checkForViol2() {
+	/*
+	bool violated = false;
+	for i in blendfunctions{
+		std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,2);
+		if (ts_down.first) insert new point at getIndex(si_array[i][2],ti_array[i][ts_down.second.first])
+			violated = true;
+			to do this:
+			insert with new index into ti_array [ti_array[i][0],ti_array[i][1],ti_array[i][ts_down.second.first],ti_array[i][2],ti_array[i][3]]
+			insert with new index into si_array
+			blendMultipliers[new_index] = 0
+			insert to tspline_control_points -- ?
+			insert to weights -- ?
+			update IA
+			update JA
+			
+		std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i,2);
+		if (ts_up.first) refine blend func of point i by inserting at ts_up.second .first value ts_up.second.second
+			violated = true;
+		std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i,2);
+		if (ss_down.first) refine blend func of point i by inserting at ss_down.second .first value ss_down.second.second
+			violated = true;
+		std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i,2);
+		if (ss_up.first) refine blend func of point i by inserting at ss_up.second .first value ss_up.second.second
+			violated = true;
+	}
+	return violated;
+	*/
+}
+
+void MyViewer::checkViolations() {
+	bool viol1 = false, viol2 = false;
+	do {
+		viol1 = checkForViol1();
+		viol2 = checkForViol2();
+	} while (viol1 || viol2);
+
+	updateEdgeTopology();
+}
+
+std::pair<double,double> MyViewer::refineBlend(std::vector<double> knot_vector, int ins_ind, double new_value) {
+	double c = ins_ind==4 ? 1.0 : (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+	double d = ins_ind == 1 ? 1.0 : (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+	return std::pair<double, double>(c,d);
+}
+
+std::pair<std::vector<int>, std::vector<double>> MyViewer::refineRowCol(double new_value, int row_col_ind, bool is_row) {
+	//Get the indices of points, whose blending function is going to be refined
+	std::vector<int> indices;
+	indices.clear();
+	int new_ind; //index of insertion in the indices vector
+	if (is_row) {
+		int start_ind = IA[row_col_ind];
+		int end_ind = IA[row_col_ind] - 1;
+		//if(new_value <= si_array[start_ind][2] || new_value >= si_array[end_ind][2]) -- throw error
+		for (int i = start_ind + 1; i <= end_ind; i++) {
+			if (new_value < si_array[i][2]) {
+				//If insertion after first in row, new_ind = 1
+				new_ind = (i == start_ind + 1) ? 1 : 2;
+				if (i - 2 >= start_ind)indices.push_back(i - 2);
+				indices.push_back(i - 1);
+				indices.push_back(i);
+				if (i + 1 <= end_ind)indices.push_back(i + 1);
 			}
 		}
 	}
+	else {
+		std::vector<int> col_inds = indicesOfColumn(row_col_ind);
+		//if(new_value <= ti_array[col_inds[0]][2] || new_value >= ti_array[col_inds[col_inds.size()-1]][2]) -- throw error
+		for (int i = 1; i < col_inds.size(); i++) {
+			if (new_value < ti_array[i][2]) {
+				//If insertion after first in col, new_ind = 1
+				new_ind = (i == 1) ? 1 : 2;
+				if (i >= 2)indices.push_back(col_inds[i - 2]);
+				indices.push_back(col_inds[i - 1]);
+				indices.push_back(col_inds[i]);
+				if (i + 1 < col_inds.size())indices.push_back(col_inds[i + 1]);
+			}
+		}
+	}
+
+	//Calculate multipliers
+	std::vector<double> multipliers;
+	multipliers.resize(indices.size() + 1);
+	for (auto i : multipliers) i = 0.0;
+	std::vector<double> knot_vector;
+	for (int i = 0; i < indices.size(); i++) {
+		// knot_vector.clear();
+		knot_vector = (is_row) ? si_array[indices[i]] : ti_array[indices[i]];
+		//First in indices
+		if (i == 0) {
+			if (new_ind == 2) {
+				multipliers[0] += 1.0;
+				multipliers[1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+			else {
+				multipliers[0] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+		}
+		//Last in indices
+		else if (i == indices.size() - 1) {
+			if (i - new_ind == 2) {
+				multipliers[i] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[i + 1] += 1.0;
+			}
+			else {
+				multipliers[i] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[i + 1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+		}
+		else {
+			if (i < new_ind) {
+				multipliers[i] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[i + 1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+			else {
+				multipliers[i - 1] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
+				multipliers[i] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
+			}
+		}
+	}
+
+	indices.insert(indices.begin() + new_ind, -1);
+	std::pair<std::vector<int>, std::vector<double>> ret_pair;
+	ret_pair.first = indices;
+	ret_pair.second = multipliers;
+	return ret_pair;
 }
 
 void MyViewer::postSelection(const QPoint &p) {
@@ -868,15 +1004,15 @@ void MyViewer::postSelection(const QPoint &p) {
 		  
 		  int act_row = actRow(index_pair.first);
 
-		  //Refinement of blending functions-calculating multipliers
-		  std::pair<std::vector<int>, std::vector<double>> refined_res = refineBlend(new_s, act_row, true);
+		  /*//Refinement of blending functions-calculating multipliers
+		  std::pair<std::vector<int>, std::vector<double>> refined_res = refineRowCol(new_s, act_row, true);
 		  for (int i = 0; i < refined_res.first.size(); i++) {
 			  if (refined_res.first[i] == -1) {
 				  std::pair<double, double> insert_pair(refined_res.second[i],1.0);
 				  blend_multipliers.insert(blend_multipliers.begin() + new_index, insert_pair);
 			  }
 			  else blend_multipliers[refined_res.first[i]].first = refined_res.second[i];
-		  }
+		  }*/
 
 		  //Check t-s downwards
 		  int i = act_row;
@@ -1038,15 +1174,15 @@ void MyViewer::postSelection(const QPoint &p) {
 		  int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 		  act_col = JA[index_pair.first];
 
-		  //Refinement of blending functions-calculating multipliers
-		  std::pair<std::vector<int>, std::vector<double>> refined_res = refineBlend(new_t, act_col, false);
+		  /*//Refinement of blending functions-calculating multipliers
+		  std::pair<std::vector<int>, std::vector<double>> refined_res = refineRowCol(new_t, act_col, false);
 		  for (int i = 0; i < refined_res.first.size(); i++) {
 			  if (refined_res.first[i] == -1) {
 				  std::pair<double, double> insert_pair(1.0, refined_res.second[i]);
 				  blend_multipliers.insert(blend_multipliers.begin() + new_index, insert_pair);
 			  }
 			  else blend_multipliers[refined_res.first[i]].second = refined_res.second[i];
-		  }
+		  }*/
 
 		  //Check s-s downwards
 		  i = act_col==0 ? act_col : act_col-1;
@@ -1199,90 +1335,6 @@ void MyViewer::postSelection(const QPoint &p) {
 	  updateMesh();
 	  update();
   }
-}
-
-std::pair<std::vector<int>, std::vector<double>> MyViewer::refineBlend(double new_value, int row_col_ind, bool is_row) {
-	//Get the indices of points, whose blending function is going to be refined
-	std::vector<int> indices;
-	indices.clear();
-	int new_ind; //index of insertion in the indices vector
-	if (is_row) {
-		int start_ind = IA[row_col_ind];
-		int end_ind = IA[row_col_ind] - 1;
-		//if(new_value <= si_array[start_ind][2] || new_value >= si_array[end_ind][2]) -- throw error
-		for (int i = start_ind+1; i <= end_ind; i++) {
-			if (new_value < si_array[i][2]) {
-				//If insertion after first in row, new_ind = 1
-				new_ind = (i == start_ind + 1) ? 1:2;
-				if (i - 2 >= start_ind)indices.push_back(i-2);
-				indices.push_back(i - 1);
-				indices.push_back(i);
-				if (i + 1 <= end_ind)indices.push_back(i + 1);
-			}
-		}
-	}
-	else {
-		std::vector<int> col_inds = indicesOfColumn(row_col_ind);
-		//if(new_value <= ti_array[col_inds[0]][2] || new_value >= ti_array[col_inds[col_inds.size()-1]][2]) -- throw error
-		for (int i = 1; i < col_inds.size(); i++) {
-			if (new_value < ti_array[i][2]) {
-				//If insertion after first in col, new_ind = 1
-				new_ind = (i == 1) ? 1 : 2;
-				if (i >= 2)indices.push_back(col_inds[i - 2]);
-				indices.push_back(col_inds[i - 1]);
-				indices.push_back(col_inds[i]);
-				if (i + 1 < col_inds.size())indices.push_back(col_inds[i + 1]);
-			}
-		}
-	}
-
-	//Calculate multipliers
-	std::vector<double> multipliers;
-	multipliers.resize(indices.size()+1);
-	for (auto i : multipliers) i = 0.0;
-	std::vector<double> knot_vector;
-	for (int i = 0; i < indices.size(); i++) {
-		// knot_vector.clear();
-		knot_vector = (is_row) ? si_array[indices[i]] : ti_array[indices[i]];
-		//First in indices
-		if(i==0){
-			if (new_ind == 2) {
-				multipliers[0] += 1.0;
-				multipliers[1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
-			}
-			else {
-				multipliers[0] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
-				multipliers[1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
-			}
-		}
-		//Last in indices
-		else if (i == indices.size() - 1) {
-			if (i - new_ind == 2) {
-				multipliers[i] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
-				multipliers[i+1] += 1.0;
-			}
-			else {
-				multipliers[i] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
-				multipliers[i+1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
-			}
-		}
-		else {
-			if (i < new_ind) {
-				multipliers[i] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
-				multipliers[i+1] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
-			}
-			else {
-				multipliers[i-1] += (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
-				multipliers[i] += (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
-			}
-		}
-	}
-	
-	indices.insert(indices.begin() + new_ind, -1);
-	std::pair<std::vector<int>, std::vector<double>> ret_pair;
-	ret_pair.first = indices;
-	ret_pair.second = multipliers;
-	return ret_pair;
 }
 
 void MyViewer::keyPressEvent(QKeyEvent *e) {
@@ -1494,15 +1546,18 @@ int MyViewer::actRow(int index) {
 //TODO moving point after multiple insertion made an error in surface - right side disappeared
 
 //TODO organize postSelection blocks into these 4 checkfunctions
-//TODO correct elseif-else branches there too
-bool MyViewer::checkTsDown(int index) {
+std::pair<bool,std::pair<int,double>> MyViewer::checkTsDown(int index, int viol_num) {
 	int act_row = actRow(index);
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	while (num_found < 2) {
 		//Check whether actual row is the first one
 		if (temp_ind == 0) {
-			if (ti_array[index][1-num_found] != ti_array[0][2]) return false;
+			if (ti_array[index][1-num_found] != ti_array[0][2])
+				if((viol_num == 1 && ti_array[index][1 - num_found] < ti_array[0][2])
+					|| (viol_num == 2 && ti_array[index][1 - num_found] > ti_array[0][2])
+					|| viol_num == 0)
+					return std::pair<bool, std::pair<int, double>>(false, std::pair < int, double>(1-num_found, ti_array[0][2]));
 			num_found++;
 		}
 		else {
@@ -1518,7 +1573,11 @@ bool MyViewer::checkTsDown(int index) {
 					for (int j = 0; j < edges.size(), !found; j++) {
 						auto p = edges[j];
 						if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
-							if (ti_array[index][1 - num_found] != ti_array[temp_ind - 1][2]) return false;
+							if (ti_array[index][1 - num_found] != ti_array[temp_ind - 1][2])
+								if ((viol_num == 1 && ti_array[index][1 - num_found] < ti_array[temp_ind - 1][2])
+									|| (viol_num == 2 && ti_array[index][1 - num_found] > ti_array[temp_ind - 1][2])
+									|| viol_num == 0)
+									return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
 							num_found++;
 							found = true;
 						}
@@ -1528,16 +1587,20 @@ bool MyViewer::checkTsDown(int index) {
 			else if (act_row != actRow(temp_ind - 1)) {}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == si_array[index][2]
-				if (ti_array[index][1-num_found] != ti_array[temp_ind - 1][2]) return false;
+				if (ti_array[index][1-num_found] != ti_array[temp_ind - 1][2])
+					if ((viol_num == 1 && ti_array[index][1 - num_found] < ti_array[temp_ind - 1][2])
+						|| (viol_num == 2 && ti_array[index][1 - num_found] > ti_array[temp_ind - 1][2])
+						|| viol_num == 0)
+						return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
 				num_found++;
 			}
 			temp_ind = IA[--act_row];
 		}
 	}
-	return true;
+	return std::pair<bool, std::pair<int, double>>(true, std::pair<int, double>(-1,0.0));
 }
 
-bool MyViewer::checkTsUp(int index) {
+std::pair<bool, std::pair<int, double>> MyViewer::checkTsUp(int index, int viol_num) {
 	int act_row = actRow(index);
 	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
 	int num_found = 0;
@@ -1545,7 +1608,11 @@ bool MyViewer::checkTsUp(int index) {
 	while (num_found < 2) {
 		//Check whether actual row is the last one
 		if (temp_ind == IA[IA.size() - 2]) {
-			if (ti_array[index][3+num_found] != ti_array[cpnum-1][2]) return false;
+			if (ti_array[index][3+num_found] != ti_array[cpnum-1][2])
+				if ((viol_num == 1 && ti_array[index][3 + num_found] > ti_array[cpnum - 1][2])
+					|| (viol_num == 2 && ti_array[index][3 + num_found] < ti_array[cpnum - 1][2])
+					|| viol_num == 0)
+					return std::pair<bool, std::pair<int, double>>(false, std::pair < int, double>(3 + num_found, ti_array[cpnum - 1][2]));
 			num_found++;
 		}
 		else {
@@ -1561,7 +1628,11 @@ bool MyViewer::checkTsUp(int index) {
 					for (int j = 0; j < edges.size(), !found; j++) {
 						auto p = edges[j];
 						if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
-							if (ti_array[index][3 + num_found] != ti_array[temp_ind - 1][2]) return false;
+							if (ti_array[index][3 + num_found] != ti_array[temp_ind - 1][2])
+								if ((viol_num == 1 && ti_array[index][3 + num_found] > ti_array[temp_ind - 1][2])
+									|| (viol_num == 2 && ti_array[index][3 + num_found] < ti_array[temp_ind - 1][2])
+									|| viol_num == 0)
+									return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
 							num_found++;
 							found = true;
 						}
@@ -1571,23 +1642,31 @@ bool MyViewer::checkTsUp(int index) {
 			else if(act_row != actRow(temp_ind-1)){}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == si_array[index][2]
-				if (ti_array[index][3 + num_found] != ti_array[temp_ind - 1][2]) return false;
+				if (ti_array[index][3 + num_found] != ti_array[temp_ind - 1][2])
+					if ((viol_num == 1 && ti_array[index][3 + num_found] > ti_array[temp_ind - 1][2])
+						|| (viol_num == 2 && ti_array[index][3 + num_found] < ti_array[temp_ind - 1][2])
+						|| viol_num == 0)
+						return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
 				num_found++;
 			}
 			temp_ind = IA[++act_row];
 		}
 	}
-	return true;
+	return std::pair<bool, std::pair<int, double>>(true, std::pair<int, double>(-1, 0.0));
 }
 
-bool MyViewer::checkSsDown(int index) {
+std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, int viol_num) {
 	int act_col = JA[index];
 	int i = act_col == 0 ? act_col : act_col - 1;
 	int num_found = 0;
 	while (num_found < 2) {
 		if (i == 0) {
 			//Check whether actual column is the first one
-			if (si_array[index][1-num_found] != si_array[0][2]) return false;
+			if (si_array[index][1-num_found] != si_array[0][2])
+				if ((viol_num == 1 && si_array[index][1 - num_found] < si_array[0][2])
+					|| (viol_num == 2 && si_array[index][1 - num_found] > si_array[0][2])
+					|| viol_num == 0)
+					return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(1 - num_found, si_array[0][2]));
 			num_found++;
 		}
 		else {
@@ -1607,7 +1686,11 @@ bool MyViewer::checkSsDown(int index) {
 					for (int k = 0; k < edges.size(), !found; k++) {
 						auto p = edges[k];
 						if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
-							if (si_array[index][1 - num_found] != si_array[is_of_col[j - 1]][2]) return false;
+							if (si_array[index][1 - num_found] != si_array[is_of_col[j - 1]][2])
+								if ((viol_num == 1 && si_array[index][1 - num_found] < si_array[is_of_col[j - 1]][2])
+									|| (viol_num == 2 && si_array[index][1 - num_found] > si_array[is_of_col[j - 1]][2])
+									|| viol_num == 0)
+									return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
 							num_found++;
 							found = true;
 						}
@@ -1616,16 +1699,20 @@ bool MyViewer::checkSsDown(int index) {
 			}
 			else {
 				//This case occurs when ti_array[is_of_col[j-1]][2] == ti_array[index][2]
-				if(si_array[index][1-num_found] != si_array[is_of_col[j - 1]][2]) return false;
+				if(si_array[index][1-num_found] != si_array[is_of_col[j - 1]][2])
+					if ((viol_num == 1 && si_array[index][1 - num_found] < si_array[is_of_col[j - 1]][2])
+						|| (viol_num == 2 && si_array[index][1 - num_found] > si_array[is_of_col[j - 1]][2])
+						|| viol_num == 0)
+						return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
 				num_found++;
 			}
 			--i;
 		}
 	}
-	return true;
+	return std::pair<bool, std::pair<int, double>>(true, std::pair<int, double>(-1, 0.0));
 }
 
-bool MyViewer::checkSsUp(int index) {
+std::pair<bool, std::pair<int, double>> MyViewer::checkSsUp(int index, int viol_num) {
 	int act_col = JA[index];
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
@@ -1634,7 +1721,11 @@ bool MyViewer::checkSsUp(int index) {
 	while (num_found < 2) {
 		//Check whether actual column is the last one
 		if (i == col_num - 1) {
-			if (si_array[index][3 + num_found] != si_array[cpnum - 1][2]) return false;
+			if (si_array[index][3 + num_found] != si_array[cpnum - 1][2])
+				if ((viol_num == 1 && si_array[index][3 + num_found] > si_array[cpnum - 1][2])
+					|| (viol_num == 2 && si_array[index][3 + num_found] < si_array[cpnum - 1][2])
+					|| viol_num == 0)
+					return std::pair<bool, std::pair<int, double>>(false, std::pair < int, double>(3 + num_found, si_array[cpnum - 1][2]));
 			num_found++;
 		}
 		else {
@@ -1654,7 +1745,11 @@ bool MyViewer::checkSsUp(int index) {
 					for (int k = 0; k < edges.size(), !found; k++) {
 						auto p = edges[k];
 						if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
-							if (si_array[index][3 + num_found] != si_array[is_of_col[j - 1]][2]) return false;
+							if (si_array[index][3 + num_found] != si_array[is_of_col[j - 1]][2])
+								if ((viol_num == 1 && si_array[index][3 + num_found] > si_array[is_of_col[j - 1]][2])
+									|| (viol_num == 2 && si_array[index][3 + num_found] < si_array[is_of_col[j - 1]][2])
+									|| viol_num == 0)
+									return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
 							num_found++;
 							found = true;
 						}
@@ -1663,13 +1758,17 @@ bool MyViewer::checkSsUp(int index) {
 			}
 			else {
 				//This case occurs when ti_array[is_of_col[j-1]][2] == ti_array[index][2]
-				if (si_array[index][3+num_found] != si_array[is_of_col[j - 1]][2]) return false;
+				if (si_array[index][3+num_found] != si_array[is_of_col[j - 1]][2])
+					if ((viol_num == 1 && si_array[index][3 + num_found] > si_array[is_of_col[j - 1]][2])
+						|| (viol_num == 2 && si_array[index][3 + num_found] < si_array[is_of_col[j - 1]][2])
+						|| viol_num == 0)
+						return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
 				num_found++;
 			}
 			++i;
 		}
 	}
-	return true;
+	return std::pair<bool, std::pair<int, double>>(true, std::pair<int, double>(-1, 0.0));
 }
 
 bool MyViewer::checkTSplineCorrectness() {
@@ -1707,17 +1806,13 @@ bool MyViewer::checkTSplineTopology() {
 	int cpnum = tspline_control_points.size();
 	//Check correctness of topology
 	for (int i = 0; i < cpnum; i++) {
-		if (!checkTsDown(i)) return false;
-		if (!checkTsUp(i)) return false;
-		if (!checkSsDown(i)) return false;
-		if (!checkSsUp(i)) return false;
+		if (!checkTsDown(i,0).first) return false;
+		if (!checkTsUp(i,0).first) return false;
+		if (!checkSsDown(i,0).first) return false;
+		if (!checkSsUp(i,0).first) return false;
 	}
 	return true;
 }
-
-/*void MyViewer::blendFuncRefine(double s, double t) {
-	//for()
-}*/
 
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {
   if (!axes.shown ||
