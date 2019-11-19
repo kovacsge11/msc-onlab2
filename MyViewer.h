@@ -77,13 +77,18 @@ private:
   bool checkTSplineTopology();
   std::vector<int> indicesOfColumn(int colindex);
   int actRow(int index);
-  bool checkTsDown(int index);
-  bool checkTsUp(int index);
-  bool checkSsDown(int index);
-  bool checkSsUp(int index);
-  std::pair<std::vector<int>, std::vector<double>> refineBlend(double new_value, int row_col_ind, bool is_row);
-  void checkViolation2(std::vector<int> indices, int new_ind, bool is_row);
-  void compareForViolation2(std::vector<double> compared_vec, std::vector<double> compare_to_vec);
+  std::pair<bool, std::pair<int, double>> checkTsDown(int index, int viol_num);
+  std::pair<bool, std::pair<int, double>> checkTsUp(int index, int viol_num);
+  std::pair<bool, std::pair<int, double>> checkSsDown(int index, int viol_num);
+  std::pair<bool, std::pair<int, double>> checkSsUp(int index, int viol_num);
+  std::pair<std::vector<int>, std::vector<double>> refineRowCol(double new_value, int row_col_ind, bool is_row);
+  void checkViolation(std::vector<int> indices, int new_ind, bool is_row, bool is_first);
+  std::pair<double, double> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
+  bool checkForViol1();
+  bool checkForViol2();
+  void checkViolations();
+  std::pair<bool, int> getIndex(double s, double t);
+  std::pair<bool, int> getRow(double t);
 
   // Visualization
   void setupCamera();
