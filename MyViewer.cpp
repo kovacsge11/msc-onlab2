@@ -818,28 +818,45 @@ bool MyViewer::checkForViol1() {
 	bool violated = false;
 	int cpnum = tspline_control_points.size();
 	for (int i = 0; i < cpnum;i++) {
-		for(auto bf: blend_functions[i]){
+		for(int j = 0; j < blend_functions[i].size(); j++){
+			auto bf = blend_functions[i][j];
 			std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,bf.first,bf.second,1);
 			if (ts_down.first) {
 				//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
 				violated = true;
-				auto c_d = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second)
-				two insertions : first: refining the actual->d to blendMultipliers[i]
-				second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
-				getIndex of(bf.first[2], bf.second[1]) if inserting with 2 below the middle point
-				with the proper index see if point has blend
-				else if the existing blend is the same as new one
-				if not store new one as well somehow
-					if so + c to blendMultipliers[index]
+				auto c_d = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second);
+				//Two insertions:
+				//First: refining the actual->d to blendMultipliers[i]
+				blend_multipliers[i][j] = c_d.second;
+				//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
+				int ref_ind;
+				if (ts_down.second.first == 1) ref_ind = getIndex(bf.first[2], ts_down.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
+				//getIndex of(bf.first[2], bf.second[1]) if inserting with 2 below the middle point
+				else ref_ind = getIndex(bf.first[2], bf.second[1]).second;
+				//with the proper index see if any of the existing blends is the same as new one -> + c to blend_multipliers[ref_ind][ind of same blend]
+				//else store new one too
+				bool exists = false;
+				for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
+					auto temp_bf = blend_functions[ref_ind][k];
+					if (temp_bf.first == && temp_bf.second == ) {
+						blend_multipliers[ref_ind][k] += c_d.first;
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					blend_functions[ref_ind].push_back(...);
+					blend_multipliers[ref_ind].push_back(c_d.first);
+				}
 			}
 			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 1);
-			if (ts_up.first) refine blend func of point i by inserting at ts_up.second.first + 1 value ts_up.second.second
+			if (ts_up.first) //refine blend func of point i by inserting at ts_up.second.first + 1 value ts_up.second.second
 				violated = true;
 			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 1);
-			if (ss_down.first) refine blend func of point i by inserting at ss_down.second.first + 1 value ss_down.second.second
+			if (ss_down.first) //refine blend func of point i by inserting at ss_down.second.first + 1 value ss_down.second.second
 				violated = true;
 			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 1);
-			if (ss_up.first) refine blend func of point i by inserting at ss_up.second.first + 1 value ss_up.second.second
+			if (ss_up.first) //refine blend func of point i by inserting at ss_up.second.first + 1 value ss_up.second.second
 				violated = true;
 		}
 	}
@@ -870,13 +887,13 @@ bool MyViewer::checkForViol2() {
 				insert to weights-- ?
 
 			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 2);
-			if (ts_up.first) refine blend func of point i by inserting at ts_up.second.first value ts_up.second.second
+			if (ts_up.first) //refine blend func of point i by inserting at ts_up.second.first value ts_up.second.second
 				violated = true;
 			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 2);
-			if (ss_down.first) refine blend func of point i by inserting at ss_down.second.first value ss_down.second.second
+			if (ss_down.first) //refine blend func of point i by inserting at ss_down.second.first value ss_down.second.second
 				violated = true;
 			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 2);
-			if (ss_up.first) refine blend func of point i by inserting at ss_up.second.first value ss_up.second.second
+			if (ss_up.first) //refine blend func of point i by inserting at ss_up.second.first value ss_up.second.second
 				violated = true;
 		}
 	}
