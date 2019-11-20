@@ -824,29 +824,33 @@ bool MyViewer::checkForViol1() {
 			if (ts_down.first) {
 				//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
 				violated = true;
-				auto c_d = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second);
+				auto refined_pairs = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second);
 				//Two insertions:
-				//First: refining the actual->d to blendMultipliers[i]
-				blend_multipliers[i][j] = c_d.second;
+				//First: refining the actual in t direction-> refine the blend function, d to blendMultipliers[i]
+				blend_functions[i][j].second = refined_pairs.second.second;
+				blend_multipliers[i][j] = refined_pairs.second.first;
 				//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
 				int ref_ind;
-				if (ts_down.second.first == 1) ref_ind = getIndex(bf.first[2], ts_down.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
+				if (ts_down.second.first == 1)ref_ind = getIndex(bf.first[2], ts_down.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
 				//getIndex of(bf.first[2], bf.second[1]) if inserting with 2 below the middle point
 				else ref_ind = getIndex(bf.first[2], bf.second[1]).second;
-				//with the proper index see if any of the existing blends is the same as new one -> + c to blend_multipliers[ref_ind][ind of same blend]
+				//refine the blend function
+				//with the proper index see if any of the existing blends is the same as new one ->+ c to blend_multipliers[ref_ind][ind of same blend]
 				//else store new one too
 				bool exists = false;
 				for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
 					auto temp_bf = blend_functions[ref_ind][k];
-					if (temp_bf.first == && temp_bf.second == ) {
-						blend_multipliers[ref_ind][k] += c_d.first;
+					//TODO does this check equality in the right way??
+					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
+						blend_multipliers[ref_ind][k] += refined_pairs.first.first;
 						exists = true;
 						break;
 					}
 				}
 				if (!exists) {
-					blend_functions[ref_ind].push_back(...);
-					blend_multipliers[ref_ind].push_back(c_d.first);
+					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
+					blend_functions[ref_ind].push_back(blend_pair);
+					blend_multipliers[ref_ind].push_back(refined_pairs.first.first);
 				}
 			}
 			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 1);
@@ -912,10 +916,17 @@ void MyViewer::checkViolations() {
 	update();
 }
 
-std::pair<double,double> MyViewer::refineBlend(std::vector<double> knot_vector, int ins_ind, double new_value) {
+//Returns the two refined blend functions with the appropriate multipliers, first the one with c multiplier
+std::pair<std::pair<double,std::vector<double>>, std::pair<double, std::vector<double>>> MyViewer::refineBlend(std::vector<double> knot_vector, int ins_ind, double new_value) {
 	double c = ins_ind==4 ? 1.0 : (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
 	double d = ins_ind == 1 ? 1.0 : (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
-	return std::pair<double, double>(c,d);
+	std::vector<double> first_vec(knot_vector.begin(),knot_vector.begin()+4); //check:does this give back a 4 long vec??
+	first_vec.insert(first_vec.begin()+ins_ind,new_value);
+	std::vector<double> second_vec(knot_vector.begin()+1, knot_vector.begin() + 5);
+	second_vec.insert(second_vec.begin() + ins_ind - 1, new_value);
+	std::pair<double, std::vector<double>> first_pair(c,first_vec);
+	std::pair<double, std::vector<double>> second_pair(d,second_vec);
+	return std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>>(first_pair,second_pair);
 }
 
 std::pair<std::vector<int>, std::vector<double>> MyViewer::refineRowCol(double new_value, int row_col_ind, bool is_row) {
