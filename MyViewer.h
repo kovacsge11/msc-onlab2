@@ -130,7 +130,8 @@ private:
   std::vector<double> weights;
   //In order to handle edges
   std::vector<std::pair<int,int>> edges;
-  std::vector<std::pair<double,double>> blend_multipliers;
+  std::vector<std::vector<std::pair<std::vector<double>, std::vector<double>>>> blend_functions;
+  std::vector<std::vector<double>> blend_multipliers;
 
   // Visualization
   double mean_min, mean_max, cutoff_ratio;

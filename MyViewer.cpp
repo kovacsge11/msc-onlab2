@@ -816,27 +816,29 @@ void MyViewer::updateJA(int new_ind, double s) {
 
 bool MyViewer::checkForViol1() {
 	bool violated = false;
-	for i in cpnums{
-		for bf in blendfunctions of i{
-			std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,bf[0],bf[1],1);
-			if (ts_down.first) refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
+	int cpnum = tspline_control_points.size();
+	for (int i = 0; i < cpnum;i++) {
+		for(auto bf: blend_functions[i]){
+			std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,bf.first,bf.second,1);
+			if (ts_down.first) {
+				//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
 				violated = true;
-				to do this:
-				c,d = refineBlend(bf[1], ts_down.second.first + 1, ts_down.second.second)
+				auto c_d = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second)
 				two insertions : first: refining the actual->d to blendMultipliers[i]
-				second : getIndex of(bf[0][2],ts_down.second.second) if inserting below the middle point
-						getIndex of(bf[0][2],bf[1][1]) if inserting with 2 below the middle point
-						with the proper index see if point has blend
-												  else if the existing blend is the same as new one
-													if not store new one as well somehow
-													if so + c to blendMultipliers[index]
-			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf[0], bf[1], 1);
+				second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
+				getIndex of(bf.first[2], bf.second[1]) if inserting with 2 below the middle point
+				with the proper index see if point has blend
+				else if the existing blend is the same as new one
+				if not store new one as well somehow
+					if so + c to blendMultipliers[index]
+			}
+			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 1);
 			if (ts_up.first) refine blend func of point i by inserting at ts_up.second.first + 1 value ts_up.second.second
 				violated = true;
-			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf[0], bf[1], 1);
+			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 1);
 			if (ss_down.first) refine blend func of point i by inserting at ss_down.second.first + 1 value ss_down.second.second
 				violated = true;
-			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf[0], bf[1], 1);
+			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 1);
 			if (ss_up.first) refine blend func of point i by inserting at ss_up.second.first + 1 value ss_up.second.second
 				violated = true;
 		}
@@ -846,29 +848,34 @@ bool MyViewer::checkForViol1() {
 
 bool MyViewer::checkForViol2() {
 	bool violated = false;
-	for i in cpnums{
-		for bf in blendfunctions of i{
-			std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,bf[0],bf[1],2);
-			if (ts_down.first) insert new point at getIndex(bf[0][2],bf[1][ts_down.second.first])
+	int cpnum = tspline_control_points.size();
+	for (int i = 0; i < cpnum; i++) {
+		for (int j = 0; j < blend_functions[i].size();j++) {
+			auto bf = blend_functions[i][j];
+			std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,bf.first,bf.second,2);
+			if (ts_down.first)
+				//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
 				violated = true;
-				to do this:
-				int new_index = getIndex(bf[0][2],bf[1][ts_down.second.first]).second; //what if this gives back false??
-				updateIA(bf[1][ts_down.second.first]);
-				updateJA(new_index,bf[0][2]);
-				insert with new index into ti_array[bf[1][0],bf[1][1],bf[1][ts_down.second.first],bf[1][2],bf[1][3]]
-				insert with new index into si_array - needs to be corrected anyway probably, so si of point i
-				blendMultipliers[new_index] = 0
+				int new_index = getIndex(bf.first[2],bf.second[ts_down.second.first]).second; //what if this gives back false??
+				updateIA(bf.second[ts_down.second.first]);
+				updateJA(new_index,bf.first[2]);
+				std::vector<double> new_ti = { bf.second[0], bf.second[1], bf.second[ts_down.second.first], bf.second[2], bf.second[3] };
+				ti_array.insert(ti_array.begin() + new_index, new_ti);
+				//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
+				si_array.insert(si_array.begin() + new_index, bf.first);
+				blend_multipliers[new_index][j] = 0;
 
+				//TODO
 				insert to tspline_control_points-- ?
 				insert to weights-- ?
 
-			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf[0], bf[1], 2);
+			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 2);
 			if (ts_up.first) refine blend func of point i by inserting at ts_up.second.first value ts_up.second.second
 				violated = true;
-			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf[0], bf[1], 2);
+			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 2);
 			if (ss_down.first) refine blend func of point i by inserting at ss_down.second.first value ss_down.second.second
 				violated = true;
-			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf[0], bf[1], 2);
+			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 2);
 			if (ss_up.first) refine blend func of point i by inserting at ss_up.second.first value ss_up.second.second
 				violated = true;
 		}
