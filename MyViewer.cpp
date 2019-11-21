@@ -29,7 +29,7 @@
 MyViewer::MyViewer(QWidget *parent) :
   QGLViewer(parent), model_type(ModelType::NONE),
   mean_min(0.0), mean_max(0.0), cutoff_ratio(0.05),
-  show_control_points(true), show_solid(true), show_wireframe(false),
+  show_control_points(true), show_solid(true), show_wireframe(false),keep_surface(false),
   visualization(Visualization::PLAIN), slicing_dir(0, 0, 1), slicing_scaling(1)
 {
   setSelectRegionWidth(10);
@@ -974,11 +974,13 @@ bool MyViewer::checkForViol2() {
 				ti_array.insert(ti_array.begin() + new_index, new_ti);
 				//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
 				si_array.insert(si_array.begin() + new_index, bf.first);
-				blend_multipliers[new_index][j] = 0;
+				std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
+				blend_functions[new_index].push_back(vec_pair);
+				blend_multipliers[new_index].push_back(0);
 
 				//TODO
-				insert to tspline_control_points-- ?
-				insert to weights-- ?
+				//insert to tspline_control_points-- ?
+				//insert to weights-- ?
 
 			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 2);
 			if (ts_up.first) //refine blend func of point i by inserting at ts_up.second.first value ts_up.second.second
@@ -1000,10 +1002,6 @@ void MyViewer::checkViolations() {
 		viol1 = checkForViol1();
 		viol2 = checkForViol2();
 	} while (viol1 || viol2);
-
-	//Needed??
-	updateEdgeTopology();
-	update();
 }
 
 //Returns the two refined blend functions with the appropriate multipliers, first the one with c multiplier
@@ -1017,6 +1015,37 @@ std::pair<std::pair<double,std::vector<double>>, std::pair<double, std::vector<d
 	std::pair<double, std::vector<double>> first_pair(c,first_vec);
 	std::pair<double, std::vector<double>> second_pair(d,second_vec);
 	return std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>>(first_pair,second_pair);
+}
+
+void MyViewer::insertRefined(double s, double t) {
+	//We want to make sure it is inserted in an existing row or col, but also that it is a new point
+	auto row = getRow(t);
+	auto col = getCol(s);
+	if (row.first) {
+		if (col.first) return;
+	}
+	else {
+		if (!col.first) return;
+	}
+	int new_ind = getIndex(s, t).second;
+	updateIA(t);
+	updateJA(new_ind, s);
+	std::vector<double> new_ti = { 0, 0, t, 0, 0 };
+	ti_array.insert(ti_array.begin() + new_ind, new_ti);
+	std::vector<double> new_si = { 0, 0, t, 0, 0 };
+	si_array.insert(si_array.begin() + new_ind, new_si);
+	std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si,new_ti);
+	blend_functions[new_ind].push_back(vec_pair);
+	blend_multipliers[new_ind].push_back(0);
+
+	//TODO
+	//insert to tspline_control_points-- ?
+	//insert to weights-- ?
+
+	checkViolations();
+	updateEdgeTopology();
+	updateMesh();
+	update();
 }
 
 std::pair<std::vector<int>, std::vector<double>> MyViewer::refineRowCol(double new_value, int row_col_ind, bool is_row) {
@@ -1150,24 +1179,20 @@ void MyViewer::postSelection(const QPoint &p) {
 	  //If in same row, otherwise they must be in same column
 	  if (ti_array[index_pair.first][2] == ti_array[index_pair.second][2]) {
 		  new_s = (si_array[index_pair.first][2] + si_array[index_pair.second][2]) / 2.0;
-		  new_si = { si_array[index_pair.first][1], si_array[index_pair.first][2], new_s, si_array[index_pair.second][2], si_array[index_pair.second][3]};
 		  new_t = ti_array[index_pair.first][2];
+
+		  if (keep_surface) {
+			  insertRefined(new_s, new_t);
+			  return;
+		  }
+
+		  new_si = { si_array[index_pair.first][1], si_array[index_pair.first][2], new_s, si_array[index_pair.second][2], si_array[index_pair.second][3]};
 		  new_index = index_pair.second;
 
 		  //Finding new ti
 		  new_ti.clear();
 		  
 		  int act_row = actRow(index_pair.first);
-
-		  /*//Refinement of blending functions-calculating multipliers
-		  std::pair<std::vector<int>, std::vector<double>> refined_res = refineRowCol(new_s, act_row, true);
-		  for (int i = 0; i < refined_res.first.size(); i++) {
-			  if (refined_res.first[i] == -1) {
-				  std::pair<double, double> insert_pair(refined_res.second[i],1.0);
-				  blend_multipliers.insert(blend_multipliers.begin() + new_index, insert_pair);
-			  }
-			  else blend_multipliers[refined_res.first[i]].first = refined_res.second[i];
-		  }*/
 
 		  //Check t-s downwards
 		  int i = act_row;
@@ -1249,8 +1274,6 @@ void MyViewer::postSelection(const QPoint &p) {
 			  }
 		  }
 
-		  
-
 		  //Update neighbouring si-s
 		  si_array[index_pair.first][3] = new_s;
 		  si_array[index_pair.first][4] = si_array[index_pair.second][2];
@@ -1272,57 +1295,19 @@ void MyViewer::postSelection(const QPoint &p) {
 		  }
 		  //Update JA too
 		  updateJA(new_index,new_s);
-		  /*int lower_col = JA[index_pair.first];
-		  int upper_col = JA[index_pair.second];
-		  bool found = false;
-		  while(!found) {
-			  //If low_col in same col as new point -- floating point comparison
-			  if (si_array[indicesOfColumn(lower_col)[0]][2] == new_s) {
-				  JA.insert(JA.begin() + new_index, lower_col);
-				  found = true;
-			  }
-			  //If new col must be inserted in JA
-			  else{
-				  if (lower_col + 1 == upper_col) {
-					  for (int j = 0; j < JA.size(); j++) {
-						  if (JA[j] > lower_col) JA[j] += 1;
-					  }
-					  JA.insert(JA.begin() + new_index, lower_col + 1);
-					  found = true;
-				  }
-				  else { lower_col++; }
-			  }
-		  }*/
 	  }
 	  else {
 		  new_s = si_array[index_pair.first][2];
 		  new_t = (ti_array[index_pair.first][2] + ti_array[index_pair.second][2]) / 2.0;
+
+		  if (keep_surface) {
+			  insertRefined(new_s, new_t);
+			  return;
+		  }
+
 		  new_ti = { ti_array[index_pair.first][1], ti_array[index_pair.first][2], new_t, ti_array[index_pair.second][2], ti_array[index_pair.second][3] };
 		  
 		  //Finding new index
-		  /*int i = 0;
-		  for (; IA[i] <= index_pair.first; i++) {
-		  }
-		  int temp_ind = IA[i]; //start index of row (of first)+1
-		  while (i < IA.size()-1) {
-			  if (ti_array[temp_ind][2] > new_t) {
-				  new_index = temp_ind;
-				  i = IA.size(); //to finish iterating
-			  }
-			  else if (ti_array[temp_ind][2] < new_t) temp_ind = IA[++i]; //go to next row
-			  else {
-				  //iterate through this row
-				  for (; temp_ind < IA[i + 1] && si_array[temp_ind][2] < new_s; temp_ind++) {
-				  }
-				  if (temp_ind == IA[i + 1] || si_array[temp_ind][2] > new_s) {
-					  new_index = temp_ind;
-					  i = IA.size(); //to finish iterating
-				  }
-				  else return; //point already exists
-			  }
-		  }
-		  //If single point between last and second to last row
-		  if (i == IA.size() - 1) new_index = temp_ind;*/
 		  auto new_ind_pair = getIndex(new_s, new_t);
 		  if (new_ind_pair.first) new_index = new_ind_pair.second;
 		  else return;
@@ -1332,16 +1317,6 @@ void MyViewer::postSelection(const QPoint &p) {
 		  int act_col;
 		  int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 		  act_col = JA[index_pair.first];
-
-		  /*//Refinement of blending functions-calculating multipliers
-		  std::pair<std::vector<int>, std::vector<double>> refined_res = refineRowCol(new_t, act_col, false);
-		  for (int i = 0; i < refined_res.first.size(); i++) {
-			  if (refined_res.first[i] == -1) {
-				  std::pair<double, double> insert_pair(1.0, refined_res.second[i]);
-				  blend_multipliers.insert(blend_multipliers.begin() + new_index, insert_pair);
-			  }
-			  else blend_multipliers[refined_res.first[i]].second = refined_res.second[i];
-		  }*/
 
 		  //Check s-s downwards
 		  int i = act_col==0 ? act_col : act_col-1;
@@ -1456,35 +1431,6 @@ void MyViewer::postSelection(const QPoint &p) {
 		  JA.insert(JA.begin()+new_index,act_col);
 		  //Update IA too
 		  updateIA(new_t);
-		  /*int lower_row = 0;
-		  for (; IA[lower_row] <= index_pair.first; lower_row++) {
-		  }
-		  lower_row--;
-		  int upper_row = lower_row;
-		  for (; IA[upper_row] <= index_pair.second; upper_row++) {
-		  }
-		  upper_row--;
-		  found = false;
-		  while (!found && lower_row <= upper_row) {
-			  //If low_col in same col as new point -- floating point comparison
-			  if (ti_array[IA[lower_row]][2] == new_t) {
-				  for (int j = lower_row + 1; j < IA.size(); j++) {
-					  IA[j] += 1;
-				  }
-				  found = true;
-			  }
-			  //If new row must be inserted in IA
-			  else if (ti_array[IA[lower_row]][2] > new_t) {
-				  for (int j = lower_row; j < IA.size(); j++) {
-					  IA[j] += 1;
-				  }
-				  IA.insert(IA.begin() + lower_row, IA[lower_row] - 1);
-				  found = true;
-			  }
-			  else {
-				  lower_row++;
-			  }
-		  }*/
 	  }
 	  double weight = 1.0; //TODO other weight value??
 	  weights.insert(weights.begin() + new_index, weight);
@@ -1535,6 +1481,10 @@ void MyViewer::keyPressEvent(QKeyEvent *e) {
       show_wireframe = !show_wireframe;
       update();
       break;
+	case Qt::Key_K:
+		keep_surface = !keep_surface;
+		update();
+		break;
     case Qt::Key_F:
       fairMesh();
       update();

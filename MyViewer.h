@@ -82,7 +82,6 @@ private:
   std::pair<bool, std::pair<int, double>> checkSsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
   std::pair<bool, std::pair<int, double>> checkSsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
   std::pair<std::vector<int>, std::vector<double>> refineRowCol(double new_value, int row_col_ind, bool is_row);
-  void checkViolation(std::vector<int> indices, int new_ind, bool is_row, bool is_first);
   std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
   bool checkForViol1();
   bool checkForViol2();
@@ -92,6 +91,7 @@ private:
   std::pair<bool, int> getCol(double s);
   void updateIA(double t);
   void updateJA(int new_ind, double s);
+  void insertRefined(double s, double t);
 
   // Visualization
   void setupCamera();
@@ -132,6 +132,8 @@ private:
   std::vector<std::pair<int,int>> edges;
   std::vector<std::vector<std::pair<std::vector<double>, std::vector<double>>>> blend_functions;
   std::vector<std::vector<double>> blend_multipliers;
+
+  bool keep_surface;
 
   // Visualization
   double mean_min, mean_max, cutoff_ratio;
