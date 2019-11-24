@@ -964,13 +964,16 @@ bool MyViewer::checkForViol2() {
 		for (int j = 0; j < blend_functions[i].size();j++) {
 			auto bf = blend_functions[i][j];
 			std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,bf.first,bf.second,2);
-			if (ts_down.first)
+			if (ts_down.first) {
 				//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
 				violated = true;
-				int new_index = getIndex(bf.first[2],bf.second[ts_down.second.first]).second; //what if this gives back false??
+				int new_index = getIndex(bf.first[2], bf.second[ts_down.second.first]).second; //what if this gives back false??
 				updateIA(bf.second[ts_down.second.first]);
-				updateJA(new_index,bf.first[2]);
-				std::vector<double> new_ti = { bf.second[0], bf.second[1], bf.second[ts_down.second.first], bf.second[2], bf.second[3] };
+				updateJA(new_index, bf.first[2]);
+				std::vector<double> new_ti;
+				//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
+				if (ts_down.second.first == 1) new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[2], bf.second[3] };
+				else new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[1], bf.second[2] };
 				ti_array.insert(ti_array.begin() + new_index, new_ti);
 				//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
 				si_array.insert(si_array.begin() + new_index, bf.first);
@@ -981,16 +984,74 @@ bool MyViewer::checkForViol2() {
 				//TODO
 				//insert to tspline_control_points-- ?
 				//insert to weights-- ?
+			}
 
 			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 2);
-			if (ts_up.first) //refine blend func of point i by inserting at ts_up.second.first value ts_up.second.second
+			if (ts_up.first) {
+				//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
 				violated = true;
+				int new_index = getIndex(bf.first[2], bf.second[ts_up.second.first]).second; //what if this gives back false??
+				updateIA(bf.second[ts_up.second.first]);
+				updateJA(new_index, bf.first[2]);
+				std::vector<double> new_ti;
+				if (ts_up.second.first == 3) new_ti = { bf.second[1], bf.second[2], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
+				else new_ti = { bf.second[2], bf.second[3], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
+				ti_array.insert(ti_array.begin() + new_index, new_ti);
+				//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
+				si_array.insert(si_array.begin() + new_index, bf.first);
+				std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
+				blend_functions[new_index].push_back(vec_pair);
+				blend_multipliers[new_index].push_back(0);
+
+				//TODO
+				//insert to tspline_control_points-- ?
+				//insert to weights-- ?
+			}
+
 			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 2);
-			if (ss_down.first) //refine blend func of point i by inserting at ss_down.second.first value ss_down.second.second
+			if (ss_down.first) {
+				//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
 				violated = true;
+				int new_index = getIndex(bf.first[ss_down.second.first], bf.second[2]).second; //what if this gives back false??
+				updateIA(bf.second[2]);
+				updateJA(new_index, bf.first[ss_down.second.first]);
+				std::vector<double> new_si;
+				//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
+				if (ss_down.second.first == 1) new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[2], bf.first[3] };
+				else new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[1], bf.first[2] };
+				si_array.insert(si_array.begin() + new_index, new_si);
+				//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
+				ti_array.insert(ti_array.begin() + new_index, bf.second);
+				std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si,bf.second);
+				blend_functions[new_index].push_back(vec_pair);
+				blend_multipliers[new_index].push_back(0);
+
+				//TODO
+				//insert to tspline_control_points-- ?
+				//insert to weights-- ?
+			}
 			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 2);
-			if (ss_up.first) //refine blend func of point i by inserting at ss_up.second.first value ss_up.second.second
+			if (ss_up.first){
+				//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
 				violated = true;
+				int new_index = getIndex(bf.first[ss_up.second.first], bf.second[2]).second; //what if this gives back false??
+				updateIA(bf.second[2]);
+				updateJA(new_index, bf.first[ss_up.second.first]);
+				std::vector<double> new_si;
+				//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
+				if (ss_up.second.first == 3) new_si = { bf.first[1], bf.first[2], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
+				else new_si = { bf.first[2], bf.first[3], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
+				si_array.insert(si_array.begin() + new_index, new_si);
+				//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
+				ti_array.insert(ti_array.begin() + new_index, bf.second);
+				std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, bf.second);
+				blend_functions[new_index].push_back(vec_pair);
+				blend_multipliers[new_index].push_back(0);
+
+				//TODO
+				//insert to tspline_control_points-- ?
+				//insert to weights-- ?
+			}
 		}
 	}
 	return violated;
@@ -1039,8 +1100,8 @@ void MyViewer::insertRefined(double s, double t) {
 	blend_multipliers[new_ind].push_back(0);
 
 	//TODO
-	//insert to tspline_control_points-- ?
-	//insert to weights-- ?
+	insert to tspline_control_points-- ?
+	insert to weights-- ?
 
 	checkViolations();
 	updateEdgeTopology();
@@ -1181,6 +1242,7 @@ void MyViewer::postSelection(const QPoint &p) {
 		  new_s = (si_array[index_pair.first][2] + si_array[index_pair.second][2]) / 2.0;
 		  new_t = ti_array[index_pair.first][2];
 
+		  //TODO visual feedback for changing keep_surface
 		  if (keep_surface) {
 			  insertRefined(new_s, new_t);
 			  return;
@@ -1656,6 +1718,12 @@ int MyViewer::actRow(int index) {
 //TODO moving point after multiple insertion made an error in surface - right side disappeared
 
 //TODO organize postSelection blocks into these 4 checkfunctions
+
+/*
+Returns with false at first if the check found an error,true if not
+Second.first: index of insertion in t_vec
+Second.second: new value to be inserted
+*/
 std::pair<bool,std::pair<int,double>> MyViewer::checkTsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int act_row = actRow(index);
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
@@ -1710,6 +1778,11 @@ std::pair<bool,std::pair<int,double>> MyViewer::checkTsDown(int index, std::vect
 	return std::pair<bool, std::pair<int, double>>(true, std::pair<int, double>(-1,0.0));
 }
 
+/*
+Returns with false at first if the check found an error,true if not
+Second.first: index of insertion in t_vec
+Second.second: new value to be inserted
+*/
 std::pair<bool, std::pair<int, double>> MyViewer::checkTsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int act_row = actRow(index);
 	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
@@ -1765,6 +1838,11 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkTsUp(int index, std::vect
 	return std::pair<bool, std::pair<int, double>>(true, std::pair<int, double>(-1, 0.0));
 }
 
+/*
+Returns with false at first if the check found an error,true if not
+Second.first: index of insertion in s_vec
+Second.second: new value to be inserted
+*/
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int act_col = JA[index];
 	int i = act_col == 0 ? act_col : act_col - 1;
@@ -1822,6 +1900,11 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, std::ve
 	return std::pair<bool, std::pair<int, double>>(true, std::pair<int, double>(-1, 0.0));
 }
 
+/*
+Returns with false at first if the check found an error,true if not
+Second.first: index of insertion in s_vec
+Second.second: new value to be inserted
+*/
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int act_col = JA[index];
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
