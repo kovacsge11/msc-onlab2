@@ -826,23 +826,44 @@ bool MyViewer::checkForViol1() {
 				violated = true;
 				auto refined_pairs = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second);
 				//Two insertions:
-				//First: refining the actual in t direction-> refine the blend function, d to blendMultipliers[i]
-				blend_functions[i][j].second = refined_pairs.second.second;
-				blend_multipliers[i][j] = refined_pairs.second.first;
+				//First: refining the actual in t direction-> refine the blend function, +multipl*d to blendMultipliers[i]
+				//Delete actual old blend func
+				blend_functions[i].erase(blend_functions[i].begin() + j);
+				double temp_multiplier = blend_multipliers[i][j];
+				blend_multipliers[i].erase(blend_multipliers[i].begin() + j);
+				//Finding the blend function which is the same, if doesn't exist, add new one
+				bool exists = false;
+				for (int k = 0; k < blend_functions[i].size(); k++) {
+					auto temp_bf = blend_functions[i][k];
+					//TODO does this check equality in the right way??
+					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
+						blend_multipliers[i][k] += temp_multiplier * refined_pairs.second.first;
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.second.second);
+					blend_functions[i].push_back(blend_pair);
+					blend_multipliers[i].push_back(temp_multiplier *refined_pairs.second.first);
+				}
 				//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
 				int ref_ind;
 				if (ts_down.second.first == 1)ref_ind = getIndex(bf.first[2], ts_down.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
 				//getIndex of(bf.first[2], bf.second[1]) if inserting with 2 below the middle point
 				else ref_ind = getIndex(bf.first[2], bf.second[1]).second;
 				//refine the blend function
-				//with the proper index see if any of the existing blends is the same as new one ->+ c to blend_multipliers[ref_ind][ind of same blend]
+				//with the proper index see if any of the existing blends is the same as new one ->+ multipl*c to blend_multipliers[ref_ind][ind of same blend]
 				//else store new one too
-				bool exists = false;
+
+				//TODO handle the case when its the blend function of new point with blend multiplier 0
+
+				exists = false;
 				for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
 					auto temp_bf = blend_functions[ref_ind][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
-						blend_multipliers[ref_ind][k] += refined_pairs.first.first;
+						blend_multipliers[ref_ind][k] += temp_multiplier * refined_pairs.first.first;
 						exists = true;
 						break;
 					}
@@ -850,7 +871,7 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
 					blend_functions[ref_ind].push_back(blend_pair);
-					blend_multipliers[ref_ind].push_back(refined_pairs.first.first);
+					blend_multipliers[ref_ind].push_back(temp_multiplier *refined_pairs.first.first);
 				}
 			}
 			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 1);
@@ -859,9 +880,27 @@ bool MyViewer::checkForViol1() {
 				violated = true;
 				auto refined_pairs = refineBlend(bf.second, ts_up.second.first + 1, ts_up.second.second);
 				//Two insertions:
-				//First: refining the actual in t direction-> refine the blend function, c to blend_multipliers[i][j]
-				blend_functions[i][j].second = refined_pairs.first.second;
-				blend_multipliers[i][j] = refined_pairs.first.first;
+				//First: refining the actual in t direction-> refine the blend function, +multipl*c to blendMultipliers[i]
+				//Delete actual old blend func
+				blend_functions[i].erase(blend_functions[i].begin() + j);
+				double temp_multiplier = blend_multipliers[i][j];
+				blend_multipliers[i].erase(blend_multipliers[i].begin() + j);
+				//Finding the blend function which is the same, if doesn't exist, add new one
+				bool exists = false;
+				for (int k = 0; k < blend_functions[i].size(); k++) {
+					auto temp_bf = blend_functions[i][k];
+					//TODO does this check equality in the right way??
+					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
+						blend_multipliers[i][k] += temp_multiplier * refined_pairs.first.first;
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
+					blend_functions[i].push_back(blend_pair);
+					blend_multipliers[i].push_back(temp_multiplier *refined_pairs.first.first);
+				}
 				//Second : getIndex of(bf.first[2], ts_up.second.second) if inserting above the middle point
 				int ref_ind;
 				if (ts_up.second.first == 3)ref_ind = getIndex(bf.first[2], ts_up.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
@@ -875,7 +914,7 @@ bool MyViewer::checkForViol1() {
 					auto temp_bf = blend_functions[ref_ind][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
-						blend_multipliers[ref_ind][k] += refined_pairs.second.first;
+						blend_multipliers[ref_ind][k] += temp_multiplier * refined_pairs.second.first;
 						exists = true;
 						break;
 					}
@@ -883,7 +922,7 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.second.second);
 					blend_functions[ref_ind].push_back(blend_pair);
-					blend_multipliers[ref_ind].push_back(refined_pairs.second.first);
+					blend_multipliers[ref_ind].push_back(temp_multiplier *refined_pairs.second.first);
 				}
 			}
 			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 1);
@@ -892,9 +931,27 @@ bool MyViewer::checkForViol1() {
 				violated = true;
 				auto refined_pairs = refineBlend(bf.first, ss_down.second.first + 1, ss_down.second.second);
 				//Two insertions:
-				//First: refining the actual in s direction-> refine the blend function, d to blendMultipliers[i]
-				blend_functions[i][j].first = refined_pairs.second.second;
-				blend_multipliers[i][j] = refined_pairs.second.first;
+				//First: refining the actual in s direction-> refine the blend function, +multipl*d to blendMultipliers[i]
+				//Delete actual old blend func
+				blend_functions[i].erase(blend_functions[i].begin() + j);
+				double temp_multiplier = blend_multipliers[i][j];
+				blend_multipliers[i].erase(blend_multipliers[i].begin() + j);
+				//Finding the blend function which is the same, if doesn't exist, add new one
+				bool exists = false;
+				for (int k = 0; k < blend_functions[i].size(); k++) {
+					auto temp_bf = blend_functions[i][k];
+					//TODO does this check equality in the right way??
+					if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
+						blend_multipliers[i][k] += temp_multiplier * refined_pairs.second.first;
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.second.second,bf.second);
+					blend_functions[i].push_back(blend_pair);
+					blend_multipliers[i].push_back(temp_multiplier *refined_pairs.second.first);
+				}
 				//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
 				int ref_ind;
 				if (ss_down.second.first == 1)ref_ind = getIndex(ss_down.second.second, bf.second[2]).second; // TODO what if getIndex.first == false?? shouldnt be
@@ -908,7 +965,7 @@ bool MyViewer::checkForViol1() {
 					auto temp_bf = blend_functions[ref_ind][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
-						blend_multipliers[ref_ind][k] += refined_pairs.first.first;
+						blend_multipliers[ref_ind][k] += temp_multiplier * refined_pairs.first.first;
 						exists = true;
 						break;
 					}
@@ -916,7 +973,7 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second, bf.second);
 					blend_functions[ref_ind].push_back(blend_pair);
-					blend_multipliers[ref_ind].push_back(refined_pairs.first.first);
+					blend_multipliers[ref_ind].push_back(temp_multiplier *refined_pairs.first.first);
 				}
 			}
 			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 1);
@@ -925,7 +982,27 @@ bool MyViewer::checkForViol1() {
 				violated = true;
 				auto refined_pairs = refineBlend(bf.first, ss_up.second.first + 1, ss_up.second.second);
 				//Two insertions:
-				//First: refining the actual in s direction-> refine the blend function, c to blendMultipliers[i]
+				//First: refining the actual in s direction-> refine the blend function, +multipl*c to blendMultipliers[i]
+				//Delete actual old blend func
+				blend_functions[i].erase(blend_functions[i].begin() + j);
+				double temp_multiplier = blend_multipliers[i][j];
+				blend_multipliers[i].erase(blend_multipliers[i].begin() + j);
+				//Finding the blend function which is the same, if doesn't exist, add new one
+				bool exists = false;
+				for (int k = 0; k < blend_functions[i].size(); k++) {
+					auto temp_bf = blend_functions[i][k];
+					//TODO does this check equality in the right way??
+					if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
+						blend_multipliers[i][k] += temp_multiplier * refined_pairs.first.first;
+						exists = true;
+						break;
+					}
+				}
+				if (!exists) {
+					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second,bf.second);
+					blend_functions[i].push_back(blend_pair);
+					blend_multipliers[i].push_back(temp_multiplier *refined_pairs.first.first);
+				}
 				blend_functions[i][j].first = refined_pairs.first.second;
 				blend_multipliers[i][j] = refined_pairs.first.first;
 				//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
@@ -941,7 +1018,7 @@ bool MyViewer::checkForViol1() {
 					auto temp_bf = blend_functions[ref_ind][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
-						blend_multipliers[ref_ind][k] += refined_pairs.second.first;
+						blend_multipliers[ref_ind][k] += temp_multiplier * refined_pairs.second.first;
 						exists = true;
 						break;
 					}
@@ -949,7 +1026,7 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.second.second, bf.second);
 					blend_functions[ref_ind].push_back(blend_pair);
-					blend_multipliers[ref_ind].push_back(refined_pairs.second.first);
+					blend_multipliers[ref_ind].push_back(temp_multiplier *refined_pairs.second.first);
 				}
 			}
 		}
@@ -1063,6 +1140,9 @@ void MyViewer::checkViolations() {
 		viol1 = checkForViol1();
 		viol2 = checkForViol2();
 	} while (viol1 || viol2);
+
+	//Do point calculation and insertion here
+	//Do updating si,tis based on blend_functions here
 }
 
 //Returns the two refined blend functions with the appropriate multipliers, first the one with c multiplier
