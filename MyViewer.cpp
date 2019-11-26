@@ -1070,7 +1070,7 @@ bool MyViewer::checkForViol2() {
 			if (ts_down.first) {
 				//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
 				violated = true;
-				int new_index = getIndex(bf.first[2], bf.second[ts_down.second.first]).second; //what if this gives back false??
+				int new_index = getIndex(bf.first[2], bf.second[ts_down.second.first]).second; //what if this gives back true--point exists?? couldnt happen, right?
 				updateIA(bf.second[ts_down.second.first]);
 				updateJA(new_index, bf.first[2]);
 				std::vector<double> new_ti;
@@ -1081,12 +1081,15 @@ bool MyViewer::checkForViol2() {
 				//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
 				si_array.insert(si_array.begin() + new_index, bf.first);
 				std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
-				blend_functions[new_index].push_back(vec_pair);
-				refined_points[new_index].push_back(0);
-
-				//TODO
-				//insert to tspline_control_points-- ?
-				//insert to weights-- ?
+				std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = {vec_pair};
+				blend_functions.insert(blend_functions.begin() + new_index, new_blend);
+				//Question TODO can new point influence others, if so it needs a good new_point and new_weight
+				std::vector<Vec> new_point = { ? ? ? };
+				refined_points.insert(refined_points.begin() + new_index, new_point);
+				std::vector<double> new_weight = { ? ? ? };
+				refined_weights.insert(refined_weights.begin() + new_index, new_weight);
+				tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
+				weights.insert(weights.begin() + new_index, new_weight[0]);
 			}
 
 			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 2);
@@ -1103,12 +1106,15 @@ bool MyViewer::checkForViol2() {
 				//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
 				si_array.insert(si_array.begin() + new_index, bf.first);
 				std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
-				blend_functions[new_index].push_back(vec_pair);
-				refined_points[new_index].push_back(0);
-
-				//TODO
-				//insert to tspline_control_points-- ?
-				//insert to weights-- ?
+				std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
+				blend_functions.insert(blend_functions.begin() + new_index, new_blend);
+				//Question TODO can new point influence others, if so it needs a good new_point and new_weight
+				std::vector<Vec> new_point = { ? ? ? };
+				refined_points.insert(refined_points.begin() + new_index, new_point);
+				std::vector<double> new_weight = { ? ? ? };
+				refined_weights.insert(refined_weights.begin() + new_index, new_weight);
+				tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
+				weights.insert(weights.begin() + new_index, new_weight[0]);
 			}
 
 			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 2);
@@ -1126,13 +1132,17 @@ bool MyViewer::checkForViol2() {
 				//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
 				ti_array.insert(ti_array.begin() + new_index, bf.second);
 				std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si,bf.second);
-				blend_functions[new_index].push_back(vec_pair);
-				refined_points[new_index].push_back(0);
-
-				//TODO
-				//insert to tspline_control_points-- ?
-				//insert to weights-- ?
+				std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
+				blend_functions.insert(blend_functions.begin() + new_index, new_blend);
+				//Question TODO can new point influence others, if so it needs a good new_point and new_weight
+				std::vector<Vec> new_point = { ? ? ? };
+				refined_points.insert(refined_points.begin() + new_index, new_point);
+				std::vector<double> new_weight = { ? ? ? };
+				refined_weights.insert(refined_weights.begin() + new_index, new_weight);
+				tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
+				weights.insert(weights.begin() + new_index, new_weight[0]);
 			}
+
 			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 2);
 			if (ss_up.first){
 				//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
@@ -1148,13 +1158,15 @@ bool MyViewer::checkForViol2() {
 				//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
 				ti_array.insert(ti_array.begin() + new_index, bf.second);
 				std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, bf.second);
-				blend_functions[new_index].push_back(vec_pair);
-				refined_points[new_index].push_back(0);
-
-				//TODO
-				//insert to tspline_control_points-- ?
-				//insert to weights-- ?
-			}
+				std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
+				blend_functions.insert(blend_functions.begin() + new_index, new_blend);
+				//Question TODO can new point influence others, if so it needs a good new_point and new_weight
+				std::vector<Vec> new_point = { ? ? ? };
+				refined_points.insert(refined_points.begin() + new_index, new_point);
+				std::vector<double> new_weight = { ? ? ? };
+				refined_weights.insert(refined_weights.begin() + new_index, new_weight);
+				tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
+				weights.insert(weights.begin() + new_index, new_weight[0]);
 		}
 	}
 	return violated;
@@ -1167,12 +1179,19 @@ void MyViewer::checkViolations() {
 		viol2 = checkForViol2();
 	} while (viol1 || viol2);
 
-	//TODO Check if only one blend function for every point--if not-some error
-	//Do point calculation and insertion here
-
-	//Do updating si,tis based on blend_functions here,
 	
-
+	int cpnum = tspline_control_points.size();
+	for (int i = 0; i < cpnum; i++) {
+		if (refined_points[i].size() != 0 || refined_weights[i].size() != 0 || blend_functions[i].size() != 0){
+			//TODO Check if only one blend function for every point--if not-some error
+		}
+		//Do point and weight calculation here
+		tspline_control_points[i] = refined_points[i][0];
+		weights[i] = refined_weights[i][0];
+		//Do updating si,tis based on blend_functions here
+		si_array[i] = blend_functions[i][0].first;
+		ti_array[i] = blend_functions[i][0].second;
+	}
 }
 
 //Returns the two refined blend functions with the appropriate multipliers, first the one with c multiplier
@@ -1205,13 +1224,16 @@ void MyViewer::insertRefined(double s, double t) {
 	ti_array.insert(ti_array.begin() + new_ind, new_ti);
 	std::vector<double> new_si = { 0, 0, t, 0, 0 };
 	si_array.insert(si_array.begin() + new_ind, new_si);
-	std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si,new_ti);
-	blend_functions[new_ind].push_back(vec_pair);
-	refined_points[new_ind].push_back(0);
-
-	//TODO
-	insert to tspline_control_points-- ?
-	insert to weights-- ?
+	std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, new_ti);
+	std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
+	blend_functions.insert(blend_functions.begin() + new_ind, new_blend);
+	//Question TODO can new point influence others, if so it needs a good new_point and new_weight
+	std::vector<Vec> new_point = { ? ? ? };
+	refined_points.insert(refined_points.begin() + new_ind, new_point);
+	std::vector<double> new_weight = {? ? ?};
+	refined_weights.insert(refined_weights.begin() + new_ind, new_weight);
+	tspline_control_points.insert(tspline_control_points.begin() + new_ind, new_point[0]);
+	weights.insert(weights.begin() + new_ind, new_weight[0]);
 
 	checkViolations();
 	updateEdgeTopology();
@@ -1794,7 +1816,7 @@ void MyViewer::generateTSplineMesh() {
 			Vec p(0.0, 0.0, 0.0);
 			double nominator = 0.0;
 			for (size_t k = 0; k < cpnum; ++k) {
-				double B_k = refined_points[k].first * cubicBSplineBasis(s,si_array[k]) * refined_points[k].second * cubicBSplineBasis(t, ti_array[k]);
+				double B_k = cubicBSplineBasis(s,si_array[k]) * cubicBSplineBasis(t, ti_array[k]);
 				p += tspline_control_points[k] * B_k;
 				nominator += weights[k] * B_k;
 			}
