@@ -401,6 +401,8 @@ bool MyViewer::openTSpline(const std::string &filename) {
 		ti_array.resize(cpnum);
 		weights.resize(cpnum);
 		blend_functions.resize(cpnum);
+		refined_points.resize(cpnum);
+		refined_weights.resize(cpnum);
 		for (size_t i = 0; i < cpnum; ++i){
 			si_array[i].resize(5);
 			ti_array[i].resize(5);
@@ -411,12 +413,12 @@ bool MyViewer::openTSpline(const std::string &filename) {
 			//Filling up JA vector as well
 			f >> JA[i];
 			//Initializing blend function
-			blend_functions[i][0].first = si_array[i];
-			blend_functions[i][0].second = ti_array[i];
+			std::pair<std::vector<double>, std::vector<double>> blend_pair(si_array[i],ti_array[i]);
+			blend_functions[i] = { blend_pair };
 			//Initializing refined_points
-			refined_points[i][0] = tspline_control_points[i];
+			refined_points[i] = { tspline_control_points[i] };
 			//Initializing refined_weights
-			refined_weights[i][0] = weights[i];
+			refined_weights[i] = { weights[i] };
 		}
 		//Finally filling up IA vector
 		for (size_t i = 0; i < ia_size; i++)
