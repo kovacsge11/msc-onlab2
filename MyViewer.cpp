@@ -400,7 +400,7 @@ bool MyViewer::openTSpline(const std::string &filename) {
 		si_array.resize(cpnum);
 		ti_array.resize(cpnum);
 		weights.resize(cpnum);
-		blend_multipliers.resize(cpnum);
+		refined_points.resize(cpnum);
 		for (size_t i = 0; i < cpnum; ++i){
 			si_array[i].resize(5);
 			ti_array[i].resize(5);
@@ -411,8 +411,8 @@ bool MyViewer::openTSpline(const std::string &filename) {
 			//Filling up JA vector as well
 			f >> JA[i];
 			//Initializing blend function multipliers
-			blend_multipliers[i].first = 1.0;
-			blend_multipliers[i].second = 1.0;
+			refined_points[i].first = 1.0;
+			refined_points[i].second = 1.0;
 		}
 		//Finally filling up IA vector
 		for (size_t i = 0; i < ia_size; i++)
@@ -829,15 +829,18 @@ bool MyViewer::checkForViol1() {
 				//First: refining the actual in t direction-> refine the blend function, +multipl*d to blendMultipliers[i]
 				//Delete actual old blend func
 				blend_functions[i].erase(blend_functions[i].begin() + j);
-				double temp_multiplier = blend_multipliers[i][j];
-				blend_multipliers[i].erase(blend_multipliers[i].begin() + j);
+				Vec temp_point = refined_points[i][j];
+				double temp_weight = refined_weights[i][j];
+				refined_points[i].erase(refined_points[i].begin() + j);
+				refined_weights[i].erase(refined_weights[i].begin() + j);
 				//Finding the blend function which is the same, if doesn't exist, add new one
 				bool exists = false;
 				for (int k = 0; k < blend_functions[i].size(); k++) {
 					auto temp_bf = blend_functions[i][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
-						blend_multipliers[i][k] += temp_multiplier * refined_pairs.second.first;
+						refined_points[i][k] += temp_point * refined_pairs.second.first;
+						refined_weights[i][k] += temp_weight * refined_pairs.second.first;
 						exists = true;
 						break;
 					}
@@ -845,7 +848,8 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.second.second);
 					blend_functions[i].push_back(blend_pair);
-					blend_multipliers[i].push_back(temp_multiplier *refined_pairs.second.first);
+					refined_points[i].push_back(temp_point * refined_pairs.second.first);
+					refined_weights[i].push_back(temp_weight * refined_pairs.second.first);
 				}
 				//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
 				int ref_ind;
@@ -863,7 +867,8 @@ bool MyViewer::checkForViol1() {
 					auto temp_bf = blend_functions[ref_ind][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
-						blend_multipliers[ref_ind][k] += temp_multiplier * refined_pairs.first.first;
+						refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
+						refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
 						exists = true;
 						break;
 					}
@@ -871,7 +876,8 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
 					blend_functions[ref_ind].push_back(blend_pair);
-					blend_multipliers[ref_ind].push_back(temp_multiplier *refined_pairs.first.first);
+					refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
+					refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
 				}
 			}
 			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 1);
@@ -883,15 +889,18 @@ bool MyViewer::checkForViol1() {
 				//First: refining the actual in t direction-> refine the blend function, +multipl*c to blendMultipliers[i]
 				//Delete actual old blend func
 				blend_functions[i].erase(blend_functions[i].begin() + j);
-				double temp_multiplier = blend_multipliers[i][j];
-				blend_multipliers[i].erase(blend_multipliers[i].begin() + j);
+				Vec temp_point = refined_points[i][j];
+				double temp_weight = refined_weights[i][j];
+				refined_points[i].erase(refined_points[i].begin() + j);
+				refined_weights[i].erase(refined_weights[i].begin() + j);
 				//Finding the blend function which is the same, if doesn't exist, add new one
 				bool exists = false;
 				for (int k = 0; k < blend_functions[i].size(); k++) {
 					auto temp_bf = blend_functions[i][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
-						blend_multipliers[i][k] += temp_multiplier * refined_pairs.first.first;
+						refined_points[i][k] += temp_point * refined_pairs.first.first;
+						refined_weights[i][k] += temp_weight * refined_pairs.first.first;
 						exists = true;
 						break;
 					}
@@ -899,7 +908,8 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
 					blend_functions[i].push_back(blend_pair);
-					blend_multipliers[i].push_back(temp_multiplier *refined_pairs.first.first);
+					refined_points[i].push_back(temp_point *refined_pairs.first.first);
+					refined_weights[i].push_back(temp_weight * refined_pairs.first.first);
 				}
 				//Second : getIndex of(bf.first[2], ts_up.second.second) if inserting above the middle point
 				int ref_ind;
@@ -914,7 +924,8 @@ bool MyViewer::checkForViol1() {
 					auto temp_bf = blend_functions[ref_ind][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
-						blend_multipliers[ref_ind][k] += temp_multiplier * refined_pairs.second.first;
+						refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
+						refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
 						exists = true;
 						break;
 					}
@@ -922,7 +933,8 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.second.second);
 					blend_functions[ref_ind].push_back(blend_pair);
-					blend_multipliers[ref_ind].push_back(temp_multiplier *refined_pairs.second.first);
+					refined_points[ref_ind].push_back(temp_point *refined_pairs.second.first);
+					refined_weights[ref_ind].push_back(temp_weight *refined_pairs.second.first);
 				}
 			}
 			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 1);
@@ -934,15 +946,18 @@ bool MyViewer::checkForViol1() {
 				//First: refining the actual in s direction-> refine the blend function, +multipl*d to blendMultipliers[i]
 				//Delete actual old blend func
 				blend_functions[i].erase(blend_functions[i].begin() + j);
-				double temp_multiplier = blend_multipliers[i][j];
-				blend_multipliers[i].erase(blend_multipliers[i].begin() + j);
+				Vec temp_point = refined_points[i][j];
+				double temp_weight = refined_weights[i][j];
+				refined_points[i].erase(refined_points[i].begin() + j);
+				refined_weights[i].erase(refined_weights[i].begin() + j);
 				//Finding the blend function which is the same, if doesn't exist, add new one
 				bool exists = false;
 				for (int k = 0; k < blend_functions[i].size(); k++) {
 					auto temp_bf = blend_functions[i][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
-						blend_multipliers[i][k] += temp_multiplier * refined_pairs.second.first;
+						refined_points[i][k] += temp_point * refined_pairs.second.first;
+						refined_weights[i][k] += temp_weight * refined_pairs.second.first;
 						exists = true;
 						break;
 					}
@@ -950,7 +965,8 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.second.second,bf.second);
 					blend_functions[i].push_back(blend_pair);
-					blend_multipliers[i].push_back(temp_multiplier *refined_pairs.second.first);
+					refined_points[i].push_back(temp_point *refined_pairs.second.first);
+					refined_weights[i].push_back(temp_weight * refined_pairs.second.first);
 				}
 				//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
 				int ref_ind;
@@ -965,7 +981,8 @@ bool MyViewer::checkForViol1() {
 					auto temp_bf = blend_functions[ref_ind][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
-						blend_multipliers[ref_ind][k] += temp_multiplier * refined_pairs.first.first;
+						refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
+						refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
 						exists = true;
 						break;
 					}
@@ -973,7 +990,8 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second, bf.second);
 					blend_functions[ref_ind].push_back(blend_pair);
-					blend_multipliers[ref_ind].push_back(temp_multiplier *refined_pairs.first.first);
+					refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
+					refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
 				}
 			}
 			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 1);
@@ -985,15 +1003,18 @@ bool MyViewer::checkForViol1() {
 				//First: refining the actual in s direction-> refine the blend function, +multipl*c to blendMultipliers[i]
 				//Delete actual old blend func
 				blend_functions[i].erase(blend_functions[i].begin() + j);
-				double temp_multiplier = blend_multipliers[i][j];
-				blend_multipliers[i].erase(blend_multipliers[i].begin() + j);
+				Vec temp_point = refined_points[i][j];
+				double temp_weight = refined_weights[i][j];
+				refined_points[i].erase(refined_points[i].begin() + j);
+				refined_weights[i].erase(refined_weights[i].begin() + j);
 				//Finding the blend function which is the same, if doesn't exist, add new one
 				bool exists = false;
 				for (int k = 0; k < blend_functions[i].size(); k++) {
 					auto temp_bf = blend_functions[i][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
-						blend_multipliers[i][k] += temp_multiplier * refined_pairs.first.first;
+						refined_points[i][k] += temp_point * refined_pairs.first.first;
+						refined_weights[i][k] += temp_weight * refined_pairs.first.first;
 						exists = true;
 						break;
 					}
@@ -1001,10 +1022,9 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second,bf.second);
 					blend_functions[i].push_back(blend_pair);
-					blend_multipliers[i].push_back(temp_multiplier *refined_pairs.first.first);
+					refined_points[i].push_back(temp_point *refined_pairs.first.first);
+					refined_weights[i].push_back(temp_weight * refined_pairs.first.first);
 				}
-				blend_functions[i][j].first = refined_pairs.first.second;
-				blend_multipliers[i][j] = refined_pairs.first.first;
 				//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
 				int ref_ind;
 				if (ss_up.second.first == 3)ref_ind = getIndex(ss_up.second.second, bf.second[2]).second; // TODO what if getIndex.first == false?? shouldnt be
@@ -1018,7 +1038,8 @@ bool MyViewer::checkForViol1() {
 					auto temp_bf = blend_functions[ref_ind][k];
 					//TODO does this check equality in the right way??
 					if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
-						blend_multipliers[ref_ind][k] += temp_multiplier * refined_pairs.second.first;
+						refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
+						refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
 						exists = true;
 						break;
 					}
@@ -1026,7 +1047,8 @@ bool MyViewer::checkForViol1() {
 				if (!exists) {
 					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.second.second, bf.second);
 					blend_functions[ref_ind].push_back(blend_pair);
-					blend_multipliers[ref_ind].push_back(temp_multiplier *refined_pairs.second.first);
+					refined_points[ref_ind].push_back(temp_point *refined_pairs.second.first);
+					refined_weights[ref_ind].push_back(temp_weight *refined_pairs.second.first);
 				}
 			}
 		}
@@ -1056,7 +1078,7 @@ bool MyViewer::checkForViol2() {
 				si_array.insert(si_array.begin() + new_index, bf.first);
 				std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
 				blend_functions[new_index].push_back(vec_pair);
-				blend_multipliers[new_index].push_back(0);
+				refined_points[new_index].push_back(0);
 
 				//TODO
 				//insert to tspline_control_points-- ?
@@ -1078,7 +1100,7 @@ bool MyViewer::checkForViol2() {
 				si_array.insert(si_array.begin() + new_index, bf.first);
 				std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
 				blend_functions[new_index].push_back(vec_pair);
-				blend_multipliers[new_index].push_back(0);
+				refined_points[new_index].push_back(0);
 
 				//TODO
 				//insert to tspline_control_points-- ?
@@ -1101,7 +1123,7 @@ bool MyViewer::checkForViol2() {
 				ti_array.insert(ti_array.begin() + new_index, bf.second);
 				std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si,bf.second);
 				blend_functions[new_index].push_back(vec_pair);
-				blend_multipliers[new_index].push_back(0);
+				refined_points[new_index].push_back(0);
 
 				//TODO
 				//insert to tspline_control_points-- ?
@@ -1123,7 +1145,7 @@ bool MyViewer::checkForViol2() {
 				ti_array.insert(ti_array.begin() + new_index, bf.second);
 				std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, bf.second);
 				blend_functions[new_index].push_back(vec_pair);
-				blend_multipliers[new_index].push_back(0);
+				refined_points[new_index].push_back(0);
 
 				//TODO
 				//insert to tspline_control_points-- ?
@@ -1177,7 +1199,7 @@ void MyViewer::insertRefined(double s, double t) {
 	si_array.insert(si_array.begin() + new_ind, new_si);
 	std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si,new_ti);
 	blend_functions[new_ind].push_back(vec_pair);
-	blend_multipliers[new_ind].push_back(0);
+	refined_points[new_ind].push_back(0);
 
 	//TODO
 	insert to tspline_control_points-- ?
@@ -1764,7 +1786,7 @@ void MyViewer::generateTSplineMesh() {
 			Vec p(0.0, 0.0, 0.0);
 			double nominator = 0.0;
 			for (size_t k = 0; k < cpnum; ++k) {
-				double B_k = blend_multipliers[k].first * cubicBSplineBasis(s,si_array[k]) * blend_multipliers[k].second * cubicBSplineBasis(t, ti_array[k]);
+				double B_k = refined_points[k].first * cubicBSplineBasis(s,si_array[k]) * refined_points[k].second * cubicBSplineBasis(t, ti_array[k]);
 				p += tspline_control_points[k] * B_k;
 				nominator += weights[k] * B_k;
 			}

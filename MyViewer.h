@@ -131,7 +131,10 @@ private:
   //In order to handle edges
   std::vector<std::pair<int,int>> edges;
   std::vector<std::vector<std::pair<std::vector<double>, std::vector<double>>>> blend_functions;
-  std::vector<std::vector<double>> blend_multipliers;
+  //For every blend function of every point stores the coordinates of actual point of origin multiplied by the factor of refinements
+  std::vector<std::vector<Vec>> refined_points;
+  //For every blend function of every point stores the weight of actual point of origin multiplied by the factor of refinements
+  std::vector<std::vector<double>> refined_weights;
 
   bool keep_surface;
 
