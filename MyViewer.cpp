@@ -868,7 +868,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 
 					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
 					//Then delete old and replace with new
-					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size == 1) {
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1) {
 						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
 						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
 						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
@@ -940,7 +940,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 
 					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
 					//Then delete old and replace with new
-					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size == 1) {
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1) {
 						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
 						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
 						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
@@ -1012,7 +1012,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 
 					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
 					//Then delete old and replace with new
-					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size == 1) {
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1) {
 						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
 						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
 						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
@@ -1084,7 +1084,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 
 					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
 					//Then delete old and replace with new
-					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size == 1) {
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1) {
 						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
 						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
 						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
@@ -1179,7 +1179,7 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
 					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
 					//New point can't influence others, so it doesn't need a good new_point and new_weight
-					std::vector<Vec> new_point = { ? ? ? };
+					std::vector<Vec> new_point = { Vec() };
 					refined_points.insert(refined_points.begin() + new_index, new_point);
 					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
 					std::vector<double> new_weight = { 0.0 };
@@ -1214,7 +1214,7 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
 					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
 					//New point can't influence others, so it doesn't need a good new_point and new_weight
-					std::vector<Vec> new_point = { ? ? ? };
+					std::vector<Vec> new_point = { Vec() };
 					refined_points.insert(refined_points.begin() + new_index, new_point);
 					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
 					std::vector<double> new_weight = { 0.0 };
@@ -1249,7 +1249,7 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
 					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
 					//New point can't influence others, so it doesn't need a good new_point and new_weight
-					std::vector<Vec> new_point = { ? ? ? };
+					std::vector<Vec> new_point = { Vec() };
 					refined_points.insert(refined_points.begin() + new_index, new_point);
 					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
 					std::vector<double> new_weight = { 0.0 };
