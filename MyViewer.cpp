@@ -400,7 +400,7 @@ bool MyViewer::openTSpline(const std::string &filename) {
 		si_array.resize(cpnum);
 		ti_array.resize(cpnum);
 		weights.resize(cpnum);
-		refined_points.resize(cpnum);
+		blend_functions.resize(cpnum);
 		for (size_t i = 0; i < cpnum; ++i){
 			si_array[i].resize(5);
 			ti_array[i].resize(5);
@@ -410,9 +410,13 @@ bool MyViewer::openTSpline(const std::string &filename) {
 			f >> weights[i];
 			//Filling up JA vector as well
 			f >> JA[i];
-			//Initializing blend function multipliers
-			refined_points[i].first = 1.0;
-			refined_points[i].second = 1.0;
+			//Initializing blend function
+			blend_functions[i][0].first = si_array[i];
+			blend_functions[i][0].second = ti_array[i];
+			//Initializing refined_points
+			refined_points[i][0] = tspline_control_points[i];
+			//Initializing refined_weights
+			refined_weights[i][0] = weights[i];
 		}
 		//Finally filling up IA vector
 		for (size_t i = 0; i < ia_size; i++)
@@ -1163,8 +1167,12 @@ void MyViewer::checkViolations() {
 		viol2 = checkForViol2();
 	} while (viol1 || viol2);
 
+	//TODO Check if only one blend function for every point--if not-some error
 	//Do point calculation and insertion here
-	//Do updating si,tis based on blend_functions here
+
+	//Do updating si,tis based on blend_functions here,
+	
+
 }
 
 //Returns the two refined blend functions with the appropriate multipliers, first the one with c multiplier
