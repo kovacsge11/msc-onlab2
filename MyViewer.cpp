@@ -829,7 +829,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 			for (int j = 0; j < blend_functions[i].size(); j++) {
 				auto bf = blend_functions[i][j];
 				std::pair<bool, std::pair<int, double>> ts_down = checkTsDown(i, bf.first, bf.second, 1);
-				if (ts_down.first) {
+				if (!ts_down.first) {
 					//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
 					violated = true;
 					auto refined_pairs = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second);
@@ -870,7 +870,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 
 					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
 					//Then delete old and replace with new
-					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1) {
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1 && refined_weights[ref_ind][0] == 0) {
 						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
 						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
 						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
@@ -901,10 +901,10 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 				}
 
 				std::pair<bool, std::pair<int, double>> ts_up = checkTsUp(i, bf.first, bf.second, 1);
-				if (ts_up.first) {
-					//Refine blend func of point i by inserting at ts_up.second.first + 1 value ts_up.second.second
+				if (!ts_up.first) {
+					//Refine blend func of point i by inserting at ts_up.second.first value ts_up.second.second
 					violated = true;
-					auto refined_pairs = refineBlend(bf.second, ts_up.second.first + 1, ts_up.second.second);
+					auto refined_pairs = refineBlend(bf.second, ts_up.second.first, ts_up.second.second);
 					//Two insertions:
 					//First: refining the actual in t direction-> refine the blend function, +multipl*c to blendMultipliers[i]
 					//Delete actual old blend func
@@ -942,7 +942,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 
 					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
 					//Then delete old and replace with new
-					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1) {
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1 && refined_weights[ref_ind][0] == 0) {
 						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
 						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
 						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
@@ -973,7 +973,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 				}
 
 				std::pair<bool, std::pair<int, double>> ss_down = checkSsDown(i, bf.first, bf.second, 1);
-				if (ss_down.first) {
+				if (!ss_down.first) {
 					//Refine blend func of point i by inserting at ss_down.second.first + 1 value ss_down.second.second
 					violated = true;
 					auto refined_pairs = refineBlend(bf.first, ss_down.second.first + 1, ss_down.second.second);
@@ -1014,7 +1014,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 
 					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
 					//Then delete old and replace with new
-					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1) {
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1 && refined_weights[ref_ind][0] == 0) {
 						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
 						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
 						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
@@ -1045,10 +1045,10 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 				}
 
 				std::pair<bool, std::pair<int, double>> ss_up = checkSsUp(i, bf.first, bf.second, 1);
-				if (ss_up.first) {
-					//Refine blend func of point i by inserting at ss_up.second.first + 1 value ss_up.second.second
+				if (!ss_up.first) {
+					//Refine blend func of point i by inserting at ss_up.second.first value ss_up.second.second
 					violated = true;
-					auto refined_pairs = refineBlend(bf.first, ss_up.second.first + 1, ss_up.second.second);
+					auto refined_pairs = refineBlend(bf.first, ss_up.second.first, ss_up.second.second);
 					//Two insertions:
 					//First: refining the actual in s direction-> refine the blend function, +multipl*c to blendMultipliers[i]
 					//Delete actual old blend func
@@ -1086,14 +1086,14 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 
 					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
 					//Then delete old and replace with new
-					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1) {
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size() == 1 && refined_weights[ref_ind][0] == 0) {
 						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
 						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
 						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
-						std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second, bf.second);
+						std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.second.second, bf.second);
 						blend_functions[ref_ind].push_back(blend_pair);
-						refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
-						refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
+						refined_points[ref_ind].push_back(temp_point *refined_pairs.second.first);
+						refined_weights[ref_ind].push_back(temp_weight *refined_pairs.second.first);
 					}
 					else {
 						bool exists = false;
@@ -1130,7 +1130,7 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 			for (int j = 0; j < blend_functions[i].size(); j++) {
 				auto bf = blend_functions[i][j];
 				std::pair<bool, std::pair<int, double>> ts_down = checkTsDown(i, bf.first, bf.second, 2);
-				if (ts_down.first) {
+				if (!ts_down.first) {
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
 					violated = true;
 					int new_index = getIndex(bf.first[2], bf.second[ts_down.second.first]).second; //what if this gives back true--point exists?? couldnt happen, right?
@@ -1165,7 +1165,7 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 				}
 
 				std::pair<bool, std::pair<int, double>> ts_up = checkTsUp(i, bf.first, bf.second, 2);
-				if (ts_up.first) {
+				if (!ts_up.first) {
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
 					violated = true;
 					int new_index = getIndex(bf.first[2], bf.second[ts_up.second.first]).second; //what if this gives back false??
@@ -1199,7 +1199,7 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 				}
 
 				std::pair<bool, std::pair<int, double>> ss_down = checkSsDown(i, bf.first, bf.second, 2);
-				if (ss_down.first) {
+				if (!ss_down.first) {
 					//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
 					violated = true;
 					int new_index = getIndex(bf.first[ss_down.second.first], bf.second[2]).second; //what if this gives back false??
@@ -1234,7 +1234,7 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 				}
 
 				std::pair<bool, std::pair<int, double>> ss_up = checkSsUp(i, bf.first, bf.second, 2);
-				if (ss_up.first) {
+				if (!ss_up.first) {
 					//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
 					violated = true;
 					int new_index = getIndex(bf.first[ss_up.second.first], bf.second[2]).second; //what if this gives back false??
@@ -2102,7 +2102,7 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, std::ve
 			if(j==0){}
 			else if (ti_array[is_of_col[j - 1]][2] < t_vec[2]) {
 				//Check if not the case of last in col having smaller t than our point
-				if (ti_array[is_of_col[j]][2] > t_vec[2]) {
+				if (ti_array[is_of_col[is_of_col.size() - 1]][2] > t_vec[2]) {
 					//Check whether there is an edge connecting temp_ind-1 and temp_ind,
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the s of them should be the 1-num_found-th element of si array of our point
@@ -2166,7 +2166,7 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkSsUp(int index, std::vect
 			if (j == 0) {}
 			else if (ti_array[is_of_col[j - 1]][2] < t_vec[2]) {
 				//Check if not the case of last in col having smaller t than our point
-				if (ti_array[is_of_col[j]][2] > t_vec[2]) {
+				if (ti_array[is_of_col[is_of_col.size()-1]][2] > t_vec[2]) {
 					//Check whether there is an edge connecting temp_ind-1 and temp_ind,
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the s of them should be the 3+num_found-th element of si array of our point
