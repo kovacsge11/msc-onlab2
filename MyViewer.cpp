@@ -1144,7 +1144,7 @@ bool MyViewer::checkForViol2() {
 			}
 
 			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 2);
-			if (ss_up.first){
+			if (ss_up.first) {
 				//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
 				violated = true;
 				int new_index = getIndex(bf.first[ss_up.second.first], bf.second[2]).second; //what if this gives back false??
@@ -1167,6 +1167,7 @@ bool MyViewer::checkForViol2() {
 				refined_weights.insert(refined_weights.begin() + new_index, new_weight);
 				tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
 				weights.insert(weights.begin() + new_index, new_weight[0]);
+			}
 		}
 	}
 	return violated;
