@@ -83,9 +83,9 @@ private:
   std::pair<bool, std::pair<int, double>> checkSsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
   std::pair<std::vector<int>, std::vector<double>> refineRowCol(double new_value, int row_col_ind, bool is_row);
   std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
-  bool checkForViol1();
-  bool checkForViol2();
-  void checkViolations();
+  bool checkForViol1(std::vector<int> excluded);
+  bool checkForViol2(std::vector<int> excluded);
+  void checkViolations(std::vector<int> excluded);
   std::pair<bool, int> getIndex(double s, double t);
   std::pair<bool, int> getRow(double t);
   std::pair<bool, int> getCol(double s);

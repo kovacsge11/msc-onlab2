@@ -818,241 +818,300 @@ void MyViewer::updateJA(int new_ind, double s) {
 	}
 }
 
-bool MyViewer::checkForViol1() {
+bool MyViewer::checkForViol1(std::vector<int> excluded) {
 	bool violated = false;
 	int cpnum = tspline_control_points.size();
 	for (int i = 0; i < cpnum;i++) {
-		for(int j = 0; j < blend_functions[i].size(); j++){
-			auto bf = blend_functions[i][j];
-			std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,bf.first,bf.second,1);
-			if (ts_down.first) {
-				//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
-				violated = true;
-				auto refined_pairs = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second);
-				//Two insertions:
-				//First: refining the actual in t direction-> refine the blend function, +multipl*d to blendMultipliers[i]
-				//Delete actual old blend func
-				blend_functions[i].erase(blend_functions[i].begin() + j);
-				Vec temp_point = refined_points[i][j];
-				double temp_weight = refined_weights[i][j];
-				refined_points[i].erase(refined_points[i].begin() + j);
-				refined_weights[i].erase(refined_weights[i].begin() + j);
-				//Finding the blend function which is the same, if doesn't exist, add new one
-				bool exists = false;
-				for (int k = 0; k < blend_functions[i].size(); k++) {
-					auto temp_bf = blend_functions[i][k];
-					//TODO does this check equality in the right way??
-					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
-						refined_points[i][k] += temp_point * refined_pairs.second.first;
-						refined_weights[i][k] += temp_weight * refined_pairs.second.first;
-						exists = true;
-						break;
+		//Check only for points which are not in the excluded
+		if (std::find(excluded.begin(), excluded.end(), i) == excluded.end()) {
+			for (int j = 0; j < blend_functions[i].size(); j++) {
+				auto bf = blend_functions[i][j];
+				std::pair<bool, std::pair<int, double>> ts_down = checkTsDown(i, bf.first, bf.second, 1);
+				if (ts_down.first) {
+					//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
+					violated = true;
+					auto refined_pairs = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second);
+					//Two insertions:
+					//First: refining the actual in t direction-> refine the blend function, +multipl*d to blendMultipliers[i]
+					//Delete actual old blend func
+					blend_functions[i].erase(blend_functions[i].begin() + j);
+					Vec temp_point = refined_points[i][j];
+					double temp_weight = refined_weights[i][j];
+					refined_points[i].erase(refined_points[i].begin() + j);
+					refined_weights[i].erase(refined_weights[i].begin() + j);
+					//Finding the blend function which is the same, if doesn't exist, add new one
+					bool exists = false;
+					for (int k = 0; k < blend_functions[i].size(); k++) {
+						auto temp_bf = blend_functions[i][k];
+						//TODO does this check equality in the right way??
+						if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
+							refined_points[i][k] += temp_point * refined_pairs.second.first;
+							refined_weights[i][k] += temp_weight * refined_pairs.second.first;
+							exists = true;
+							break;
+						}
 					}
-				}
-				if (!exists) {
-					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.second.second);
-					blend_functions[i].push_back(blend_pair);
-					refined_points[i].push_back(temp_point * refined_pairs.second.first);
-					refined_weights[i].push_back(temp_weight * refined_pairs.second.first);
-				}
-				//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
-				int ref_ind;
-				if (ts_down.second.first == 1)ref_ind = getIndex(bf.first[2], ts_down.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
-				//getIndex of(bf.first[2], bf.second[1]) if inserting with 2 below the middle point
-				else ref_ind = getIndex(bf.first[2], bf.second[1]).second;
-				//refine the blend function
-				//with the proper index see if any of the existing blends is the same as new one ->+ multipl*c to blend_multipliers[ref_ind][ind of same blend]
-				//else store new one too
+					if (!exists) {
+						std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.second.second);
+						blend_functions[i].push_back(blend_pair);
+						refined_points[i].push_back(temp_point * refined_pairs.second.first);
+						refined_weights[i].push_back(temp_weight * refined_pairs.second.first);
+					}
+					//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
+					int ref_ind;
+					if (ts_down.second.first == 1)ref_ind = getIndex(bf.first[2], ts_down.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
+					//getIndex of(bf.first[2], bf.second[1]) if inserting with 2 below the middle point
+					else ref_ind = getIndex(bf.first[2], bf.second[1]).second;
+					//refine the blend function
+					//with the proper index see if any of the existing blends is the same as new one ->+ multipl*c to blend_multipliers[ref_ind][ind of same blend]
+					//else store new one too
 
-				//TODO handle the case when its the blend function of new point with blend multiplier 0
+					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
+					//Then delete old and replace with new
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size == 1) {
+						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
+						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
+						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
+						std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
+						blend_functions[ref_ind].push_back(blend_pair);
+						refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
+						refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
+					}
+					else {
+						exists = false;
+						for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
+							auto temp_bf = blend_functions[ref_ind][k];
+							//TODO does this check equality in the right way??
+							if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
+								refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
+								refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
+								exists = true;
+								break;
+							}
+						}
+						if (!exists) {
+							std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
+							blend_functions[ref_ind].push_back(blend_pair);
+							refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
+							refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
+						}
+					}
+				}
 
-				exists = false;
-				for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
-					auto temp_bf = blend_functions[ref_ind][k];
-					//TODO does this check equality in the right way??
-					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
-						refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
-						refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
-						exists = true;
-						break;
+				std::pair<bool, std::pair<int, double>> ts_up = checkTsUp(i, bf.first, bf.second, 1);
+				if (ts_up.first) {
+					//Refine blend func of point i by inserting at ts_up.second.first + 1 value ts_up.second.second
+					violated = true;
+					auto refined_pairs = refineBlend(bf.second, ts_up.second.first + 1, ts_up.second.second);
+					//Two insertions:
+					//First: refining the actual in t direction-> refine the blend function, +multipl*c to blendMultipliers[i]
+					//Delete actual old blend func
+					blend_functions[i].erase(blend_functions[i].begin() + j);
+					Vec temp_point = refined_points[i][j];
+					double temp_weight = refined_weights[i][j];
+					refined_points[i].erase(refined_points[i].begin() + j);
+					refined_weights[i].erase(refined_weights[i].begin() + j);
+					//Finding the blend function which is the same, if doesn't exist, add new one
+					bool exists = false;
+					for (int k = 0; k < blend_functions[i].size(); k++) {
+						auto temp_bf = blend_functions[i][k];
+						//TODO does this check equality in the right way??
+						if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
+							refined_points[i][k] += temp_point * refined_pairs.first.first;
+							refined_weights[i][k] += temp_weight * refined_pairs.first.first;
+							exists = true;
+							break;
+						}
+					}
+					if (!exists) {
+						std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
+						blend_functions[i].push_back(blend_pair);
+						refined_points[i].push_back(temp_point *refined_pairs.first.first);
+						refined_weights[i].push_back(temp_weight * refined_pairs.first.first);
+					}
+					//Second : getIndex of(bf.first[2], ts_up.second.second) if inserting above the middle point
+					int ref_ind;
+					if (ts_up.second.first == 3)ref_ind = getIndex(bf.first[2], ts_up.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
+					//getIndex of(bf.first[2], bf.second[3]) if inserting with 2 above the middle point
+					else ref_ind = getIndex(bf.first[2], bf.second[3]).second;
+					//refine the blend function
+					//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
+					//else store new one too
+
+					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
+					//Then delete old and replace with new
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size == 1) {
+						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
+						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
+						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
+						std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.second.second);
+						blend_functions[ref_ind].push_back(blend_pair);
+						refined_points[ref_ind].push_back(temp_point *refined_pairs.second.first);
+						refined_weights[ref_ind].push_back(temp_weight *refined_pairs.second.first);
+					}
+					else {
+						bool exists = false;
+						for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
+							auto temp_bf = blend_functions[ref_ind][k];
+							//TODO does this check equality in the right way??
+							if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
+								refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
+								refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
+								exists = true;
+								break;
+							}
+						}
+						if (!exists) {
+							std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.second.second);
+							blend_functions[ref_ind].push_back(blend_pair);
+							refined_points[ref_ind].push_back(temp_point *refined_pairs.second.first);
+							refined_weights[ref_ind].push_back(temp_weight *refined_pairs.second.first);
+						}
 					}
 				}
-				if (!exists) {
-					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
-					blend_functions[ref_ind].push_back(blend_pair);
-					refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
-					refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
-				}
-			}
-			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 1);
-			if (ts_up.first) {
-				//Refine blend func of point i by inserting at ts_up.second.first + 1 value ts_up.second.second
-				violated = true;
-				auto refined_pairs = refineBlend(bf.second, ts_up.second.first + 1, ts_up.second.second);
-				//Two insertions:
-				//First: refining the actual in t direction-> refine the blend function, +multipl*c to blendMultipliers[i]
-				//Delete actual old blend func
-				blend_functions[i].erase(blend_functions[i].begin() + j);
-				Vec temp_point = refined_points[i][j];
-				double temp_weight = refined_weights[i][j];
-				refined_points[i].erase(refined_points[i].begin() + j);
-				refined_weights[i].erase(refined_weights[i].begin() + j);
-				//Finding the blend function which is the same, if doesn't exist, add new one
-				bool exists = false;
-				for (int k = 0; k < blend_functions[i].size(); k++) {
-					auto temp_bf = blend_functions[i][k];
-					//TODO does this check equality in the right way??
-					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
-						refined_points[i][k] += temp_point * refined_pairs.first.first;
-						refined_weights[i][k] += temp_weight * refined_pairs.first.first;
-						exists = true;
-						break;
+
+				std::pair<bool, std::pair<int, double>> ss_down = checkSsDown(i, bf.first, bf.second, 1);
+				if (ss_down.first) {
+					//Refine blend func of point i by inserting at ss_down.second.first + 1 value ss_down.second.second
+					violated = true;
+					auto refined_pairs = refineBlend(bf.first, ss_down.second.first + 1, ss_down.second.second);
+					//Two insertions:
+					//First: refining the actual in s direction-> refine the blend function, +multipl*d to blendMultipliers[i]
+					//Delete actual old blend func
+					blend_functions[i].erase(blend_functions[i].begin() + j);
+					Vec temp_point = refined_points[i][j];
+					double temp_weight = refined_weights[i][j];
+					refined_points[i].erase(refined_points[i].begin() + j);
+					refined_weights[i].erase(refined_weights[i].begin() + j);
+					//Finding the blend function which is the same, if doesn't exist, add new one
+					bool exists = false;
+					for (int k = 0; k < blend_functions[i].size(); k++) {
+						auto temp_bf = blend_functions[i][k];
+						//TODO does this check equality in the right way??
+						if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
+							refined_points[i][k] += temp_point * refined_pairs.second.first;
+							refined_weights[i][k] += temp_weight * refined_pairs.second.first;
+							exists = true;
+							break;
+						}
+					}
+					if (!exists) {
+						std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.second.second, bf.second);
+						blend_functions[i].push_back(blend_pair);
+						refined_points[i].push_back(temp_point *refined_pairs.second.first);
+						refined_weights[i].push_back(temp_weight * refined_pairs.second.first);
+					}
+					//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
+					int ref_ind;
+					if (ss_down.second.first == 1)ref_ind = getIndex(ss_down.second.second, bf.second[2]).second; // TODO what if getIndex.first == false?? shouldnt be
+					//getIndex of(bf.first[1], bf.second[2]) if inserting with 2 below the middle point
+					else ref_ind = getIndex(bf.first[1], bf.second[2]).second;
+					//refine the blend function
+					//with the proper index see if any of the existing blends is the same as new one ->+ c to blend_multipliers[ref_ind][ind of same blend]
+					//else store new one too
+
+					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
+					//Then delete old and replace with new
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size == 1) {
+						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
+						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
+						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
+						std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second, bf.second);
+						blend_functions[ref_ind].push_back(blend_pair);
+						refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
+						refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
+					}
+					else {
+						bool exists = false;
+						for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
+							auto temp_bf = blend_functions[ref_ind][k];
+							//TODO does this check equality in the right way??
+							if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
+								refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
+								refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
+								exists = true;
+								break;
+							}
+						}
+						if (!exists) {
+							std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second, bf.second);
+							blend_functions[ref_ind].push_back(blend_pair);
+							refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
+							refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
+						}
 					}
 				}
-				if (!exists) {
-					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.first.second);
-					blend_functions[i].push_back(blend_pair);
-					refined_points[i].push_back(temp_point *refined_pairs.first.first);
-					refined_weights[i].push_back(temp_weight * refined_pairs.first.first);
-				}
-				//Second : getIndex of(bf.first[2], ts_up.second.second) if inserting above the middle point
-				int ref_ind;
-				if (ts_up.second.first == 3)ref_ind = getIndex(bf.first[2], ts_up.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
-				//getIndex of(bf.first[2], bf.second[3]) if inserting with 2 above the middle point
-				else ref_ind = getIndex(bf.first[2], bf.second[3]).second;
-				//refine the blend function
-				//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
-				//else store new one too
-				bool exists = false;
-				for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
-					auto temp_bf = blend_functions[ref_ind][k];
-					//TODO does this check equality in the right way??
-					if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
-						refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
-						refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
-						exists = true;
-						break;
+
+				std::pair<bool, std::pair<int, double>> ss_up = checkSsUp(i, bf.first, bf.second, 1);
+				if (ss_up.first) {
+					//Refine blend func of point i by inserting at ss_up.second.first + 1 value ss_up.second.second
+					violated = true;
+					auto refined_pairs = refineBlend(bf.first, ss_up.second.first + 1, ss_up.second.second);
+					//Two insertions:
+					//First: refining the actual in s direction-> refine the blend function, +multipl*c to blendMultipliers[i]
+					//Delete actual old blend func
+					blend_functions[i].erase(blend_functions[i].begin() + j);
+					Vec temp_point = refined_points[i][j];
+					double temp_weight = refined_weights[i][j];
+					refined_points[i].erase(refined_points[i].begin() + j);
+					refined_weights[i].erase(refined_weights[i].begin() + j);
+					//Finding the blend function which is the same, if doesn't exist, add new one
+					bool exists = false;
+					for (int k = 0; k < blend_functions[i].size(); k++) {
+						auto temp_bf = blend_functions[i][k];
+						//TODO does this check equality in the right way??
+						if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
+							refined_points[i][k] += temp_point * refined_pairs.first.first;
+							refined_weights[i][k] += temp_weight * refined_pairs.first.first;
+							exists = true;
+							break;
+						}
 					}
-				}
-				if (!exists) {
-					std::pair<std::vector<double>, std::vector<double>> blend_pair(bf.first, refined_pairs.second.second);
-					blend_functions[ref_ind].push_back(blend_pair);
-					refined_points[ref_ind].push_back(temp_point *refined_pairs.second.first);
-					refined_weights[ref_ind].push_back(temp_weight *refined_pairs.second.first);
-				}
-			}
-			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 1);
-			if (ss_down.first) {
-				//Refine blend func of point i by inserting at ss_down.second.first + 1 value ss_down.second.second
-				violated = true;
-				auto refined_pairs = refineBlend(bf.first, ss_down.second.first + 1, ss_down.second.second);
-				//Two insertions:
-				//First: refining the actual in s direction-> refine the blend function, +multipl*d to blendMultipliers[i]
-				//Delete actual old blend func
-				blend_functions[i].erase(blend_functions[i].begin() + j);
-				Vec temp_point = refined_points[i][j];
-				double temp_weight = refined_weights[i][j];
-				refined_points[i].erase(refined_points[i].begin() + j);
-				refined_weights[i].erase(refined_weights[i].begin() + j);
-				//Finding the blend function which is the same, if doesn't exist, add new one
-				bool exists = false;
-				for (int k = 0; k < blend_functions[i].size(); k++) {
-					auto temp_bf = blend_functions[i][k];
-					//TODO does this check equality in the right way??
-					if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
-						refined_points[i][k] += temp_point * refined_pairs.second.first;
-						refined_weights[i][k] += temp_weight * refined_pairs.second.first;
-						exists = true;
-						break;
+					if (!exists) {
+						std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second, bf.second);
+						blend_functions[i].push_back(blend_pair);
+						refined_points[i].push_back(temp_point *refined_pairs.first.first);
+						refined_weights[i].push_back(temp_weight * refined_pairs.first.first);
 					}
-				}
-				if (!exists) {
-					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.second.second,bf.second);
-					blend_functions[i].push_back(blend_pair);
-					refined_points[i].push_back(temp_point *refined_pairs.second.first);
-					refined_weights[i].push_back(temp_weight * refined_pairs.second.first);
-				}
-				//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
-				int ref_ind;
-				if (ss_down.second.first == 1)ref_ind = getIndex(ss_down.second.second, bf.second[2]).second; // TODO what if getIndex.first == false?? shouldnt be
-				//getIndex of(bf.first[1], bf.second[2]) if inserting with 2 below the middle point
-				else ref_ind = getIndex(bf.first[1], bf.second[2]).second;
-				//refine the blend function
-				//with the proper index see if any of the existing blends is the same as new one ->+ c to blend_multipliers[ref_ind][ind of same blend]
-				//else store new one too
-				bool exists = false;
-				for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
-					auto temp_bf = blend_functions[ref_ind][k];
-					//TODO does this check equality in the right way??
-					if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
-						refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
-						refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
-						exists = true;
-						break;
+					//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
+					int ref_ind;
+					if (ss_up.second.first == 3)ref_ind = getIndex(ss_up.second.second, bf.second[2]).second; // TODO what if getIndex.first == false?? shouldnt be
+					//getIndex of(bf.first[3], bf.second[2]) if inserting with 2 above the middle point
+					else ref_ind = getIndex(bf.first[3], bf.second[2]).second;
+					//refine the blend function
+					//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
+					//else store new one too
+
+					//If pushing to point which was newly added(is in excluded) and is first one to push to it(size of blend_func[ref_ind] is 1)
+					//Then delete old and replace with new
+					if (std::find(excluded.begin(), excluded.end(), ref_ind) != excluded.end() && blend_functions[ref_ind].size == 1) {
+						blend_functions[ref_ind].erase(blend_functions[ref_ind].begin());
+						refined_points[ref_ind].erase(refined_points[ref_ind].begin());
+						refined_weights[ref_ind].erase(refined_weights[ref_ind].begin());
+						std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second, bf.second);
+						blend_functions[ref_ind].push_back(blend_pair);
+						refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
+						refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
 					}
-				}
-				if (!exists) {
-					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second, bf.second);
-					blend_functions[ref_ind].push_back(blend_pair);
-					refined_points[ref_ind].push_back(temp_point *refined_pairs.first.first);
-					refined_weights[ref_ind].push_back(temp_weight *refined_pairs.first.first);
-				}
-			}
-			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 1);
-			if (ss_up.first) {
-				//Refine blend func of point i by inserting at ss_up.second.first + 1 value ss_up.second.second
-				violated = true;
-				auto refined_pairs = refineBlend(bf.first, ss_up.second.first + 1, ss_up.second.second);
-				//Two insertions:
-				//First: refining the actual in s direction-> refine the blend function, +multipl*c to blendMultipliers[i]
-				//Delete actual old blend func
-				blend_functions[i].erase(blend_functions[i].begin() + j);
-				Vec temp_point = refined_points[i][j];
-				double temp_weight = refined_weights[i][j];
-				refined_points[i].erase(refined_points[i].begin() + j);
-				refined_weights[i].erase(refined_weights[i].begin() + j);
-				//Finding the blend function which is the same, if doesn't exist, add new one
-				bool exists = false;
-				for (int k = 0; k < blend_functions[i].size(); k++) {
-					auto temp_bf = blend_functions[i][k];
-					//TODO does this check equality in the right way??
-					if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
-						refined_points[i][k] += temp_point * refined_pairs.first.first;
-						refined_weights[i][k] += temp_weight * refined_pairs.first.first;
-						exists = true;
-						break;
+					else {
+						bool exists = false;
+						for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
+							auto temp_bf = blend_functions[ref_ind][k];
+							//TODO does this check equality in the right way??
+							if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
+								refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
+								refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
+								exists = true;
+								break;
+							}
+						}
+						if (!exists) {
+							std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.second.second, bf.second);
+							blend_functions[ref_ind].push_back(blend_pair);
+							refined_points[ref_ind].push_back(temp_point *refined_pairs.second.first);
+							refined_weights[ref_ind].push_back(temp_weight *refined_pairs.second.first);
+						}
 					}
-				}
-				if (!exists) {
-					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.first.second,bf.second);
-					blend_functions[i].push_back(blend_pair);
-					refined_points[i].push_back(temp_point *refined_pairs.first.first);
-					refined_weights[i].push_back(temp_weight * refined_pairs.first.first);
-				}
-				//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
-				int ref_ind;
-				if (ss_up.second.first == 3)ref_ind = getIndex(ss_up.second.second, bf.second[2]).second; // TODO what if getIndex.first == false?? shouldnt be
-				//getIndex of(bf.first[3], bf.second[2]) if inserting with 2 above the middle point
-				else ref_ind = getIndex(bf.first[3], bf.second[2]).second;
-				//refine the blend function
-				//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
-				//else store new one too
-				bool exists = false;
-				for (int k = 0; k < blend_functions[ref_ind].size(); k++) {
-					auto temp_bf = blend_functions[ref_ind][k];
-					//TODO does this check equality in the right way??
-					if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
-						refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
-						refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
-						exists = true;
-						break;
-					}
-				}
-				if (!exists) {
-					std::pair<std::vector<double>, std::vector<double>> blend_pair(refined_pairs.second.second, bf.second);
-					blend_functions[ref_ind].push_back(blend_pair);
-					refined_points[ref_ind].push_back(temp_point *refined_pairs.second.first);
-					refined_weights[ref_ind].push_back(temp_weight *refined_pairs.second.first);
 				}
 			}
 		}
@@ -1060,124 +1119,164 @@ bool MyViewer::checkForViol1() {
 	return violated;
 }
 
-bool MyViewer::checkForViol2() {
+bool MyViewer::checkForViol2(std::vector<int> excluded) {
 	bool violated = false;
 	int cpnum = tspline_control_points.size();
 	for (int i = 0; i < cpnum; i++) {
-		for (int j = 0; j < blend_functions[i].size();j++) {
-			auto bf = blend_functions[i][j];
-			std::pair<bool,std::pair<int,double>> ts_down = checkTsDown(i,bf.first,bf.second,2);
-			if (ts_down.first) {
-				//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
-				violated = true;
-				int new_index = getIndex(bf.first[2], bf.second[ts_down.second.first]).second; //what if this gives back true--point exists?? couldnt happen, right?
-				updateIA(bf.second[ts_down.second.first]);
-				updateJA(new_index, bf.first[2]);
-				std::vector<double> new_ti;
-				//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
-				if (ts_down.second.first == 1) new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[2], bf.second[3] };
-				else new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[1], bf.second[2] };
-				ti_array.insert(ti_array.begin() + new_index, new_ti);
-				//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
-				si_array.insert(si_array.begin() + new_index, bf.first);
-				std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
-				std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = {vec_pair};
-				blend_functions.insert(blend_functions.begin() + new_index, new_blend);
-				//Question TODO can new point influence others, if so it needs a good new_point and new_weight
-				std::vector<Vec> new_point = { ? ? ? };
-				refined_points.insert(refined_points.begin() + new_index, new_point);
-				std::vector<double> new_weight = { ? ? ? };
-				refined_weights.insert(refined_weights.begin() + new_index, new_weight);
-				tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
-				weights.insert(weights.begin() + new_index, new_weight[0]);
-			}
+		//Check only for points which are not in the excluded, excluded is going to contain the indices of the newly added 
+		if (std::find(excluded.begin(), excluded.end(), i) == excluded.end()) {
+			for (int j = 0; j < blend_functions[i].size(); j++) {
+				auto bf = blend_functions[i][j];
+				std::pair<bool, std::pair<int, double>> ts_down = checkTsDown(i, bf.first, bf.second, 2);
+				if (ts_down.first) {
+					//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
+					violated = true;
+					int new_index = getIndex(bf.first[2], bf.second[ts_down.second.first]).second; //what if this gives back true--point exists?? couldnt happen, right?
+					updateIA(bf.second[ts_down.second.first]);
+					updateJA(new_index, bf.first[2]);
+					std::vector<double> new_ti;
+					//Isn't going to be good in all cases, but best guess for lower indices: the value of index from Rule1
+					if (ts_down.second.first == 1) new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[2], bf.second[3] };
+					else new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[1], bf.second[2] };
+					ti_array.insert(ti_array.begin() + new_index, new_ti);
+					//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
+					si_array.insert(si_array.begin() + new_index, bf.first);
+					std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
+					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
+					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
+					//New point can't influence others, so it doesn't need a good new_point and new_weight
+					std::vector<Vec> new_point = { Vec() };
+					refined_points.insert(refined_points.begin() + new_index, new_point);
+					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
+					std::vector<double> new_weight = { 0.0 };
+					refined_weights.insert(refined_weights.begin() + new_index, new_weight);
+					tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
+					weights.insert(weights.begin() + new_index, new_weight[0]);
+					//Handle index changes due to new point inserted- to still check all points
+					cpnum++;
+					if (new_index <= i) i++;
+					//Update excluded accordingly too
+					for (auto ex : excluded) {
+						if (ex >= new_index) ex++;
+					}
+					excluded.push_back(new_index);
+				}
 
-			std::pair<bool,std::pair<int,double>> ts_up = checkTsUp(i, bf.first, bf.second, 2);
-			if (ts_up.first) {
-				//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
-				violated = true;
-				int new_index = getIndex(bf.first[2], bf.second[ts_up.second.first]).second; //what if this gives back false??
-				updateIA(bf.second[ts_up.second.first]);
-				updateJA(new_index, bf.first[2]);
-				std::vector<double> new_ti;
-				if (ts_up.second.first == 3) new_ti = { bf.second[1], bf.second[2], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
-				else new_ti = { bf.second[2], bf.second[3], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
-				ti_array.insert(ti_array.begin() + new_index, new_ti);
-				//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
-				si_array.insert(si_array.begin() + new_index, bf.first);
-				std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
-				std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
-				blend_functions.insert(blend_functions.begin() + new_index, new_blend);
-				//Question TODO can new point influence others, if so it needs a good new_point and new_weight
-				std::vector<Vec> new_point = { ? ? ? };
-				refined_points.insert(refined_points.begin() + new_index, new_point);
-				std::vector<double> new_weight = { ? ? ? };
-				refined_weights.insert(refined_weights.begin() + new_index, new_weight);
-				tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
-				weights.insert(weights.begin() + new_index, new_weight[0]);
-			}
+				std::pair<bool, std::pair<int, double>> ts_up = checkTsUp(i, bf.first, bf.second, 2);
+				if (ts_up.first) {
+					//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
+					violated = true;
+					int new_index = getIndex(bf.first[2], bf.second[ts_up.second.first]).second; //what if this gives back false??
+					updateIA(bf.second[ts_up.second.first]);
+					updateJA(new_index, bf.first[2]);
+					std::vector<double> new_ti;
+					if (ts_up.second.first == 3) new_ti = { bf.second[1], bf.second[2], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
+					else new_ti = { bf.second[2], bf.second[3], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
+					ti_array.insert(ti_array.begin() + new_index, new_ti);
+					//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
+					si_array.insert(si_array.begin() + new_index, bf.first);
+					std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
+					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
+					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
+					//New point can't influence others, so it doesn't need a good new_point and new_weight
+					std::vector<Vec> new_point = { ? ? ? };
+					refined_points.insert(refined_points.begin() + new_index, new_point);
+					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
+					std::vector<double> new_weight = { 0.0 };
+					refined_weights.insert(refined_weights.begin() + new_index, new_weight);
+					tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
+					weights.insert(weights.begin() + new_index, new_weight[0]);
+					//Handle index changes due to new point inserted- to still check all points
+					cpnum++;
+					if (new_index <= i) i++;
+					//Update excluded accordingly too
+					for (auto ex : excluded) {
+						if (ex >= new_index) ex++;
+					}
+					excluded.push_back(new_index);
+				}
 
-			std::pair<bool,std::pair<int,double>> ss_down = checkSsDown(i, bf.first, bf.second, 2);
-			if (ss_down.first) {
-				//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
-				violated = true;
-				int new_index = getIndex(bf.first[ss_down.second.first], bf.second[2]).second; //what if this gives back false??
-				updateIA(bf.second[2]);
-				updateJA(new_index, bf.first[ss_down.second.first]);
-				std::vector<double> new_si;
-				//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
-				if (ss_down.second.first == 1) new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[2], bf.first[3] };
-				else new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[1], bf.first[2] };
-				si_array.insert(si_array.begin() + new_index, new_si);
-				//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
-				ti_array.insert(ti_array.begin() + new_index, bf.second);
-				std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si,bf.second);
-				std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
-				blend_functions.insert(blend_functions.begin() + new_index, new_blend);
-				//Question TODO can new point influence others, if so it needs a good new_point and new_weight
-				std::vector<Vec> new_point = { ? ? ? };
-				refined_points.insert(refined_points.begin() + new_index, new_point);
-				std::vector<double> new_weight = { ? ? ? };
-				refined_weights.insert(refined_weights.begin() + new_index, new_weight);
-				tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
-				weights.insert(weights.begin() + new_index, new_weight[0]);
-			}
+				std::pair<bool, std::pair<int, double>> ss_down = checkSsDown(i, bf.first, bf.second, 2);
+				if (ss_down.first) {
+					//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
+					violated = true;
+					int new_index = getIndex(bf.first[ss_down.second.first], bf.second[2]).second; //what if this gives back false??
+					updateIA(bf.second[2]);
+					updateJA(new_index, bf.first[ss_down.second.first]);
+					std::vector<double> new_si;
+					//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
+					if (ss_down.second.first == 1) new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[2], bf.first[3] };
+					else new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[1], bf.first[2] };
+					si_array.insert(si_array.begin() + new_index, new_si);
+					//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
+					ti_array.insert(ti_array.begin() + new_index, bf.second);
+					std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, bf.second);
+					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
+					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
+					//New point can't influence others, so it doesn't need a good new_point and new_weight
+					std::vector<Vec> new_point = { ? ? ? };
+					refined_points.insert(refined_points.begin() + new_index, new_point);
+					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
+					std::vector<double> new_weight = { 0.0 };
+					refined_weights.insert(refined_weights.begin() + new_index, new_weight);
+					tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
+					weights.insert(weights.begin() + new_index, new_weight[0]);
+					//Handle index changes due to new point inserted- to still check all points
+					cpnum++;
+					if (new_index <= i) i++;
+					//Update excluded accordingly too
+					for (auto ex : excluded) {
+						if (ex >= new_index) ex++;
+					}
+					excluded.push_back(new_index);
+				}
 
-			std::pair<bool,std::pair<int,double>> ss_up = checkSsUp(i, bf.first, bf.second, 2);
-			if (ss_up.first) {
-				//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
-				violated = true;
-				int new_index = getIndex(bf.first[ss_up.second.first], bf.second[2]).second; //what if this gives back false??
-				updateIA(bf.second[2]);
-				updateJA(new_index, bf.first[ss_up.second.first]);
-				std::vector<double> new_si;
-				//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
-				if (ss_up.second.first == 3) new_si = { bf.first[1], bf.first[2], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
-				else new_si = { bf.first[2], bf.first[3], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
-				si_array.insert(si_array.begin() + new_index, new_si);
-				//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
-				ti_array.insert(ti_array.begin() + new_index, bf.second);
-				std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, bf.second);
-				std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
-				blend_functions.insert(blend_functions.begin() + new_index, new_blend);
-				//Question TODO can new point influence others, if so it needs a good new_point and new_weight
-				std::vector<Vec> new_point = { ? ? ? };
-				refined_points.insert(refined_points.begin() + new_index, new_point);
-				std::vector<double> new_weight = { ? ? ? };
-				refined_weights.insert(refined_weights.begin() + new_index, new_weight);
-				tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
-				weights.insert(weights.begin() + new_index, new_weight[0]);
+				std::pair<bool, std::pair<int, double>> ss_up = checkSsUp(i, bf.first, bf.second, 2);
+				if (ss_up.first) {
+					//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
+					violated = true;
+					int new_index = getIndex(bf.first[ss_up.second.first], bf.second[2]).second; //what if this gives back false??
+					updateIA(bf.second[2]);
+					updateJA(new_index, bf.first[ss_up.second.first]);
+					std::vector<double> new_si;
+					//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
+					if (ss_up.second.first == 3) new_si = { bf.first[1], bf.first[2], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
+					else new_si = { bf.first[2], bf.first[3], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
+					si_array.insert(si_array.begin() + new_index, new_si);
+					//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
+					ti_array.insert(ti_array.begin() + new_index, bf.second);
+					std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, bf.second);
+					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
+					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
+					//New point can't influence others, so it doesn't need a good new_point and new_weight
+					std::vector<Vec> new_point = { ? ? ? };
+					refined_points.insert(refined_points.begin() + new_index, new_point);
+					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
+					std::vector<double> new_weight = { 0.0 };
+					refined_weights.insert(refined_weights.begin() + new_index, new_weight);
+					tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
+					weights.insert(weights.begin() + new_index, new_weight[0]);
+					//Handle index changes due to new point inserted- to still check all points
+					cpnum++;
+					if (new_index <= i) i++;
+					//Update excluded accordingly too
+					for (auto ex : excluded) {
+						if (ex >= new_index) ex++;
+					}
+					excluded.push_back(new_index);
+				}
 			}
 		}
 	}
 	return violated;
 }
 
-void MyViewer::checkViolations() {
+void MyViewer::checkViolations(std::vector<int> excluded) {
 	bool viol1 = false, viol2 = false;
 	do {
-		viol1 = checkForViol1();
-		viol2 = checkForViol2();
+		viol1 = checkForViol1(excluded);
+		excluded = {};
+		viol2 = checkForViol2(excluded);
 	} while (viol1 || viol2);
 
 	
@@ -1223,20 +1322,22 @@ void MyViewer::insertRefined(double s, double t) {
 	updateJA(new_ind, s);
 	std::vector<double> new_ti = { 0, 0, t, 0, 0 };
 	ti_array.insert(ti_array.begin() + new_ind, new_ti);
-	std::vector<double> new_si = { 0, 0, t, 0, 0 };
+	std::vector<double> new_si = { 0, 0, s, 0, 0 };
 	si_array.insert(si_array.begin() + new_ind, new_si);
 	std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, new_ti);
 	std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
 	blend_functions.insert(blend_functions.begin() + new_ind, new_blend);
-	//Question TODO can new point influence others, if so it needs a good new_point and new_weight
-	std::vector<Vec> new_point = { ? ? ? };
+	//New point can't influence others, so it doesn't need a good new_point and new_weight
+	std::vector<Vec> new_point = { Vec() };
 	refined_points.insert(refined_points.begin() + new_ind, new_point);
-	std::vector<double> new_weight = {? ? ?};
+	//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
+	std::vector<double> new_weight = {0.0};
 	refined_weights.insert(refined_weights.begin() + new_ind, new_weight);
 	tspline_control_points.insert(tspline_control_points.begin() + new_ind, new_point[0]);
 	weights.insert(weights.begin() + new_ind, new_weight[0]);
+	std::vector<int> excluded = {new_ind};
 
-	checkViolations();
+	checkViolations(excluded);
 	updateEdgeTopology();
 	updateMesh();
 	update();
