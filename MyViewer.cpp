@@ -1162,6 +1162,12 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 						if (ex >= new_index) ex++;
 					}
 					excluded.push_back(new_index);
+
+					//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
+					for (int e = 0; e < edges.size(); e++) {
+						if (edges[e].first >= new_index) edges[e].first++;
+						if (edges[e].second >= new_index) edges[e].second++;
+					}
 				}
 
 				std::pair<bool, std::pair<int, double>> ts_up = checkTsUp(i, bf.first, bf.second, 2);
@@ -1196,6 +1202,11 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 						if (ex >= new_index) ex++;
 					}
 					excluded.push_back(new_index);
+					//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
+					for (int e = 0; e < edges.size(); e++) {
+						if (edges[e].first >= new_index) edges[e].first++;
+						if (edges[e].second >= new_index) edges[e].second++;
+					}
 				}
 
 				std::pair<bool, std::pair<int, double>> ss_down = checkSsDown(i, bf.first, bf.second, 2);
@@ -1231,6 +1242,11 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 						if (ex >= new_index) ex++;
 					}
 					excluded.push_back(new_index);
+					//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
+					for (int e = 0; e < edges.size(); e++) {
+						if (edges[e].first >= new_index) edges[e].first++;
+						if (edges[e].second >= new_index) edges[e].second++;
+					}
 				}
 
 				std::pair<bool, std::pair<int, double>> ss_up = checkSsUp(i, bf.first, bf.second, 2);
@@ -1266,6 +1282,11 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 						if (ex >= new_index) ex++;
 					}
 					excluded.push_back(new_index);
+					//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
+					for (int e = 0; e < edges.size(); e++) {
+						if (edges[e].first >= new_index) edges[e].first++;
+						if (edges[e].second >= new_index) edges[e].second++;
+					}
 				}
 			}
 		}
@@ -1338,6 +1359,12 @@ void MyViewer::insertRefined(double s, double t) {
 	tspline_control_points.insert(tspline_control_points.begin() + new_ind, new_point[0]);
 	weights.insert(weights.begin() + new_ind, new_weight[0]);
 	std::vector<int> excluded = {new_ind};
+
+	//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
+	for (int e = 0; e < edges.size();e++) {
+		if (edges[e].first >= new_ind) edges[e].first++;
+		if (edges[e].second >= new_ind) edges[e].second++;
+	}
 
 	checkViolations(excluded);
 	updateEdgeTopology();
