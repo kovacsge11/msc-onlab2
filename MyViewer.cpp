@@ -1121,7 +1121,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 	return violated;
 }
 
-bool MyViewer::checkForViol2(std::vector<int> excluded) {
+std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> excluded) {
 	bool violated = false;
 	int cpnum = tspline_control_points.size();
 	for (int i = 0; i < cpnum; i++) {
@@ -1291,7 +1291,8 @@ bool MyViewer::checkForViol2(std::vector<int> excluded) {
 			}
 		}
 	}
-	return violated;
+	std::pair<bool, std::vector<int>> ret_pair(violated,excluded);
+	return ret_pair;
 }
 
 void MyViewer::checkViolations(std::vector<int> excluded) {
@@ -1299,7 +1300,9 @@ void MyViewer::checkViolations(std::vector<int> excluded) {
 	do {
 		viol1 = checkForViol1(excluded);
 		excluded = {};
-		viol2 = checkForViol2(excluded);
+		std::pair<bool, std::vector<int>> viol2_pair = checkForViol2(excluded);
+		excluded = viol2_pair.second;
+		viol2 = viol2_pair.first;
 	} while (viol1 || viol2);
 
 	

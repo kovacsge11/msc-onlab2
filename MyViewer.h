@@ -84,7 +84,7 @@ private:
   std::pair<std::vector<int>, std::vector<double>> refineRowCol(double new_value, int row_col_ind, bool is_row);
   std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
   bool checkForViol1(std::vector<int> excluded);
-  bool checkForViol2(std::vector<int> excluded);
+  std::pair<bool, std::vector<int>> checkForViol2(std::vector<int> excluded);
   void checkViolations(std::vector<int> excluded);
   std::pair<bool, int> getIndex(double s, double t);
   std::pair<bool, int> getRow(double t);
