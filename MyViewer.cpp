@@ -1496,16 +1496,19 @@ void MyViewer::postSelection(const QPoint &p) {
   else {
 	  //Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
-	  /*bool found;
+	  //Select point under pixel
+	  bool found;
 	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
-	  if (!found) return;*/
-	  Vec selectedPoint = (tspline_control_points[index_pair.first] + tspline_control_points[index_pair.second]) / 2.0;
+	  if (!found) return;
+	  double proportion = (selectedPoint - tspline_control_points[index_pair.first]).norm() / (tspline_control_points[index_pair.first] - tspline_control_points[index_pair.second]).norm();
+	  //Vec selectedPoint = (tspline_control_points[index_pair.first] + tspline_control_points[index_pair.second]) / 2.0;
 	  std::vector<double> new_si, new_ti;
 	  int new_index;
 	  double new_s, new_t;
 	  //If in same row, otherwise they must be in same column
 	  if (ti_array[index_pair.first][2] == ti_array[index_pair.second][2]) {
-		  new_s = (si_array[index_pair.first][2] + si_array[index_pair.second][2]) / 2.0;
+		  new_s = si_array[index_pair.first][2] + (si_array[index_pair.second][2] - si_array[index_pair.first][2])*proportion;
+		  //new_s = (si_array[index_pair.first][2] + si_array[index_pair.second][2]) / 2.0;
 		  new_t = ti_array[index_pair.first][2];
 
 		  //TODO visual feedback for changing keep_surface
@@ -1626,7 +1629,8 @@ void MyViewer::postSelection(const QPoint &p) {
 	  }
 	  else {
 		  new_s = si_array[index_pair.first][2];
-		  new_t = (ti_array[index_pair.first][2] + ti_array[index_pair.second][2]) / 2.0;
+		  new_t = ti_array[index_pair.first][2] + (ti_array[index_pair.second][2] - ti_array[index_pair.first][2])*proportion;
+		  //new_t = (ti_array[index_pair.first][2] + ti_array[index_pair.second][2]) / 2.0;
 
 		  if (keep_surface) {
 			  insertRefined(new_s, new_t);
