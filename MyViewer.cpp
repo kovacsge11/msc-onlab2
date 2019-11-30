@@ -1338,7 +1338,7 @@ void MyViewer::insertRefined(double s, double t) {
 	auto row = getRow(t);
 	auto col = getCol(s);
 	if (row.first) {
-		if (col.first) return;
+		if (col.first && getIndex(s,t).first) return;
 	}
 	else {
 		if (!col.first) return;
@@ -1919,7 +1919,7 @@ void MyViewer::generateBezierMesh() {
 }
 
 void MyViewer::generateTSplineMesh() {
-	size_t resolution = 30;
+	size_t resolution = 50;
 	size_t cpnum = weights.size();
 	//Assuming that the last point is the one with both the biggest s and biggest t -->cause surface cpts: rectangle
 	double biggest_s = si_array[cpnum-1][2];
