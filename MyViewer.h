@@ -91,7 +91,8 @@ private:
   std::pair<bool, int> getCol(double s);
   void updateIA(double t);
   void updateJA(int new_ind, double s);
-  void insertRefined(double s, double t);
+  void insertRefined(double s, double t, int new_ind);
+  std::pair<bool, double> checkOpposite(double s, double t, bool horizontal_insertion, int new_index, double epsilon);
 
   // Visualization
   void setupCamera();

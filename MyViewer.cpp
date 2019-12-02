@@ -1333,8 +1333,8 @@ std::pair<std::pair<double,std::vector<double>>, std::pair<double, std::vector<d
 	return std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>>(first_pair,second_pair);
 }
 
-void MyViewer::insertRefined(double s, double t) {
-	//We want to make sure it is inserted in an existing row or col, but also that it is a new point
+void MyViewer::insertRefined(double s, double t, int new_ind) {
+	/*//We want to make sure it is inserted in an existing row or col, but also that it is a new point
 	auto row = getRow(t);
 	auto col = getCol(s);
 	if (row.first) {
@@ -1343,7 +1343,9 @@ void MyViewer::insertRefined(double s, double t) {
 	else {
 		if (!col.first) return;
 	}
-	int new_ind = getIndex(s, t).second;
+	int new_ind = getIndex(s, t).second;*/
+
+	
 	updateIA(t);
 	updateJA(new_ind, s);
 	std::vector<double> new_ti = { 0, 0, t, 0, 0 };
@@ -1373,6 +1375,74 @@ void MyViewer::insertRefined(double s, double t) {
 	updateEdgeTopology();
 	updateMesh();
 	update();
+}
+
+//Checks whether there is an opposite t-junction in the epsilon neighbourhood, if so, it returns true and the value of opposite
+std::pair<bool, double> MyViewer::checkOpposite(double s, double t, bool horizontal_insertion, int new_index, double epsilon) {
+	std::vector<double> new_ti = { -1, -1, t, -1, -1 }; //TODO shift min to 0,0 in openTSpline - so no minus values will occur
+	std::vector<double> new_si = { -1, -1, s, -1, -1 };
+	if (horizontal_insertion) {
+		//Finding first t down according to Rule 1
+		double t_down = checkTsDown(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
+		//Check if point with nearly same s exists
+		int down_row = getRow(t_down).second; //first should give true, should be existing row
+		//Check all points in row for close point
+		bool is_close = false;
+		double close_value = -1.0;
+		for (int i = IA[down_row]; i < IA[down_row + 1]; i++) {
+			double temp_s = si_array[i][2];
+			if (abs(temp_s - s) < epsilon) {
+				is_close = true;
+				if (abs(temp_s - s) < abs(close_value - s)) close_value = temp_s;
+			}
+		}
+
+		//Do the same upwards, only update close value if its closer than the closest downwards
+		double t_up = checkTsUp(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
+		//Check if point with nearly same s exists
+		int up_row = getRow(t_up).second; //first should give true, should be existing row
+		//Check all points in row for close point
+		for (int i = IA[up_row]; i < IA[up_row + 1]; i++) {
+			double temp_s = si_array[i][2];
+			if (abs(temp_s - s) < epsilon) {
+				is_close = true;
+				if (abs(temp_s - s) < abs(close_value - s)) close_value = temp_s;
+			}
+		}
+		return { is_close,close_value };
+	}
+	else {
+		//Finding first s down according to Rule 1
+		double s_down = checkSsDown(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
+		//Check if point with nearly same t exists
+		int down_col = getCol(s_down).second; //first should give true, should be existing col
+		//Check all points in col for close point
+		bool is_close = false;
+		double close_value = -1.0;
+		std::vector<int> col_indices = indicesOfColumn(down_col);
+		for (auto i: col_indices) {
+			double temp_t = ti_array[i][2];
+			if (abs(temp_t - t) < epsilon) {
+				is_close = true;
+				if (abs(temp_t - t) < abs(close_value - t)) close_value = temp_t;
+			}
+		}
+
+		//Do the same upwards, only update close value if its closer than the closest downwards
+		double s_up = checkSsUp(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
+		//Check if point with nearly same s exists
+		int up_col = getCol(s_up).second; //first should give true, should be existing col
+		col_indices = indicesOfColumn(down_col);
+		//Check all points in col for close point
+		for (auto i : col_indices) {
+			double temp_t = ti_array[i][2];
+			if (abs(temp_t - t) < epsilon) {
+				is_close = true;
+				if (abs(temp_t - t) < abs(close_value - t)) close_value = temp_t;
+			}
+		}
+		return { is_close,close_value };
+	}
 }
 
 std::pair<std::vector<int>, std::vector<double>> MyViewer::refineRowCol(double new_value, int row_col_ind, bool is_row) {
@@ -1459,7 +1529,7 @@ std::pair<std::vector<int>, std::vector<double>> MyViewer::refineRowCol(double n
 	return ret_pair;
 }
 
-void MyViewer::postSelection(const QPoint &p) {
+void MyViewer::postSelection(const QPoint &p)  {
   int sel = selectedName();
   if (sel == -1) {
     axes.shown = false;
@@ -1494,6 +1564,8 @@ void MyViewer::postSelection(const QPoint &p) {
 	  axes.selected_axis = -1;
   }
   else {
+	  double epsilon = 0.05;
+
 	  //Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
 	  //Select point under pixel
@@ -1510,15 +1582,19 @@ void MyViewer::postSelection(const QPoint &p) {
 		  new_s = si_array[index_pair.first][2] + (si_array[index_pair.second][2] - si_array[index_pair.first][2])*proportion;
 		  //new_s = (si_array[index_pair.first][2] + si_array[index_pair.second][2]) / 2.0;
 		  new_t = ti_array[index_pair.first][2];
+		  new_index = index_pair.second;
+
+		  auto opp_check = checkOpposite(new_s, new_t, true, new_index, epsilon);
+		  if (opp_check.first) new_s = opp_check.second;
 
 		  //TODO visual feedback for changing keep_surface
 		  if (keep_surface) {
-			  insertRefined(new_s, new_t);
+			  insertRefined(new_s, new_t, new_index);
 			  return;
 		  }
 
 		  new_si = { si_array[index_pair.first][1], si_array[index_pair.first][2], new_s, si_array[index_pair.second][2], si_array[index_pair.second][3]};
-		  new_index = index_pair.second;
+		  
 
 		  //Finding new ti
 		  new_ti.clear();
@@ -1631,18 +1707,29 @@ void MyViewer::postSelection(const QPoint &p) {
 		  new_s = si_array[index_pair.first][2];
 		  new_t = ti_array[index_pair.first][2] + (ti_array[index_pair.second][2] - ti_array[index_pair.first][2])*proportion;
 		  //new_t = (ti_array[index_pair.first][2] + ti_array[index_pair.second][2]) / 2.0;
+		  
+		  //Finding new index
+		  auto new_ind_pair = getIndex(new_s, new_t);
+		  if (!new_ind_pair.first) new_index = new_ind_pair.second;
+		  else return;
+
+		  auto opp_check = checkOpposite(new_s, new_t, false, new_index, epsilon);
+		  if (opp_check.first) {
+			  new_t = opp_check.second;
+			  //Updating index
+			  auto new_ind_pair = getIndex(new_s, new_t);
+			  if (!new_ind_pair.first) new_index = new_ind_pair.second;
+			  else return;
+		  }
 
 		  if (keep_surface) {
-			  insertRefined(new_s, new_t);
+			  insertRefined(new_s, new_t,new_index);
 			  return;
 		  }
 
 		  new_ti = { ti_array[index_pair.first][1], ti_array[index_pair.first][2], new_t, ti_array[index_pair.second][2], ti_array[index_pair.second][3] };
 		  
-		  //Finding new index
-		  auto new_ind_pair = getIndex(new_s, new_t);
-		  if (new_ind_pair.first) new_index = new_ind_pair.second;
-		  else return;
+		  
 
 		  //Finding new si
 		  new_si.clear();
