@@ -1432,7 +1432,7 @@ std::pair<bool, double> MyViewer::checkOpposite(double s, double t, bool horizon
 		double s_up = checkSsUp(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
 		int up_col = getCol(s_up).second; //first should give true, should be existing col
-		col_indices = indicesOfColumn(down_col);
+		col_indices = indicesOfColumn(up_col);
 		//Check all points in col for close point
 		for (auto i : col_indices) {
 			double temp_t = ti_array[i][2];
@@ -1564,7 +1564,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  axes.selected_axis = -1;
   }
   else {
-	  double epsilon = 0.05;
+	  double epsilon = 0.25;
 
 	  //Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
@@ -2082,7 +2082,7 @@ Second.first: index of insertion in t_vec
 Second.second: new value to be inserted
 */
 std::pair<bool,std::pair<int,double>> MyViewer::checkTsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_row = actRow(index);
+	int act_row = getRow(t_vec[2]).second;
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	while (num_found < 2) {
@@ -2105,7 +2105,7 @@ std::pair<bool,std::pair<int,double>> MyViewer::checkTsDown(int index, std::vect
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the t of them should be the 1-num_found-th element of ti array of our point
 					bool found = false;
-					for (int j = 0; j < edges.size(), !found; j++) {
+					for (int j = 0; j < edges.size() && !found; j++) {
 						auto p = edges[j];
 						if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
 							if (t_vec[1 - num_found] != ti_array[temp_ind - 1][2])
@@ -2141,7 +2141,7 @@ Second.first: index of insertion in t_vec
 Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkTsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_row = actRow(index);
+	int act_row = getRow(t_vec[2]).second;
 	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
@@ -2165,7 +2165,7 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkTsUp(int index, std::vect
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the t of them should be the 3+num_found-th element of ti array of our point
 					bool found = false;
-					for (int j = 0; j < edges.size(), !found; j++) {
+					for (int j = 0; j < edges.size() && !found; j++) {
 						auto p = edges[j];
 						if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
 							if (t_vec[3 + num_found] != ti_array[temp_ind - 1][2])
@@ -2201,7 +2201,7 @@ Second.first: index of insertion in s_vec
 Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_col = JA[index];
+	int act_col = getCol(s_vec[2]).second;
 	int i = act_col == 0 ? act_col : act_col - 1;
 	int num_found = 0;
 	while (num_found < 2) {
@@ -2228,7 +2228,7 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, std::ve
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the s of them should be the 1-num_found-th element of si array of our point
 					bool found = false;
-					for (int k = 0; k < edges.size(), !found; k++) {
+					for (int k = 0; k < edges.size() && !found; k++) {
 						auto p = edges[k];
 						if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
 							if (s_vec[1 - num_found] != si_array[is_of_col[j - 1]][2])
@@ -2263,7 +2263,7 @@ Second.first: index of insertion in s_vec
 Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_col = JA[index];
+	int act_col = getCol(s_vec[2]).second; //is this OK here?
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
 	int num_found = 0;
@@ -2292,7 +2292,7 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkSsUp(int index, std::vect
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the s of them should be the 3+num_found-th element of si array of our point
 					bool found = false;
-					for (int k = 0; k < edges.size(), !found; k++) {
+					for (int k = 0; k < edges.size() && !found; k++) {
 						auto p = edges[k];
 						if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
 							if (s_vec[3 + num_found] != si_array[is_of_col[j - 1]][2])
