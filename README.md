@@ -2,6 +2,10 @@
 My code to subject "Önálló laboratórium 2" at masters.
 I used the framework implemented by Peter Salvi: https://github.com/salvipeter/sample-framework/tree/757a0b1af2f4a17fb536777664c68145f386b65e.
 
+## Added key actions
+With the key K you can change whether you want surface-keeping insertion or not (the latter is the default).
+With the key E you can change whether you want insertions at any given point of an edge (this is the default) or at the half of the edge.
+
 ## Rule checking
 According to the publication [T-Splines and T-NURCCs by Sederberg et al. 2003](https://www.researchgate.net/publication/234827617_T-splines_and_T-NURCCs) two rules of T-mesh have to be checked in order to validate the correctness of the topology. 
 
