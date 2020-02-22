@@ -137,7 +137,7 @@ private:
   //For every blend function of every point stores the weight of actual point of origin multiplied by the factor of refinements
   std::vector<std::vector<double>> refined_weights;
 
-  bool keep_surface;
+  bool keep_surface, mid_insert;
 
   // Visualization
   double mean_min, mean_max, cutoff_ratio;

@@ -28,7 +28,7 @@
 
 MyViewer::MyViewer(QWidget *parent) :
   QGLViewer(parent), model_type(ModelType::NONE),
-  mean_min(0.0), mean_max(0.0), cutoff_ratio(0.05),
+  mean_min(0.0), mean_max(0.0), cutoff_ratio(0.05), mid_insert(false),
   show_control_points(true), show_solid(true), show_wireframe(false),keep_surface(false),
   visualization(Visualization::PLAIN), slicing_dir(0, 0, 1), slicing_scaling(1)
 {
@@ -1566,21 +1566,26 @@ void MyViewer::postSelection(const QPoint &p)  {
   else {
 	  double epsilon = 0.25;
 
-	  //Vec selectedPoint = camera()->pointUnderPixel(p, found);
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
-	  //Select point under pixel
-	  bool found;
-	  Vec selectedPoint = camera()->pointUnderPixel(p, found);
-	  if (!found) return;
-	  double proportion = (selectedPoint - tspline_control_points[index_pair.first]).norm() / (tspline_control_points[index_pair.first] - tspline_control_points[index_pair.second]).norm();
-	  //Vec selectedPoint = (tspline_control_points[index_pair.first] + tspline_control_points[index_pair.second]) / 2.0;
+	  double proportion = 0.5;
+	  Vec selectedPoint;
+	  if(mid_insert){
+		  selectedPoint = (tspline_control_points[index_pair.first] + tspline_control_points[index_pair.second]) / 2.0;
+	  }
+	  else {
+		  //Select point under pixel
+		  bool found;
+		  selectedPoint = camera()->pointUnderPixel(p, found);
+		  if (!found) return;
+		  proportion = (selectedPoint - tspline_control_points[index_pair.first]).norm() / (tspline_control_points[index_pair.first] - tspline_control_points[index_pair.second]).norm();
+	  }
+
 	  std::vector<double> new_si, new_ti;
 	  int new_index;
 	  double new_s, new_t;
 	  //If in same row, otherwise they must be in same column
 	  if (ti_array[index_pair.first][2] == ti_array[index_pair.second][2]) {
 		  new_s = si_array[index_pair.first][2] + (si_array[index_pair.second][2] - si_array[index_pair.first][2])*proportion;
-		  //new_s = (si_array[index_pair.first][2] + si_array[index_pair.second][2]) / 2.0;
 		  new_t = ti_array[index_pair.first][2];
 		  new_index = index_pair.second;
 
@@ -1706,7 +1711,6 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  else {
 		  new_s = si_array[index_pair.first][2];
 		  new_t = ti_array[index_pair.first][2] + (ti_array[index_pair.second][2] - ti_array[index_pair.first][2])*proportion;
-		  //new_t = (ti_array[index_pair.first][2] + ti_array[index_pair.second][2]) / 2.0;
 		  
 		  //Finding new index
 		  auto new_ind_pair = getIndex(new_s, new_t);
@@ -1902,6 +1906,11 @@ void MyViewer::keyPressEvent(QKeyEvent *e) {
       break;
 	case Qt::Key_K:
 		keep_surface = !keep_surface;
+		update();
+		break;
+	//TODO do this more user-friendly
+	case Qt::Key_E:
+		mid_insert = !mid_insert;
 		update();
 		break;
     case Qt::Key_F:
