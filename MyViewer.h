@@ -40,6 +40,7 @@ protected:
   virtual void init() override;
   virtual void draw() override;
   virtual void drawWithNames() override;
+  virtual void endSelection(const QPoint & p) override;
   virtual void postSelection(const QPoint &p) override;
   virtual void keyPressEvent(QKeyEvent *e) override;
   virtual void mouseMoveEvent(QMouseEvent *e) override;
@@ -66,12 +67,38 @@ private:
 
   // Bezier
   static void bernsteinAll(size_t n, double u, std::vector<double> &coeff);
-  void generateMesh();
+  void generateBezierMesh();
+
+  //TSpline
+  double cubicBSplineBasis(double param, std::vector<double> knots);
+  void generateTSplineMesh();
+  void updateEdgeTopology();
+  bool checkTSplineCorrectness();
+  bool checkTSplineTopology();
+  std::vector<int> indicesOfColumn(int colindex);
+  int actRow(int index);
+  std::pair<bool, std::pair<int, double>> checkTsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
+  std::pair<bool, std::pair<int, double>> checkTsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
+  std::pair<bool, std::pair<int, double>> checkSsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
+  std::pair<bool, std::pair<int, double>> checkSsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
+  std::pair<std::vector<int>, std::vector<double>> refineRowCol(double new_value, int row_col_ind, bool is_row);
+  std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
+  bool checkForViol1(std::vector<int> excluded);
+  std::pair<bool, std::vector<int>> checkForViol2(std::vector<int> excluded);
+  void checkViolations(std::vector<int> excluded);
+  std::pair<bool, int> getIndex(double s, double t);
+  std::pair<bool, int> getRow(double t);
+  std::pair<bool, int> getCol(double s);
+  void updateIA(double t);
+  void updateJA(int new_ind, double s);
+  void insertRefined(double s, double t, int new_ind);
+  std::pair<bool, double> checkOpposite(double s, double t, bool horizontal_insertion, int new_index, double epsilon);
 
   // Visualization
   void setupCamera();
   Vec meanMapColor(double d) const;
-  void drawControlNet() const;
+  void drawBezierControlNet() const;
+  void drawTSplineControlNet(bool with_names, int start_index) const;
   void drawAxes() const;
   void drawAxesWithNames() const;
   static Vec intersectLines(const Vec &ap, const Vec &ad, const Vec &bp, const Vec &bd);
@@ -90,12 +117,27 @@ private:
 
   // Bezier
   size_t degree[2];
-  std::vector<Vec> control_points;
+  std::vector<Vec> bezier_control_points;
 
   //TSpline
-  std::vector<std::vector<float>> si_array;
-  std::vector<std::vector<float>> ti_array;
-  std::vector<float> weights;
+  //https://www.geeksforgeeks.org/sparse-matrix-representations-set-3-csr/ - sparse matrix representation
+
+  std::vector<Vec> tspline_control_points;
+  std::vector<int> IA;
+  std::vector<int> JA;
+
+  std::vector<std::vector<double>> si_array;
+  std::vector<std::vector<double>> ti_array;
+  std::vector<double> weights;
+  //In order to handle edges
+  std::vector<std::pair<int,int>> edges;
+  std::vector<std::vector<std::pair<std::vector<double>, std::vector<double>>>> blend_functions;
+  //For every blend function of every point stores the coordinates of actual point of origin multiplied by the factor of refinements
+  std::vector<std::vector<Vec>> refined_points;
+  //For every blend function of every point stores the weight of actual point of origin multiplied by the factor of refinements
+  std::vector<std::vector<double>> refined_weights;
+
+  bool keep_surface, mid_insert;
 
   // Visualization
   double mean_min, mean_max, cutoff_ratio;
