@@ -87,9 +87,9 @@ private:
   std::pair<bool, std::vector<int>> checkForViol2(std::vector<int> excluded);
   void checkViolations(std::vector<int> excluded);
   std::pair<bool, int> getIndex(double s, double t);
-  std::pair<bool, int> getRow(double t);
-  std::pair<bool, int> getCol(double s);
-  void updateIA(double t);
+  std::pair<bool, int> getRow(int index, double t);
+  std::pair<bool, int> getCol(int index, double s);
+  void updateIA(int new_ind, double t);
   void updateJA(int new_ind, double s);
   void insertRefined(double s, double t, int new_ind);
   std::pair<bool, double> checkOpposite(double s, double t, bool horizontal_insertion, int new_index, double epsilon);

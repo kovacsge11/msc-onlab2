@@ -757,17 +757,17 @@ std::vector<int> MyViewer::indicesOfColumn(int colindex) {
 	return ret_vec;
 }
 
-std::pair<bool, int> MyViewer::getRow(double t) {
+std::pair<bool, int> MyViewer::getRow(int index, double t) {
 	int i = 0;
-	for (; ti_array[IA[i]][2] < t; i++) {
+	for (; IA[i] < index; i++) {
 	}
 	//Returns with true,i if row exists, false otherwise
-	return std::pair<bool, int>(!(ti_array[IA[i]][2] > t),i);
+	return std::pair<bool, int>(!(ti_array[IA[i]][2] > t), i);
 }
 
-std::pair<bool, int> MyViewer::getCol(double s) {
+std::pair<bool, int> MyViewer::getCol(int index, double s) {
 	int i = 0;
-	for (; si_array[indicesOfColumn(i)[0]][2] < s; i++) {
+	for (;indicesOfColumn(i)[0] < index; i++) {
 	}
 	//Returns with true,i if row exists, false otherwise
 	return std::pair<bool, int>(!(si_array[indicesOfColumn(i)[0]][2] > s), i);
@@ -777,7 +777,7 @@ std::pair<bool, int> MyViewer::getCol(double s) {
 //true if point exists already
 std::pair<bool, int> MyViewer::getIndex(double s, double t) {
 	int new_index;
-	auto row = getRow(t);
+	auto row = getRow(new_index, t);
 	if (row.first) {
 		int i = IA[row.second];
 		for (; i < IA[row.second + 1] && si_array[i][2] < s; i++) {
@@ -790,8 +790,8 @@ std::pair<bool, int> MyViewer::getIndex(double s, double t) {
 	}
 }
 
-void MyViewer::updateIA(double t) {
-	auto row = getRow(t);
+void MyViewer::updateIA(int new_ind, double t) {
+	auto row = getRow(new_ind, t);
 	//If is inserted into existing row
 	if (row.first) {
 		for (int j = row.second + 1; j < IA.size(); j++) {
@@ -807,7 +807,7 @@ void MyViewer::updateIA(double t) {
 }
 
 void MyViewer::updateJA(int new_ind, double s) {
-	auto col = getCol(s);
+	auto col = getCol(new_ind,s);
 	//If is inserted into existing col
 	if (col.first) {
 		JA.insert(JA.begin() + new_ind, col.second);
@@ -1134,7 +1134,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
 					violated = true;
 					int new_index = getIndex(bf.first[2], bf.second[ts_down.second.first]).second; //what if this gives back true--point exists?? couldnt happen, right?
-					updateIA(bf.second[ts_down.second.first]);
+					updateIA(new_index, bf.second[ts_down.second.first]);
 					updateJA(new_index, bf.first[2]);
 					std::vector<double> new_ti;
 					//Isn't going to be good in all cases, but best guess for lower indices: the value of index from Rule1
@@ -1175,7 +1175,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
 					violated = true;
 					int new_index = getIndex(bf.first[2], bf.second[ts_up.second.first]).second; //what if this gives back false??
-					updateIA(bf.second[ts_up.second.first]);
+					updateIA(new_index,bf.second[ts_up.second.first]);
 					updateJA(new_index, bf.first[2]);
 					std::vector<double> new_ti;
 					if (ts_up.second.first == 3) new_ti = { bf.second[1], bf.second[2], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
@@ -1214,7 +1214,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
 					violated = true;
 					int new_index = getIndex(bf.first[ss_down.second.first], bf.second[2]).second; //what if this gives back false??
-					updateIA(bf.second[2]);
+					updateIA(new_index,bf.second[2]);
 					updateJA(new_index, bf.first[ss_down.second.first]);
 					std::vector<double> new_si;
 					//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
@@ -1254,7 +1254,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
 					violated = true;
 					int new_index = getIndex(bf.first[ss_up.second.first], bf.second[2]).second; //what if this gives back false??
-					updateIA(bf.second[2]);
+					updateIA(new_index,bf.second[2]);
 					updateJA(new_index, bf.first[ss_up.second.first]);
 					std::vector<double> new_si;
 					//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
@@ -1346,7 +1346,7 @@ void MyViewer::insertRefined(double s, double t, int new_ind) {
 	int new_ind = getIndex(s, t).second;*/
 
 	
-	updateIA(t);
+	updateIA(new_ind,t);
 	updateJA(new_ind, s);
 	std::vector<double> new_ti = { 0, 0, t, 0, 0 };
 	ti_array.insert(ti_array.begin() + new_ind, new_ti);
@@ -1385,7 +1385,7 @@ std::pair<bool, double> MyViewer::checkOpposite(double s, double t, bool horizon
 		//Finding first t down according to Rule 1
 		double t_down = checkTsDown(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
-		int down_row = getRow(t_down).second; //first should give true, should be existing row
+		int down_row = getRow(new_index,t_down).second; //first should give true, should be existing row
 		//Check all points in row for close point
 		bool is_close = false;
 		double close_value = -1.0;
@@ -1400,7 +1400,7 @@ std::pair<bool, double> MyViewer::checkOpposite(double s, double t, bool horizon
 		//Do the same upwards, only update close value if its closer than the closest downwards
 		double t_up = checkTsUp(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
-		int up_row = getRow(t_up).second; //first should give true, should be existing row
+		int up_row = getRow(new_index,t_up).second; //first should give true, should be existing row
 		//Check all points in row for close point
 		for (int i = IA[up_row]; i < IA[up_row + 1]; i++) {
 			double temp_s = si_array[i][2];
@@ -1415,7 +1415,7 @@ std::pair<bool, double> MyViewer::checkOpposite(double s, double t, bool horizon
 		//Finding first s down according to Rule 1
 		double s_down = checkSsDown(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same t exists
-		int down_col = getCol(s_down).second; //first should give true, should be existing col
+		int down_col = getCol(new_index,s_down).second; //first should give true, should be existing col
 		//Check all points in col for close point
 		bool is_close = false;
 		double close_value = -1.0;
@@ -1431,7 +1431,7 @@ std::pair<bool, double> MyViewer::checkOpposite(double s, double t, bool horizon
 		//Do the same upwards, only update close value if its closer than the closest downwards
 		double s_up = checkSsUp(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
-		int up_col = getCol(s_up).second; //first should give true, should be existing col
+		int up_col = getCol(new_index,s_up).second; //first should give true, should be existing col
 		col_indices = indicesOfColumn(up_col);
 		//Check all points in col for close point
 		for (auto i : col_indices) {
@@ -1853,7 +1853,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  //Update JA
 		  JA.insert(JA.begin()+new_index,act_col);
 		  //Update IA too
-		  updateIA(new_t);
+		  updateIA(new_index,new_t);
 	  }
 	  double weight = 1.0; //TODO other weight value??
 	  weights.insert(weights.begin() + new_index, weight);
@@ -2091,7 +2091,7 @@ Second.first: index of insertion in t_vec
 Second.second: new value to be inserted
 */
 std::pair<bool,std::pair<int,double>> MyViewer::checkTsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_row = getRow(t_vec[2]).second;
+	int act_row = getRow(index,t_vec[2]).second;
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	while (num_found < 2) {
@@ -2150,7 +2150,7 @@ Second.first: index of insertion in t_vec
 Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkTsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_row = getRow(t_vec[2]).second;
+	int act_row = getRow(index,t_vec[2]).second;
 	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
@@ -2210,7 +2210,7 @@ Second.first: index of insertion in s_vec
 Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_col = getCol(s_vec[2]).second;
+	int act_col = getCol(index,s_vec[2]).second;
 	int i = act_col == 0 ? act_col : act_col - 1;
 	int num_found = 0;
 	while (num_found < 2) {
@@ -2272,7 +2272,7 @@ Second.first: index of insertion in s_vec
 Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_col = getCol(s_vec[2]).second; //is this OK here?
+	int act_col = getCol(index,s_vec[2]).second; //is this OK here?
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
 	int num_found = 0;
