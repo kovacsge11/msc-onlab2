@@ -491,14 +491,14 @@ void MyViewer::init() {
 
 void MyViewer::updateEdgeTopology() {
 	edges.clear();
-	size_t cpnum = tspline_control_points.size();
-	size_t ia_size = IA.size();
+	int cpnum = tspline_control_points.size();
+	int ia_size = IA.size();
 	//Storing controlnet in row direction
-	for (size_t i = 1; i < ia_size; ++i) {
+	for (int i = 1; i < ia_size; ++i) {
 		bool first = true;
-		for (size_t j = IA[i - 1]; j < IA[i]; ++j) {
+		for (int j = IA[i - 1]; j < IA[i]; ++j) {
 			//If last in row or is not connected with next in row /this way the topology is surely true to rule 2/
-			if ((si_array[j][3] == si_array[j][2]) || (si_array[j][3] != si_array[j + 1][2])) {
+			if ((j == IA[i]-1) || (si_array[j][3] != si_array[j + 1][2])) {
 				if (first) break;
 				first = true;
 				std::pair<int, int> ind_pair = std::pair<int, int>(j - 1, j);
@@ -519,10 +519,10 @@ void MyViewer::updateEdgeTopology() {
 	//Drawing in column direction
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	bool first = true;
-	for (size_t i = 0; i < col_num; ++i) {
+	for (int i = 0; i < col_num; ++i) {
 		first = true;
 		std::vector<int> col_indices = indicesOfColumn(i);
-		for (size_t j = 0; j < col_indices.size(); ++j) {
+		for (int j = 0; j < col_indices.size(); ++j) {
 			//If last or first in column or is not connected with next in column /this way the topology is surely true to rule 2/
 			if (j==col_indices.size()-1 || j==0 || (ti_array[col_indices[j]][2] != ti_array[col_indices[j-1]][3])) {
 				if (!first) {
@@ -757,20 +757,30 @@ std::vector<int> MyViewer::indicesOfColumn(int colindex) {
 	return ret_vec;
 }
 
+//Returns with true,i if row exists, false otherwise
 std::pair<bool, int> MyViewer::getRow(int index, double t) {
 	int i = 0;
-	for (; IA[i] < index; i++) {
+	int max_row = IA.size() - 2;
+	for (; (max_row >= i) && (IA[i] <= index); i++) {
 	}
-	//Returns with true,i if row exists, false otherwise
-	return std::pair<bool, int>(!(ti_array[IA[i]][2] > t), i);
+	return std::pair<bool, int>((max_row >= i) ? !(ti_array[IA[i]][2] > t) : true, i-1);
 }
 
+//Returns with true,i if col exists, false otherwise
 std::pair<bool, int> MyViewer::getCol(int index, double s) {
 	int i = 0;
-	for (;indicesOfColumn(i)[0] < index; i++) {
+	int max_col = *std::max_element(JA.begin(), JA.end());
+	for (; (max_col >= i); i++) {
+		auto col_ind = indicesOfColumn(i);
+		if (std::find(col_ind.begin(), col_ind.end(), index) != col_ind.end()) {
+			return std::pair<bool, int>(true, i);
+		}
+		else if (si_array[col_ind[0]][2] > s) {
+			return std::pair<bool, int>(si_array[indicesOfColumn(i - 1)[0]][2] == s, i-1);
+		}
 	}
-	//Returns with true,i if row exists, false otherwise
-	return std::pair<bool, int>(!(si_array[indicesOfColumn(i)[0]][2] > s), i);
+	//If none of those before, then new index and is in the last col
+	return std::pair<bool, int>(true,max_col);
 }
 
 //gives back index based on s,t - bool,int pair in return
