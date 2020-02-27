@@ -783,20 +783,36 @@ std::pair<bool, int> MyViewer::getCol(int index, double s) {
 	return std::pair<bool, int>(true,max_col);
 }
 
-//gives back index based on s,t - bool,int pair in return
-//true if point exists already
-std::pair<bool, int> MyViewer::getIndex(double s, double t) {
-	int new_index;
-	auto row = getRow(new_index, t);
-	if (row.first) {
-		int i = IA[row.second];
-		for (; i < IA[row.second + 1] && si_array[i][2] < s; i++) {
 
-		}
-		return std::pair<bool, int>((si_array[i][2] == s),i);
+//gives back index of new point based on the edge of insertion
+//New insertion can only happen on edges with positive knot value
+int MyViewer::getIndex(int first_ind, int sec_ind, double t) {
+	int first_row = getRow(first_ind, ti_array[first_ind][2]).second;
+	int sec_row = getRow(sec_ind, ti_array[sec_ind][2]).second;
+
+	//If insertion on horizontal edge
+	if (first_row == sec_row) {
+		return sec_ind;
 	}
+	//Insertion on vertical edge
 	else {
-		return std::pair<bool, int>(false,IA[row.second]);
+		if (first_ind + 1 == sec_ind) return sec_ind; // Not sure if can happen
+		bool sameRow = false;
+		int col = getCol(first_ind, si_array[first_ind][2]).second;
+		for (int i = first_row+1; i <= sec_row; ++i) {
+			//Checking if in the same row as the one to be inserted
+			//TODO check more securely
+			if (ti_array[IA[i]][2] == t) {
+				for (int j = IA[i]; j < IA[i + 1]; ++j) {
+					if (getCol(j, si_array[j][2]).second > col) {
+						return j;
+					}
+				}
+			}
+			else if (ti_array[IA[i]][2] > t) {
+				return IA[i];
+			}
+		}
 	}
 }
 
@@ -1594,7 +1610,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  int new_index;
 	  double new_s, new_t;
 	  //If in same row, otherwise they must be in same column
-	  if (ti_array[index_pair.first][2] == ti_array[index_pair.second][2]) {
+	  if (getRow(index_pair.first,ti_array[index_pair.first][2]).second == getRow(index_pair.second, ti_array[index_pair.second][2]).second) {
 		  new_s = si_array[index_pair.first][2] + (si_array[index_pair.second][2] - si_array[index_pair.first][2])*proportion;
 		  new_t = ti_array[index_pair.first][2];
 		  new_index = index_pair.second;
@@ -1723,17 +1739,13 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  new_t = ti_array[index_pair.first][2] + (ti_array[index_pair.second][2] - ti_array[index_pair.first][2])*proportion;
 		  
 		  //Finding new index
-		  auto new_ind_pair = getIndex(new_s, new_t);
-		  if (!new_ind_pair.first) new_index = new_ind_pair.second;
-		  else return;
+		  new_index = getIndex(index_pair.first, index_pair.second, new_t);
 
 		  auto opp_check = checkOpposite(new_s, new_t, false, new_index, epsilon);
 		  if (opp_check.first) {
 			  new_t = opp_check.second;
 			  //Updating index
-			  auto new_ind_pair = getIndex(new_s, new_t);
-			  if (!new_ind_pair.first) new_index = new_ind_pair.second;
-			  else return;
+			  new_index = getIndex(index_pair.first, index_pair.second, new_t);
 		  }
 
 		  if (keep_surface) {

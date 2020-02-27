@@ -86,7 +86,7 @@ private:
   bool checkForViol1(std::vector<int> excluded);
   std::pair<bool, std::vector<int>> checkForViol2(std::vector<int> excluded);
   void checkViolations(std::vector<int> excluded);
-  std::pair<bool, int> getIndex(double s, double t);
+  int getIndex(int first_ind, int sec_ind, double t);
   std::pair<bool, int> getRow(int index, double t);
   std::pair<bool, int> getCol(int index, double s);
   void updateIA(int new_ind, double t);
