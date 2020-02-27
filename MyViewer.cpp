@@ -767,12 +767,12 @@ std::pair<bool, int> MyViewer::getRow(int index, double t) {
 }
 
 //Returns with true,i if col exists, false otherwise
-std::pair<bool, int> MyViewer::getCol(int index, double s) {
+std::pair<bool, int> MyViewer::getCol(bool exists, int index, double s) {
 	int i = 0;
 	int max_col = *std::max_element(JA.begin(), JA.end());
 	for (; (max_col >= i); i++) {
 		auto col_ind = indicesOfColumn(i);
-		if (std::find(col_ind.begin(), col_ind.end(), index) != col_ind.end()) {
+		if (exists && std::find(col_ind.begin(), col_ind.end(), index) != col_ind.end()) {
 			return std::pair<bool, int>(true, i);
 		}
 		else if (si_array[col_ind[0]][2] > s) {
@@ -798,13 +798,13 @@ int MyViewer::getIndex(int first_ind, int sec_ind, double t) {
 	else {
 		if (first_ind + 1 == sec_ind) return sec_ind; // Not sure if can happen
 		bool sameRow = false;
-		int col = getCol(first_ind, si_array[first_ind][2]).second;
+		int col = getCol(true, first_ind, si_array[first_ind][2]).second;
 		for (int i = first_row+1; i <= sec_row; ++i) {
 			//Checking if in the same row as the one to be inserted
 			//TODO check more securely
 			if (ti_array[IA[i]][2] == t) {
 				for (int j = IA[i]; j < IA[i + 1]; ++j) {
-					if (getCol(j, si_array[j][2]).second > col) {
+					if (getCol(true, j, si_array[j][2]).second > col) {
 						return j;
 					}
 				}
@@ -833,7 +833,7 @@ void MyViewer::updateIA(int new_ind, double t) {
 }
 
 void MyViewer::updateJA(int new_ind, double s) {
-	auto col = getCol(new_ind,s);
+	auto col = getCol(false,new_ind,s);
 	//If is inserted into existing col
 	if (col.first) {
 		JA.insert(JA.begin() + new_ind, col.second);
@@ -887,9 +887,13 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					}
 					//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
 					int ref_ind;
-					if (ts_down.second.first == 1)ref_ind = getIndex(bf.first[2], ts_down.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
+					//Indices downwards
+					auto col_inds = indicesOfColumn(getCol(true,i,bf.first[2]).second);
+					auto act_vec = std::find(col_inds.begin(),col_inds.end(),i);
+
+					if (ts_down.second.first == 1)ref_ind = getIndex(i, *(act_vec-1),ts_down.second.second);
 					//getIndex of(bf.first[2], bf.second[1]) if inserting with 2 below the middle point
-					else ref_ind = getIndex(bf.first[2], bf.second[1]).second;
+					else ref_ind = getIndex(*(act_vec - 1), *(act_vec - 2), bf.second[1]); //TODO is this bf.second[1]??
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ multipl*c to blend_multipliers[ref_ind][ind of same blend]
 					//else store new one too
@@ -959,9 +963,13 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					}
 					//Second : getIndex of(bf.first[2], ts_up.second.second) if inserting above the middle point
 					int ref_ind;
-					if (ts_up.second.first == 3)ref_ind = getIndex(bf.first[2], ts_up.second.second).second; // TODO what if getIndex.first == false?? shouldnt be
+					//Indices downwards
+					auto col_inds = indicesOfColumn(getCol(true,i, bf.first[2]).second);
+					auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
+
+					if (ts_up.second.first == 3)ref_ind = getIndex(i, *(act_vec + 1), ts_up.second.second);
 					//getIndex of(bf.first[2], bf.second[3]) if inserting with 2 above the middle point
-					else ref_ind = getIndex(bf.first[2], bf.second[3]).second;
+					else ref_ind = getIndex(*(act_vec + 1), *(act_vec + 2), bf.second[3]); //TODO check third arg
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
 					//else store new one too
@@ -1031,9 +1039,10 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					}
 					//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
 					int ref_ind;
-					if (ss_down.second.first == 1)ref_ind = getIndex(ss_down.second.second, bf.second[2]).second; // TODO what if getIndex.first == false?? shouldnt be
+
+					if (ss_down.second.first == 1)ref_ind = getIndex(i-1,i, bf.second[2]);
 					//getIndex of(bf.first[1], bf.second[2]) if inserting with 2 below the middle point
-					else ref_ind = getIndex(bf.first[1], bf.second[2]).second;
+					else ref_ind = getIndex(i-2,i-1, bf.second[2]);
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ c to blend_multipliers[ref_ind][ind of same blend]
 					//else store new one too
@@ -1103,9 +1112,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					}
 					//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
 					int ref_ind;
-					if (ss_up.second.first == 3)ref_ind = getIndex(ss_up.second.second, bf.second[2]).second; // TODO what if getIndex.first == false?? shouldnt be
-					//getIndex of(bf.first[3], bf.second[2]) if inserting with 2 above the middle point
-					else ref_ind = getIndex(bf.first[3], bf.second[2]).second;
+					if (ss_up.second.first == 3)ref_ind = getIndex(i,i+1, bf.second[2]);
+					else ref_ind = getIndex(i+1,i+2, bf.second[2]);
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
 					//else store new one too
@@ -1159,7 +1167,16 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 				if (!ts_down.first) {
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
 					violated = true;
-					int new_index = getIndex(bf.first[2], bf.second[ts_down.second.first]).second; //what if this gives back true--point exists?? couldnt happen, right?
+
+					//Indices downwards
+					auto col_inds = indicesOfColumn(getCol(true,i, bf.first[2]).second);
+					auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
+
+					int new_index;
+					if (ts_down.second.first == 1)new_index = getIndex(i, *(act_vec - 1), ts_down.second.second);
+					//getIndex of(bf.first[2], bf.second[1]) if inserting with 2 below the middle point
+					else new_index = getIndex(*(act_vec - 1), *(act_vec - 2), bf.second[1]); //TODO is this bf.second[1]??
+
 					updateIA(new_index, bf.second[ts_down.second.first]);
 					updateJA(new_index, bf.first[2]);
 					std::vector<double> new_ti;
@@ -1200,7 +1217,16 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 				if (!ts_up.first) {
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
 					violated = true;
-					int new_index = getIndex(bf.first[2], bf.second[ts_up.second.first]).second; //what if this gives back false??
+
+					//Indices downwards
+					auto col_inds = indicesOfColumn(getCol(true,i, bf.first[2]).second);
+					auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
+					int new_index;
+
+					if (ts_up.second.first == 3)new_index = getIndex(i, *(act_vec + 1), ts_up.second.second);
+					//getIndex of(bf.first[2], bf.second[3]) if inserting with 2 above the middle point
+					else new_index = getIndex(*(act_vec + 1), *(act_vec + 2), bf.second[3]); //TODO check third arg
+
 					updateIA(new_index,bf.second[ts_up.second.first]);
 					updateJA(new_index, bf.first[2]);
 					std::vector<double> new_ti;
@@ -1239,7 +1265,12 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 				if (!ss_down.first) {
 					//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
 					violated = true;
-					int new_index = getIndex(bf.first[ss_down.second.first], bf.second[2]).second; //what if this gives back false??
+
+					int new_index;
+					if (ss_down.second.first == 1)new_index = getIndex(i - 1, i, bf.second[2]);
+					//getIndex of(bf.first[1], bf.second[2]) if inserting with 2 below the middle point
+					else new_index = getIndex(i - 2, i - 1, bf.second[2]);
+
 					updateIA(new_index,bf.second[2]);
 					updateJA(new_index, bf.first[ss_down.second.first]);
 					std::vector<double> new_si;
@@ -1279,7 +1310,11 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 				if (!ss_up.first) {
 					//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
 					violated = true;
-					int new_index = getIndex(bf.first[ss_up.second.first], bf.second[2]).second; //what if this gives back false??
+
+					int new_index;
+					if (ss_up.second.first == 3)new_index = getIndex(i, i + 1, bf.second[2]);
+					else new_index = getIndex(i + 1, i + 2, bf.second[2]);
+
 					updateIA(new_index,bf.second[2]);
 					updateJA(new_index, bf.first[ss_up.second.first]);
 					std::vector<double> new_si;
@@ -1441,7 +1476,7 @@ std::pair<bool, double> MyViewer::checkOpposite(double s, double t, bool horizon
 		//Finding first s down according to Rule 1
 		double s_down = checkSsDown(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same t exists
-		int down_col = getCol(new_index,s_down).second; //first should give true, should be existing col
+		int down_col = getCol(false,new_index,s_down).second; //first should give true, should be existing col
 		//Check all points in col for close point
 		bool is_close = false;
 		double close_value = -1.0;
@@ -1457,7 +1492,7 @@ std::pair<bool, double> MyViewer::checkOpposite(double s, double t, bool horizon
 		//Do the same upwards, only update close value if its closer than the closest downwards
 		double s_up = checkSsUp(new_index, new_si, new_ti, 0).second.second; //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
-		int up_col = getCol(new_index,s_up).second; //first should give true, should be existing col
+		int up_col = getCol(false,new_index,s_up).second; //first should give true, should be existing col
 		col_indices = indicesOfColumn(up_col);
 		//Check all points in col for close point
 		for (auto i : col_indices) {
@@ -2232,7 +2267,7 @@ Second.first: index of insertion in s_vec
 Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_col = getCol(index,s_vec[2]).second;
+	int act_col = getCol(true,index,s_vec[2]).second;
 	int i = act_col == 0 ? act_col : act_col - 1;
 	int num_found = 0;
 	while (num_found < 2) {
@@ -2294,7 +2329,7 @@ Second.first: index of insertion in s_vec
 Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_col = getCol(index,s_vec[2]).second; //is this OK here?
+	int act_col = getCol(true,index,s_vec[2]).second; //is this OK here?
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
 	int num_found = 0;
