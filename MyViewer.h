@@ -88,10 +88,10 @@ private:
   void checkViolations(std::vector<int> excluded);
   int getIndex(int first_ind, int sec_ind, double t);
   std::pair<bool, int> getRow(int index, double t);
-  std::pair<bool, int> getCol(bool exists, int index, double s);
+  std::pair<bool, int> getColOfNew(int first_ind, int sec_ind, double s);
   void updateIA(int new_ind, double t);
-  void updateJA(int new_ind, double s);
-  void insertRefined(double s, double t, int new_ind);
+  void updateJA(int first_ind, int sec_ind, int new_ind, double s);
+  void insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind);
   std::pair<bool, double> checkOpposite(double s, double t, bool horizontal_insertion, int new_index, double epsilon);
 
   // Visualization
