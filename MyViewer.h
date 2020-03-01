@@ -76,7 +76,6 @@ private:
   bool checkTSplineCorrectness();
   bool checkTSplineTopology();
   std::vector<int> indicesOfColumn(int colindex);
-  int actRow(int index);
   std::pair<std::pair<bool, int>, std::pair<int, double>> checkTsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
   std::pair<std::pair<bool, int>, std::pair<int, double>> checkTsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
   std::pair<std::pair<bool, int>, std::pair<int, double>> checkSsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num);
@@ -92,6 +91,8 @@ private:
   std::pair<bool, int> getColOfNew(int first_ind, int sec_ind, double s);
   void updateIA(int first_ind, int sec_ind, double t);
   void updateJA(int first_ind, int sec_ind, int new_ind, double s);
+  void deleteFromIA(int del_ind);
+  void deleteFromJA(int del_ind);
   void insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind);
   std::pair<bool, double> checkOpposite(int act_row, int act_col, double s, double t, bool horizontal_insertion, int new_index, double epsilon);
 

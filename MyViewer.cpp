@@ -858,6 +858,23 @@ void MyViewer::updateIA(int first_ind, int sec_ind, double t) {
 	}
 }
 
+void MyViewer::deleteFromIA(int del_ind) {
+	int row = getRowOfExisting(del_ind);
+	//If it was the only one in the col
+	if (IA[row] == del_ind && IA[row + 1] == del_ind + 1) {
+		for (int i = row + 1; i < IA.size(); ++i) {
+			IA[i]--;
+		}
+		IA.erase(IA.begin() + row);
+	}
+	else{
+		int i = (IA[row] == del_ind) ? row : row + 1;
+		for (; i < IA.size(); ++i) {
+			IA[i]--;
+		}
+	}
+}
+
 void MyViewer::updateJA(int first_ind, int sec_ind, int new_ind, double s) {
 	auto col = getColOfNew(first_ind, sec_ind,s);
 	//If is inserted into existing col
@@ -869,6 +886,19 @@ void MyViewer::updateJA(int first_ind, int sec_ind, int new_ind, double s) {
 			if (JA[j] >= col.second) JA[j] += 1;
 		}
 		JA.insert(JA.begin() + new_ind, col.second);
+	}
+}
+
+void MyViewer::deleteFromJA(int del_ind) {
+	int col = JA[del_ind];
+	JA.erase(JA.begin() + del_ind);
+	//If it was the only one in the col
+	if (std::find(JA.begin(), JA.end(), col) == JA.end()) {
+		for (int i = 0; i < JA.size(); ++i) {
+			if (JA[i] > col) {
+				JA[i]--;
+			}
+		}
 	}
 }
 
@@ -1696,10 +1726,16 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  new_t = ti_array[index_pair.first][2];
 		  new_index = index_pair.second;
 
-		  int act_row = getRowOfExisting(index_pair.first);
-		  int act_col = getColOfNew(index_pair.first, index_pair.second, new_s).second;
+		  //Update JA and IA temporarily
+		  updateJA(index_pair.first, index_pair.second, new_index, new_s);
+		  updateIA(index_pair.first, index_pair.second, new_t);
+
+		  int act_row = getRowOfExisting(new_index);
+		  int act_col = JA[new_index];
 		  auto opp_check = checkOpposite(act_row, act_col, new_s, new_t, true, new_index, epsilon);
 		  if (opp_check.first) new_s = opp_check.second;
+		  deleteFromJA(new_index);
+		  deleteFromIA(new_index);
 
 		  //TODO visual feedback for changing keep_surface
 		  if (keep_surface) {
@@ -1713,8 +1749,6 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  //Finding new ti
 		  new_ti.clear();
 		  
-		  //TODO replace actRow with getRowOfExisting
-		  int act_row = actRow(index_pair.first);
 
 		  //Check t-s downwards
 		  int i = act_row;
@@ -1726,7 +1760,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 				  num_found++;
 			  }
 			  else {
-				  for (; si_array[temp_ind][2] <= new_s && actRow(temp_ind) == i; temp_ind++) {
+				  for (; si_array[temp_ind][2] <= new_s && getRowOfExisting(temp_ind) == i; temp_ind++) {
 				  }
 				  if (si_array[temp_ind-1][2] < new_s){
 					  //Check if not the case of last in row having smaller s than new_s
@@ -1745,7 +1779,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 						  }
 					  }
 				  } //First of actual row has greater s than our point
-				  else if (i != actRow(temp_ind - 1)) {}
+				  else if (i != getRowOfExisting(temp_ind - 1)) {}
 				  else {
 					  //This case occurs when si_array[temp_ind - 1][2] == new_s
 					  new_ti.insert(new_ti.begin(), ti_array[temp_ind-1][2]);
@@ -1767,7 +1801,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 				  num_found++;
 			  }
 			  else {
-				  for (; si_array[temp_ind][2] <= new_s && actRow(temp_ind) == i; temp_ind++) {
+				  for (; si_array[temp_ind][2] <= new_s && getRowOfExisting(temp_ind) == i; temp_ind++) {
 				  }
 				  if (si_array[temp_ind - 1][2] < new_s) {
 					  //Check if not the case of last in row having smaller s than new_s
@@ -1786,7 +1820,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 						  }
 					  }
 				  } //First of actual row has greater s than our point
-				  else if (i != actRow(temp_ind - 1)) {}
+				  else if (i != getRowOfExisting(temp_ind - 1)) {}
 				  else {
 					  //This case occurs when si_array[temp_ind - 1][2] == new_s
 					  new_ti.push_back(ti_array[temp_ind - 1][2]);
@@ -1823,15 +1857,20 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  
 		  //Finding new index
 		  new_index = getIndex(index_pair.first, index_pair.second, new_t);
-		  int act_row = getRowOfNew(index_pair.first, index_pair.second, new_t).second;
-		  int act_col = JA[index_pair.first];
+		  //Update JA and IA temporarily
+		  updateJA(index_pair.first, index_pair.second, new_index, new_s);
+		  updateIA(index_pair.first, index_pair.second, new_t);
 
+		  int act_row = getRowOfExisting(new_index);
+		  int act_col = JA[new_index];
 		  auto opp_check = checkOpposite(act_row, act_col, new_s, new_t, false, new_index, epsilon);
 		  if (opp_check.first) {
 			  new_t = opp_check.second;
 			  //Updating index
 			  new_index = getIndex(index_pair.first, index_pair.second, new_t);
 		  }
+		  deleteFromJA(new_index);
+		  deleteFromIA(new_index);
 
 		  if (keep_surface) {
 			  insertRefined(new_s, new_t,new_index, index_pair.first, index_pair.second);
@@ -1844,7 +1883,6 @@ void MyViewer::postSelection(const QPoint &p)  {
 
 		  //Finding new si
 		  new_si.clear();
-		  int act_col;
 		  int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 		  act_col = JA[index_pair.first];
 
@@ -2182,14 +2220,6 @@ void MyViewer::generateTSplineMesh() {
 		}
 }
 
-int MyViewer::actRow(int index) {
-	int act_row = 0;
-	for (; IA[act_row] <= index; act_row++) {
-	}
-	act_row--;
-	return act_row;
-}
-
 //TODO moving point after multiple insertion made an error in surface - right side disappeared
 
 //TODO organize postSelection blocks into these 4 checkfunctions
@@ -2215,7 +2245,7 @@ std::pair<std::pair<bool, int>,std::pair<int,double>> MyViewer::checkTsDown(int 
 			num_found++;
 		}
 		else {
-			for (; si_array[temp_ind][2] <= s_vec[2] && actRow(temp_ind) == act_row; temp_ind++) {
+			for (; si_array[temp_ind][2] <= s_vec[2] && getRowOfExisting(temp_ind) == act_row; temp_ind++) {
 			}
 			if (si_array[temp_ind - 1][2] < s_vec[2]) {
 				//Check if not the case of last in row having smaller s than the point with index "index"
@@ -2238,7 +2268,7 @@ std::pair<std::pair<bool, int>,std::pair<int,double>> MyViewer::checkTsDown(int 
 					}
 				}
 			} //First of actual row has greater s than our point or the biggest of cols with same s in act_row is earlier than ours
-			else if (act_row != actRow(temp_ind - 1) || JA[index] > JA[temp_ind - 1]) {}
+			else if (act_row != getRowOfExisting(temp_ind - 1) || JA[index] > JA[temp_ind - 1]) {}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == s_vec[2]
 				while (getRowOfExisting(temp_ind - 1) == act_row && act_col != JA[temp_ind - 1]) {
@@ -2282,7 +2312,7 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkTsUp(int 
 			num_found++;
 		}
 		else {
-			for (; si_array[temp_ind][2] <= s_vec[2] && actRow(temp_ind) == act_row; temp_ind++) {
+			for (; si_array[temp_ind][2] <= s_vec[2] && getRowOfExisting(temp_ind) == act_row; temp_ind++) {
 			}
 			if (si_array[temp_ind - 1][2] < s_vec[2]) {
 				//Check if not the case of last in row having smaller s than our point
@@ -2305,7 +2335,7 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkTsUp(int 
 					}
 				}
 			} //First of actual row has greater s than our point or the biggest of cols with same s in act_row is earlier than ours
-			else if(act_row != actRow(temp_ind-1) || JA[index] > JA[temp_ind - 1]){}
+			else if(act_row != getRowOfExisting(temp_ind-1) || JA[index] > JA[temp_ind - 1]){}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == s_vec[2]
 				while (getRowOfExisting(temp_ind - 1) == act_row && act_col != JA[temp_ind - 1]) {
