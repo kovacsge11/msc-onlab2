@@ -757,13 +757,32 @@ std::vector<int> MyViewer::indicesOfColumn(int colindex) {
 	return ret_vec;
 }
 
-//Returns with true,i if row exists, false otherwise
-std::pair<bool, int> MyViewer::getRow(int index, double t) {
+//Returns with index of row
+int MyViewer::getRowOfExisting(int index) {
 	int i = 0;
-	int max_row = IA.size() - 2;
-	for (; (max_row >= i) && (IA[i] <= index); i++) {
+	for (; IA[i] <= index; i++) {
 	}
-	return std::pair<bool, int>((max_row >= i) ? !(ti_array[IA[i]][2] > t) : true, i-1);
+	return i - 1;
+}
+
+//Returns with true,i if row exists, false otherwise
+std::pair<bool, int> MyViewer::getRowOfNew(int first_ind, int sec_ind, double t) {
+	int first_row = getRowOfExisting(first_ind);
+	int sec_row = getRowOfExisting(sec_ind);
+	//If inserting horizontally
+	if (first_row == sec_row) return std::pair<bool, int>(true, first_row);
+	//If inserting vertically
+	//If first_row and sec_row next to each other, inserting between them
+	if(first_row + 1 == sec_row) return std::pair<bool, int>(false, sec_row);
+	else {
+		int i = first_row;
+		for (; sec_row > i; i++) {
+			if (ti_array[IA[i]][2] == t) return std::pair<bool, int>(true, i);
+			if (ti_array[IA[i]][2] > t) {
+				return std::pair<bool, int>(false, i);
+			}
+		}
+	}
 }
 
 //Returns with true,i if col exists, false otherwise
@@ -794,8 +813,8 @@ std::pair<bool, int> MyViewer::getColOfNew(int first_ind, int sec_ind, double s)
 //gives back index of new point based on the edge of insertion
 //New insertion can only happen on edges with positive knot value
 int MyViewer::getIndex(int first_ind, int sec_ind, double t) {
-	int first_row = getRow(first_ind, ti_array[first_ind][2]).second;
-	int sec_row = getRow(sec_ind, ti_array[sec_ind][2]).second;
+	int first_row = getRowOfExisting(first_ind);
+	int sec_row = getRowOfExisting(sec_ind);
 
 	//If insertion on horizontal edge
 	if (first_row == sec_row) {
@@ -823,8 +842,8 @@ int MyViewer::getIndex(int first_ind, int sec_ind, double t) {
 	}
 }
 
-void MyViewer::updateIA(int new_ind, double t) {
-	auto row = getRow(new_ind, t);
+void MyViewer::updateIA(int first_ind, int sec_ind, double t) {
+	auto row = getRowOfNew(first_ind, sec_ind, t);
 	//If is inserted into existing row
 	if (row.first) {
 		for (int j = row.second + 1; j < IA.size(); j++) {
@@ -1175,14 +1194,14 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					if (ts_down.second.first == 1) {
 						new_index = getIndex(*(act_vec - 1), i, ts_down.second.second);
 						updateJA(*(act_vec - 1), i, new_index, bf.first[2]);
+						updateIA(*(act_vec - 1), i, ts_down.second.second);
 					}
 					//if inserting with 2 below the middle point
 					else {
 						new_index = getIndex(*(act_vec - 2), *(act_vec - 1), ts_down.second.second);
 						updateJA(*(act_vec - 2), *(act_vec - 1), new_index, bf.first[2]);
+						updateIA(*(act_vec - 2), *(act_vec - 1), ts_down.second.second);
 					}
-
-					updateIA(new_index, bf.second[ts_down.second.first]);
 					
 					std::vector<double> new_ti;
 					//Isn't going to be good in all cases, but best guess for lower indices: the value of index from Rule1
@@ -1231,14 +1250,15 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					if (ts_up.second.first == 3) {
 						new_index = getIndex(i, *(act_vec + 1), ts_up.second.second);
 						updateJA(i, *(act_vec + 1), new_index, bf.first[2]);
+						updateIA(i, *(act_vec + 1), ts_up.second.second);
 					}
 					//if inserting with 2 above the middle point
 					else {
 						new_index = getIndex(*(act_vec + 1), *(act_vec + 2), ts_up.second.second);
 						updateJA(*(act_vec + 1), *(act_vec + 2), new_index, bf.first[2]);
+						updateIA(*(act_vec + 1), *(act_vec + 2), ts_up.second.second);
 					}
 
-					updateIA(new_index,bf.second[ts_up.second.first]);
 					std::vector<double> new_ti;
 					if (ts_up.second.first == 3) new_ti = { bf.second[1], bf.second[2], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
 					else new_ti = { bf.second[2], bf.second[3], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
@@ -1280,16 +1300,15 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					if (ss_down.second.first == 1) {
 						new_index = getIndex(i - 1, i, bf.second[2]);
 						updateJA(i - 1, i, new_index, ss_down.second.second);
+						updateIA(i - 1, i, bf.second[2]);
 					}
 					//if inserting with 2 below the middle point
 					else {
 						new_index = getIndex(i - 2, i - 1, bf.second[2]);
 						updateJA(i - 2, i - 1, new_index, ss_down.second.second);
+						updateIA(i - 2, i - 1, bf.second[2]);
 					}
 
-					//updateJA(new_index, bf.first[ss_down.second.first]); ??? TODO
-
-					updateIA(new_index,bf.second[2]);
 					std::vector<double> new_si;
 					//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
 					if (ss_down.second.first == 1) new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[2], bf.first[3] };
@@ -1332,14 +1351,15 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					if (ss_up.second.first == 3) {
 						new_index = getIndex(i, i + 1, bf.second[2]);
 						updateJA(i, i + 1, new_index, ss_up.second.second);
+						updateIA(i, i + 1, bf.second[2]);
 					}
 					//if inserting with 2 above the middle point
 					else {
 						new_index = getIndex(i + 1, i + 2, bf.second[2]);
 						updateJA(i + 1, i + 2, new_index, ss_up.second.second);
+						updateIA(i + 1, i + 2, bf.second[2]);
 					}
 
-					updateIA(new_index,bf.second[2]);
 					std::vector<double> new_si;
 					//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
 					if (ss_up.second.first == 3) new_si = { bf.first[1], bf.first[2], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
@@ -1429,7 +1449,7 @@ void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int
 	}
 	int new_ind = getIndex(s, t).second;*/
 
-	updateIA(new_ind, t);
+	updateIA(first_ind, sec_ind, t);
 	updateJA(first_ind, sec_ind, new_ind, s);
 	std::vector<double> new_ti = { 0, 0, t, 0, 0 };
 	ti_array.insert(ti_array.begin() + new_ind, new_ti);
@@ -1667,7 +1687,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  int new_index;
 	  double new_s, new_t;
 	  //If in same row, otherwise they must be in same column
-	  if (getRow(index_pair.first,ti_array[index_pair.first][2]).second == getRow(index_pair.second, ti_array[index_pair.second][2]).second) {
+	  if (getRowOfExisting(index_pair.first) == getRowOfExisting(index_pair.second)) {
 		  new_s = si_array[index_pair.first][2] + (si_array[index_pair.second][2] - si_array[index_pair.first][2])*proportion;
 		  new_t = ti_array[index_pair.first][2];
 		  new_index = index_pair.second;
@@ -1907,7 +1927,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  //Update JA
 		  JA.insert(JA.begin() + new_index, act_col);
 		  //Update IA too
-		  updateIA(new_index, new_t);
+		  updateIA(index_pair.first, index_pair.second, new_t);
 
 		  //Update neighbouring ti-s
 		  ti_array[index_pair.first][3] = new_t;
@@ -2171,7 +2191,7 @@ Second.first: index of insertion in t_vec
 Second.second: new value to be inserted
 */
 std::pair<bool,std::pair<int,double>> MyViewer::checkTsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_row = getRow(index,t_vec[2]).second;
+	int act_row = getRowOfExisting(index);
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	while (num_found < 2) {
@@ -2207,23 +2227,23 @@ std::pair<bool,std::pair<int,double>> MyViewer::checkTsDown(int index, std::vect
 						}
 					}
 				}
-			} //First of actual row has greater s than our point or there exists a point in earlier col with same s
+			} //First of actual row has greater s than our point or the biggest of cols with same s in act_row is earlier than ours
 			else if (act_row != actRow(temp_ind - 1) || JA[index] > JA[temp_ind - 1]) {}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == s_vec[2]
 				int act_col = JA[index];
-				while (act_col != JA[temp_ind - 1] && getRow(temp_ind - 1, ti_array[temp_ind - 1][2]).second == act_row) {
+				while (getRowOfExisting(temp_ind - 1) == act_row && act_col != JA[temp_ind - 1]) {
 					temp_ind--;
 				}
-				//If first in act_row has same s, but is in a col with greater index
-				if (getRow(temp_ind - 1, ti_array[temp_ind - 1][2]).second != act_row) break;
-
-				if (t_vec[1-num_found] != ti_array[temp_ind - 1][2])
-					if ((viol_num == 1 && t_vec[1 - num_found] < ti_array[temp_ind - 1][2])
-						|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[temp_ind - 1][2])
-						|| viol_num == 0)
-						return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
-				num_found++;
+				//!= if first in act_row has same s, but is in a col with greater index
+				if (getRowOfExisting(temp_ind - 1) == act_row) {
+					if (t_vec[1 - num_found] != ti_array[temp_ind - 1][2])
+						if ((viol_num == 1 && t_vec[1 - num_found] < ti_array[temp_ind - 1][2])
+							|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[temp_ind - 1][2])
+							|| viol_num == 0)
+							return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
+					num_found++;
+				}
 			}
 			temp_ind = IA[--act_row];
 		}
@@ -2237,7 +2257,7 @@ Second.first: index of insertion in t_vec
 Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkTsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
-	int act_row = getRow(index,t_vec[2]).second;
+	int act_row = getRowOfExisting(index);
 	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
@@ -2274,23 +2294,23 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkTsUp(int index, std::vect
 						}
 					}
 				}
-			} //First of actual row has greater s than our point or there exists a point in earlier col with same s
+			} //First of actual row has greater s than our point or the biggest of cols with same s in act_row is earlier than ours
 			else if(act_row != actRow(temp_ind-1) || JA[index] > JA[temp_ind - 1]){}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == s_vec[2]
 				int act_col = JA[index];
-				while (act_col != JA[temp_ind - 1] && getRow(temp_ind - 1, ti_array[temp_ind-1][2]).second == act_row) {
+				while (getRowOfExisting(temp_ind - 1) == act_row && act_col != JA[temp_ind - 1]) {
 					temp_ind--;
 				}
-				//If first in act_row has same s, but is in a col with greater index
-				if (getRow(temp_ind - 1, ti_array[temp_ind - 1][2]).second != act_row) break;
-
-				if (t_vec[3 + num_found] != ti_array[temp_ind - 1][2])
-					if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[temp_ind - 1][2])
-						|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[temp_ind - 1][2])
-						|| viol_num == 0)
-						return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
-				num_found++;
+				//!= if first in act_row has same s, but is in a col with greater index
+				if (getRowOfExisting(temp_ind - 1) == act_row) {
+					if (t_vec[3 + num_found] != ti_array[temp_ind - 1][2])
+						if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[temp_ind - 1][2])
+							|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[temp_ind - 1][2])
+							|| viol_num == 0)
+							return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
+					num_found++;
+				}
 			}
 			temp_ind = IA[++act_row];
 		}
@@ -2305,7 +2325,7 @@ Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int act_col = JA[index];
-	int act_row = getRow(index, t_vec[2]).second;
+	int act_row = getRowOfExisting(index);
 	int i = act_col == 0 ? act_col : act_col - 1;
 	int num_found = 0;
 	while (num_found < 2) {
@@ -2346,22 +2366,22 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkSsDown(int index, std::ve
 					}
 				}
 			}
-			//There exists a point in earlier row with same t
-			else if (getRow(is_of_col[j - 1], ti_array[is_of_col[j - 1]][2]).second < act_row) {}
+			//the biggest of rows with same t in act_col is earlier than ours
+			else if (getRowOfExisting(is_of_col[j - 1]) < act_row) {}
 			else {
 				//This case occurs when ti_array[is_of_col[j-1]][2] == t_vec[2]
-				while (act_row != getRow(is_of_col[j - 1], ti_array[is_of_col[j - 1]][2]).second && j > 0) {
+				while (j > 0 && act_row != getRowOfExisting(is_of_col[j - 1])) {
 					j--;
 				}
-				//If first in act_col has same t, but is in a row with greater index
-				if (j == 0) break;
-
-				if(s_vec[1-num_found] != si_array[is_of_col[j - 1]][2])
-					if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[j - 1]][2])
-						|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[j - 1]][2])
-						|| viol_num == 0)
-						return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
-				num_found++;
+				//j == 0 if first in act_col has same t, but is in a row with greater index
+				if (j != 0) {
+					if (s_vec[1 - num_found] != si_array[is_of_col[j - 1]][2])
+						if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[j - 1]][2])
+							|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[j - 1]][2])
+							|| viol_num == 0)
+							return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
+					num_found++;
+				}
 			}
 			--i;
 		}
@@ -2376,7 +2396,7 @@ Second.second: new value to be inserted
 */
 std::pair<bool, std::pair<int, double>> MyViewer::checkSsUp(int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int act_col = JA[index];
-	int act_row = getRow(index, t_vec[2]).second;
+	int act_row = getRowOfExisting(index);
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
 	int num_found = 0;
@@ -2419,22 +2439,22 @@ std::pair<bool, std::pair<int, double>> MyViewer::checkSsUp(int index, std::vect
 					}
 				}
 			}
-			//There exists a point in earlier row with same t
-			else if (getRow(is_of_col[j - 1], ti_array[is_of_col[j - 1]][2]).second < act_row) {}
+			//the biggest of rows with same t in act_col is earlier than ours
+			else if (getRowOfExisting(is_of_col[j - 1]) < act_row) {}
 			else {
 				//This case occurs when ti_array[is_of_col[j-1]][2] == t_vec[2]
-				while (act_row != getRow(is_of_col[j - 1], ti_array[is_of_col[j - 1]][2]).second && j > 0) {
+				while (j > 0 && act_row != getRowOfExisting(is_of_col[j - 1])) {
 					j--;
 				}
-				//If first in act_col has same t, but is in a row with greater index
-				if (j == 0) break;
-
-				if (s_vec[3+num_found] != si_array[is_of_col[j - 1]][2])
-					if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[j - 1]][2])
-						|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[j - 1]][2])
-						|| viol_num == 0)
-						return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
-				num_found++;
+				//j == 0 if first in act_col has same t, but is in a row with greater index
+				if (j != 0) {
+					if (s_vec[3 + num_found] != si_array[is_of_col[j - 1]][2])
+						if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[j - 1]][2])
+							|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[j - 1]][2])
+							|| viol_num == 0)
+							return std::pair<bool, std::pair<int, double>>(false, std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
+					num_found++;
+				}
 			}
 			++i;
 		}
