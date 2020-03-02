@@ -545,6 +545,13 @@ void MyViewer::updateEdgeTopology() {
 	}
 }
 
+void MyViewer::updateEdgesTemporarily(bool remove, int temp_index) {
+	for (int e = 0; e < edges.size(); e++) {
+		if (edges[e].first >= temp_index) remove ? edges[e].first-- : edges[e].first++;
+		if (edges[e].second >= temp_index) remove ? edges[e].second-- : edges[e].second++;
+	}
+}
+
 void MyViewer::draw() {
   if (model_type == ModelType::BEZIER_SURFACE && show_control_points)
     drawBezierControlNet();
@@ -776,7 +783,7 @@ std::pair<bool, int> MyViewer::getRowOfNew(int first_ind, int sec_ind, double t)
 	if(first_row + 1 == sec_row) return std::pair<bool, int>(false, sec_row);
 	else {
 		int i = first_row;
-		for (; sec_row > i; i++) {
+		for (; sec_row >= i; i++) {
 			if (ti_array[IA[i]][2] == t) return std::pair<bool, int>(true, i);
 			if (ti_array[IA[i]][2] > t) {
 				return std::pair<bool, int>(false, i);
@@ -1503,10 +1510,7 @@ void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int
 	std::vector<int> excluded = {new_ind};
 
 	//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
-	for (int e = 0; e < edges.size();e++) {
-		if (edges[e].first >= new_ind) edges[e].first++;
-		if (edges[e].second >= new_ind) edges[e].second++;
-	}
+	updateEdgesTemporarily(false, new_ind);
 
 	checkViolations(excluded);
 	updateEdgeTopology();
@@ -1527,7 +1531,8 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		bool is_close = false;
 		double close_value = -1.0;
 		for (int i = IA[down_row]; i < IA[down_row + 1]; i++) {
-			double temp_s = si_array[i][2];
+			//WARNING edges and indices updated temporarily but ti and si not
+			double temp_s = (i >= new_index) ? si_array[i-1][2] : si_array[i][2];
 			if (abs(temp_s - s) < epsilon) {
 				is_close = true;
 				if (abs(temp_s - s) < abs(close_value - s)) close_value = temp_s;
@@ -1540,7 +1545,8 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		int up_row = t_up.first.second; //first should give true, should be existing row
 		//Check all points in row for close point
 		for (int i = IA[up_row]; i < IA[up_row + 1]; i++) {
-			double temp_s = si_array[i][2];
+			//WARNING edges and indices updated temporarily but ti and si not
+			double temp_s = (i >= new_index) ? si_array[i - 1][2] : si_array[i][2];
 			if (abs(temp_s - s) < epsilon) {
 				is_close = true;
 				if (abs(temp_s - s) < abs(close_value - s)) close_value = temp_s;
@@ -1558,7 +1564,8 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		double close_value = -1.0;
 		std::vector<int> col_indices = indicesOfColumn(down_col);
 		for (auto i: col_indices) {
-			double temp_t = ti_array[i][2];
+			//WARNING edges and indices updated temporarily but ti and si not
+			double temp_t = (i >= new_index) ? ti_array[i - 1][2] : ti_array[i][2];
 			if (abs(temp_t - t) < epsilon) {
 				is_close = true;
 				if (abs(temp_t - t) < abs(close_value - t)) close_value = temp_t;
@@ -1572,7 +1579,8 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		col_indices = indicesOfColumn(up_col);
 		//Check all points in col for close point
 		for (auto i : col_indices) {
-			double temp_t = ti_array[i][2];
+			//WARNING edges and indices updated temporarily but ti and si not
+			double temp_t = (i >= new_index) ? ti_array[i - 1][2] : ti_array[i][2];
 			if (abs(temp_t - t) < epsilon) {
 				is_close = true;
 				if (abs(temp_t - t) < abs(close_value - t)) close_value = temp_t;
@@ -1726,16 +1734,25 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  new_t = ti_array[index_pair.first][2];
 		  new_index = index_pair.second;
 
-		  //Update JA and IA temporarily
-		  updateJA(index_pair.first, index_pair.second, new_index, new_s);
-		  updateIA(index_pair.first, index_pair.second, new_t);
+		  int act_row;
 
-		  int act_row = getRowOfExisting(new_index);
-		  int act_col = JA[new_index];
-		  auto opp_check = checkOpposite(act_row, act_col, new_s, new_t, true, new_index, epsilon);
-		  if (opp_check.first) new_s = opp_check.second;
-		  deleteFromJA(new_index);
-		  deleteFromIA(new_index);
+		  if (!mid_insert) {
+			  //Update JA and IA temporarily
+			  updateJA(index_pair.first, index_pair.second, new_index, new_s);
+			  updateIA(index_pair.first, index_pair.second, new_t);
+			  updateEdgesTemporarily(false, new_index);
+
+			  act_row = getRowOfExisting(new_index);
+			  int act_col = JA[new_index];
+			  auto opp_check = checkOpposite(act_row, act_col, new_s, new_t, true, new_index, epsilon);
+			  if (opp_check.first) new_s = opp_check.second;
+			  deleteFromJA(new_index);
+			  deleteFromIA(new_index);
+			  updateEdgesTemporarily(true, new_index);
+		  }
+		  else {
+			  act_row = getRowOfExisting(index_pair.first);
+		  }
 
 		  //TODO visual feedback for changing keep_surface
 		  if (keep_surface) {
@@ -1857,20 +1874,27 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  
 		  //Finding new index
 		  new_index = getIndex(index_pair.first, index_pair.second, new_t);
-		  //Update JA and IA temporarily
-		  updateJA(index_pair.first, index_pair.second, new_index, new_s);
-		  updateIA(index_pair.first, index_pair.second, new_t);
+		  
+		  int act_col;
+		  if (!mid_insert) {
+			  //Update JA and IA temporarily
+			  updateJA(index_pair.first, index_pair.second, new_index, new_s);
+			  updateIA(index_pair.first, index_pair.second, new_t);
+			  updateEdgesTemporarily(false, new_index);
 
-		  int act_row = getRowOfExisting(new_index);
-		  int act_col = JA[new_index];
-		  auto opp_check = checkOpposite(act_row, act_col, new_s, new_t, false, new_index, epsilon);
-		  if (opp_check.first) {
-			  new_t = opp_check.second;
-			  //Updating index
-			  new_index = getIndex(index_pair.first, index_pair.second, new_t);
+			  int act_row = getRowOfExisting(new_index);
+			  act_col = JA[new_index];
+			  auto opp_check = checkOpposite(act_row, act_col, new_s, new_t, false, new_index, epsilon);
+			  deleteFromJA(new_index);
+			  deleteFromIA(new_index);
+			  updateEdgesTemporarily(true, new_index);
+
+			  if (opp_check.first) {
+				  new_t = opp_check.second;
+				  //Updating index
+				  new_index = getIndex(index_pair.first, index_pair.second, new_t);
+			  }
 		  }
-		  deleteFromJA(new_index);
-		  deleteFromIA(new_index);
 
 		  if (keep_surface) {
 			  insertRefined(new_s, new_t,new_index, index_pair.first, index_pair.second);
@@ -2374,7 +2398,7 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsDown(in
 				if ((viol_num == 1 && s_vec[1 - num_found] < si_array[0][2])
 					|| (viol_num == 2 && s_vec[1 - num_found] > si_array[0][2])
 					|| viol_num == 0)
-					return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_col), std::pair<int, double>(1 - num_found, si_array[0][2]));
+					return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(1 - num_found, si_array[0][2]));
 			num_found++;
 		}
 		else {
@@ -2398,7 +2422,7 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsDown(in
 								if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[j - 1]][2])
 									|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[j - 1]][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_col), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
+									return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
 							num_found++;
 							found = true;
 						}
@@ -2418,14 +2442,14 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsDown(in
 						if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[j - 1]][2])
 							|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[j - 1]][2])
 							|| viol_num == 0)
-							return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_col), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
+							return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
 					num_found++;
 				}
 			}
 			--i;
 		}
 	}
-	return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(true, act_col), std::pair<int, double>(-1, 0.0));
+	return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(true, i), std::pair<int, double>(-1, 0.0));
 }
 
 /*
@@ -2447,7 +2471,7 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsUp(int 
 				if ((viol_num == 1 && s_vec[3 + num_found] > si_array[cpnum - 1][2])
 					|| (viol_num == 2 && s_vec[3 + num_found] < si_array[cpnum - 1][2])
 					|| viol_num == 0)
-					return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_col), std::pair < int, double>(3 + num_found, si_array[cpnum - 1][2]));
+					return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair < int, double>(3 + num_found, si_array[cpnum - 1][2]));
 			num_found++;
 		}
 		else {
@@ -2471,7 +2495,7 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsUp(int 
 								if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[j - 1]][2])
 									|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[j - 1]][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_col), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
+									return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
 							num_found++;
 							found = true;
 						}
@@ -2491,14 +2515,14 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsUp(int 
 						if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[j - 1]][2])
 							|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[j - 1]][2])
 							|| viol_num == 0)
-							return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_col), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
+							return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
 					num_found++;
 				}
 			}
 			++i;
 		}
 	}
-	return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(true, act_col), std::pair<int, double>(-1, 0.0));
+	return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(true, i), std::pair<int, double>(-1, 0.0));
 }
 
 bool MyViewer::checkTSplineCorrectness() {

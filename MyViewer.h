@@ -73,6 +73,7 @@ private:
   double cubicBSplineBasis(double param, std::vector<double> knots);
   void generateTSplineMesh();
   void updateEdgeTopology();
+  void updateEdgesTemporarily(bool remove, int temp_index);
   bool checkTSplineCorrectness();
   bool checkTSplineTopology();
   std::vector<int> indicesOfColumn(int colindex);
