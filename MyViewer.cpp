@@ -1233,15 +1233,15 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 
 					int new_index;
 					if (ts_down.second.first == 1) {
-						new_index = getIndex(*(act_vec - 1), i, ts_down.second.second);
+						new_index = getIndex(*(act_vec - 1), i, bf.second[ts_down.second.first]);
 						updateJA(*(act_vec - 1), i, new_index, bf.first[2]);
-						updateIA(*(act_vec - 1), i, ts_down.second.second);
+						updateIA(*(act_vec - 1), i, bf.second[ts_down.second.first]);
 					}
 					//if inserting with 2 below the middle point
 					else {
-						new_index = getIndex(*(act_vec - 2), *(act_vec - 1), ts_down.second.second);
+						new_index = getIndex(*(act_vec - 2), *(act_vec - 1), bf.second[ts_down.second.first]);
 						updateJA(*(act_vec - 2), *(act_vec - 1), new_index, bf.first[2]);
-						updateIA(*(act_vec - 2), *(act_vec - 1), ts_down.second.second);
+						updateIA(*(act_vec - 2), *(act_vec - 1), bf.second[ts_down.second.first]);
 					}
 					
 					std::vector<double> new_ti;
@@ -1289,15 +1289,15 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					int new_index;
 
 					if (ts_up.second.first == 3) {
-						new_index = getIndex(i, *(act_vec + 1), ts_up.second.second);
+						new_index = getIndex(i, *(act_vec + 1), bf.second[ts_up.second.first]);
 						updateJA(i, *(act_vec + 1), new_index, bf.first[2]);
-						updateIA(i, *(act_vec + 1), ts_up.second.second);
+						updateIA(i, *(act_vec + 1), bf.second[ts_up.second.first]);
 					}
 					//if inserting with 2 above the middle point
 					else {
-						new_index = getIndex(*(act_vec + 1), *(act_vec + 2), ts_up.second.second);
+						new_index = getIndex(*(act_vec + 1), *(act_vec + 2), bf.second[ts_up.second.first]);
 						updateJA(*(act_vec + 1), *(act_vec + 2), new_index, bf.first[2]);
-						updateIA(*(act_vec + 1), *(act_vec + 2), ts_up.second.second);
+						updateIA(*(act_vec + 1), *(act_vec + 2), bf.second[ts_up.second.first]);
 					}
 
 					std::vector<double> new_ti;
@@ -1340,13 +1340,13 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					int new_index;
 					if (ss_down.second.first == 1) {
 						new_index = getIndex(i - 1, i, bf.second[2]);
-						updateJA(i - 1, i, new_index, ss_down.second.second);
+						updateJA(i - 1, i, new_index, bf.first[ss_down.second.first]);
 						updateIA(i - 1, i, bf.second[2]);
 					}
 					//if inserting with 2 below the middle point
 					else {
 						new_index = getIndex(i - 2, i - 1, bf.second[2]);
-						updateJA(i - 2, i - 1, new_index, ss_down.second.second);
+						updateJA(i - 2, i - 1, new_index, bf.first[ss_down.second.first]);
 						updateIA(i - 2, i - 1, bf.second[2]);
 					}
 
@@ -1391,13 +1391,13 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					int new_index;
 					if (ss_up.second.first == 3) {
 						new_index = getIndex(i, i + 1, bf.second[2]);
-						updateJA(i, i + 1, new_index, ss_up.second.second);
+						updateJA(i, i + 1, new_index, bf.first[ss_up.second.first]);
 						updateIA(i, i + 1, bf.second[2]);
 					}
 					//if inserting with 2 above the middle point
 					else {
 						new_index = getIndex(i + 1, i + 2, bf.second[2]);
-						updateJA(i + 1, i + 2, new_index, ss_up.second.second);
+						updateJA(i + 1, i + 2, new_index, bf.first[ss_up.second.first]);
 						updateIA(i + 1, i + 2, bf.second[2]);
 					}
 
@@ -1709,7 +1709,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  axes.selected_axis = -1;
   }
   else {
-	  double epsilon = 0.1;
+	  double epsilon = 0.05;
 
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
 	  double proportion = 0.5;
