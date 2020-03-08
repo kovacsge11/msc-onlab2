@@ -87,14 +87,16 @@ private:
   std::pair<bool, std::vector<int>> checkForViol2(std::vector<int> excluded);
   void checkViolations(std::vector<int> excluded);
   int getIndex(int first_ind, int sec_ind, double t);
-  std::pair<bool, int> getRowOfNew(int first_ind, int sec_ind, double t);
+  std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t);
   int MyViewer::getRowOfExisting(int index);
-  std::pair<bool, int> getColOfNew(int first_ind, int sec_ind, double s);
-  void updateIA(int first_ind, int sec_ind, double t);
-  void updateJA(int first_ind, int sec_ind, int new_ind, double s);
+  std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s);
+  void updateIA(int first_row, int sec_col, double t);
+  void updateJA(int first_col, int sec_col, int new_ind, double s);
   void deleteFromIA(int del_ind);
   void deleteFromJA(int del_ind);
+  bool edgeExists(int first_ind, int sec_ind);
   void insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind);
+  void insertOnFace(int first_ind, int sec_ind);
   std::pair<bool, double> checkOpposite(int act_row, int act_col, double s, double t, bool horizontal_insertion, int new_index, double epsilon);
 
   // Visualization
