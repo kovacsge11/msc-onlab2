@@ -86,7 +86,7 @@ private:
   bool checkForViol1(std::vector<int> excluded);
   std::pair<bool, std::vector<int>> checkForViol2(std::vector<int> excluded);
   void checkViolations(std::vector<int> excluded);
-  int getIndex(int first_ind, int sec_ind, double t);
+  int getIndex(int first_row, int sec_row, int act_col, double t);
   std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t);
   int MyViewer::getRowOfExisting(int index);
   std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s);

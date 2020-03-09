@@ -812,38 +812,23 @@ std::pair<bool, int> MyViewer::getColOfNew(int first_col, int sec_col, double s)
 	
 }
 
-int getIndexOnFace() {
-
-}
-
-//gives back index of new point based on the edge of insertion
+//Gives back index of new point based on the edge of the vertical insertion
 //New insertion can only happen on edges with positive knot value
-int MyViewer::getIndex(int first_ind, int sec_ind, double t) {
-	int first_row = getRowOfExisting(first_ind);
-	int sec_row = getRowOfExisting(sec_ind);
-
-	//If insertion on horizontal edge
-	if (first_row == sec_row) {
-		return sec_ind;
-	}
+int MyViewer::getIndex(int first_row, int sec_row, int act_col, double t) {
 	//Insertion on vertical edge
-	else {
-		if (first_ind + 1 == sec_ind) return sec_ind; // Not sure if can happen
-		bool sameRow = false;
-		int col = JA[first_ind];
-		for (int i = first_row+1; i <= sec_row; ++i) {
-			//Checking if in the same row as the one to be inserted
-			//TODO check more securely
-			if (ti_array[IA[i]][2] == t) {
-				for (int j = IA[i]; j < IA[i + 1]; ++j) {
-					if (JA[j] > col) {
-						return j;
-					}
+	bool sameRow = false;
+	for (int i = first_row+1; i <= sec_row; ++i) {
+		//Checking if in the same row as the one to be inserted
+		//TODO check more securely
+		if (ti_array[IA[i]][2] == t) {
+			for (int j = IA[i]; j < IA[i + 1]; ++j) {
+				if (JA[j] > act_col) {
+					return j;
 				}
 			}
-			else if (ti_array[IA[i]][2] > t) {
-				return IA[i];
-			}
+		}
+		else if (ti_array[IA[i]][2] > t) {
+			return IA[i];
 		}
 	}
 }
@@ -1236,28 +1221,37 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//handle case when there is only one in col
 					if (col_inds.size() == 1) {
 						//getIndex
-						new_index = getIndexOnFace();
+						new_index = getIndex(ts_down.first.second, act_row, act_col, ts_down.second.second);
 						updateJA(act_col, act_col, new_index, bf.first[2]);
 						updateIA(ts_down.first.second, act_row, bf.second[ts_down.second.first]);
 					}
 					else {
 						auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
-
 						if (ts_down.second.first == 1) {
-							new_index = getIndex(*(act_vec - 1), i, bf.second[ts_down.second.first]);
 							//If the actual and next one isn't connected
-							if (!edgeExists(*(act_vec - 1), i)) {
-								//TODO
-							}
+							if (act_vec==col_inds.begin() || !edgeExists(*(act_vec - 1), i)) {
+								new_index = getIndex(ts_down.first.second, act_row, act_col, ts_down.second.second);
+							} else{ new_index = getIndex(getRowOfExisting(*(act_vec - 1)), act_row, act_col, bf.second[ts_down.second.first]); }
 
 							updateJA(act_col, act_col, new_index, bf.first[2]);
-							updateIA(getRowOfExisting(*(act_vec - 1)), act_row, bf.second[ts_down.second.first]);
+							updateIA(ts_down.first.second, act_row, bf.second[ts_down.second.first]);
 						}
 						//if inserting with 2 below the middle point
 						else {
-							new_index = getIndex(*(act_vec - 2), *(act_vec - 1), bf.second[ts_down.second.first]);
+							//If no point on the first t down
+							if (act_vec==col_inds.begin() || !edgeExists(*(act_vec - 1), i)) {
+								throw;
+								//new_index = getIndexOnFace(false, ts_down.first.second, ??, ts_down.second.second);
+								//TODO
+								
+								//updateIA(getRowOfExisting(*(act_vec - 2)), getRowOfExisting(*(act_vec - 1)), bf.second[ts_down.second.first]);
+							}
+							else {
+								//TODO handle the case of no act_vec-2 but act_vec - 1 
+								new_index = getIndex(getRowOfExisting(*(act_vec - 2)), getRowOfExisting(*(act_vec - 1)), JA[*(act_vec - 1)], bf.second[ts_down.second.first]);
+								updateIA(getRowOfExisting(*(act_vec - 2)), getRowOfExisting(*(act_vec - 1)), bf.second[ts_down.second.first]);
+							}
 							updateJA(act_col, act_col, new_index, bf.first[2]);
-							updateIA(getRowOfExisting(*(act_vec - 2)), getRowOfExisting(*(act_vec - 1)), bf.second[ts_down.second.first]);
 						}
 					}
 					
@@ -1304,22 +1298,38 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					auto col_inds = indicesOfColumn(JA[i]);
 					if (col_inds.size() == 1) {
 						//getIndex
-						new_index = getIndexOnFace();
+						new_index = getIndex(act_row, ts_up.first.second, act_col, ts_up.second.second);
 						updateJA(act_col, act_col, new_index, bf.first[2]);
 						updateIA(act_row, ts_up.first.second, bf.second[ts_up.second.first]);
 					}
 					else {
 						auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
 						if (ts_up.second.first == 3) {
-							new_index = getIndex(i, *(act_vec + 1), bf.second[ts_up.second.first]);
+							//If the actual and next one isn't connected
+							if (act_vec == col_inds.end()-1 || !edgeExists(i, *(act_vec + 1))) {
+								new_index = getIndex(act_row, ts_up.first.second, act_col, ts_up.second.second);
+							}
+							else { new_index = getIndex(act_row, getRowOfExisting(*(act_vec + 1)), act_col, bf.second[ts_up.second.first]); }
+							
 							updateJA(act_col, act_col, new_index, bf.first[2]);
-							updateIA(act_row, getRowOfExisting(*(act_vec + 1)), bf.second[ts_up.second.first]);
+							updateIA(act_row, ts_up.first.second, bf.second[ts_up.second.first]);
 						}
 						//if inserting with 2 above the middle point
 						else {
-							new_index = getIndex(*(act_vec + 1), *(act_vec + 2), bf.second[ts_up.second.first]);
+							//If no point on the first t up
+							if (act_vec == col_inds.end()-1 || !edgeExists(i, *(act_vec + 1))) {
+								//TODO
+								throw;
+								//new_index = getIndexOnFace(false, ??, ts_up.first.second, ts_up.second.second);
+								//updateIA(getRowOfExisting(*(act_vec + 1)), getRowOfExisting(*(act_vec + 2)), bf.second[ts_up.second.first]);
+							}
+							else {
+								//TODO handle the case of no act_vec+2 but act_vec + 1 
+								new_index = getIndex(getRowOfExisting(*(act_vec + 1)), getRowOfExisting(*(act_vec + 2)), JA[*(act_vec + 1)], bf.second[ts_up.second.first]);
+								updateIA(getRowOfExisting(*(act_vec + 1)), getRowOfExisting(*(act_vec + 2)), bf.second[ts_up.second.first]);
+							}
 							updateJA(act_col, act_col, new_index, bf.first[2]);
-							updateIA(getRowOfExisting(*(act_vec + 1)), getRowOfExisting(*(act_vec + 2)), bf.second[ts_up.second.first]);
+							
 						}
 					}
 
@@ -1368,8 +1378,17 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					}
 					//if inserting with 2 below the middle point
 					else {
-						new_index = i - 2;
-						updateJA(JA[i - 2], JA[i - 1], new_index, bf.first[ss_down.second.first]);
+						//If no point on the first s down
+						if (!edgeExists(i - 1, i)) {
+							new_index = i - 1;
+							//TODO
+							throw;
+							//updateJA(ss_down.first.second, , new_index, bf.first[ss_down.second.first]);
+						} else{
+							new_index = i - 2;
+							updateJA(ss_down.first.second, JA[i - 1], new_index, bf.first[ss_down.second.first]);
+						}
+						
 						updateIA(act_row, act_row, bf.second[2]);
 					}
 
@@ -1413,14 +1432,23 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 
 					int new_index;
 					if (ss_up.second.first == 3) {
-						new_index = getIndex(i, i + 1, bf.second[2]);
-						updateJA(act_col, JA[i + 1], new_index, bf.first[ss_up.second.first]);
+						new_index = i + 1;
+						updateJA(act_col, ss_up.first.second, new_index, bf.first[ss_up.second.first]);
 						updateIA(act_row, act_row, bf.second[2]);
 					}
 					//if inserting with 2 above the middle point
 					else {
-						new_index = getIndex(i + 1, i + 2, bf.second[2]);
-						updateJA(JA[i + 1], JA[i + 2], new_index, bf.first[ss_up.second.first]);
+						//If no point on the first s down
+						if (!edgeExists(i, i+1)) {
+							new_index = i + 1;
+							//TODO
+							throw;
+							//updateJA(JA[i + 1], ss_up.first.second, new_index, bf.first[ss_up.second.first]);
+						}
+						else {
+							new_index = i + 2;
+							updateJA(JA[i + 1], ss_up.first.second, new_index, bf.first[ss_up.second.first]);
+						}
 						updateIA(act_row, act_row, bf.second[2]);
 					}
 
@@ -1502,17 +1530,6 @@ std::pair<std::pair<double,std::vector<double>>, std::pair<double, std::vector<d
 }
 
 void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind) {
-	/*//We want to make sure it is inserted in an existing row or col, but also that it is a new point
-	auto row = getRow(t);
-	auto col = getCol(s);
-	if (row.first) {
-		if (col.first && getIndex(s,t).first) return;
-	}
-	else {
-		if (!col.first) return;
-	}
-	int new_ind = getIndex(s, t).second;*/
-
 	updateIA(getRowOfExisting(first_ind), getRowOfExisting(sec_ind), t);
 	updateJA(JA[first_ind], JA[sec_ind], new_ind, s);
 	std::vector<double> new_ti = { 0, 0, t, 0, 0 };
@@ -1903,7 +1920,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  new_t = ti_array[index_pair.first][2] + (ti_array[index_pair.second][2] - ti_array[index_pair.first][2])*proportion;
 		  
 		  //Finding new index
-		  new_index = getIndex(index_pair.first, index_pair.second, new_t);
+		  new_index = getIndex(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t);
 		  
 		  int act_col;
 		  if (!mid_insert) {
@@ -1922,7 +1939,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 			  if (opp_check.first) {
 				  new_t = opp_check.second;
 				  //Updating index
-				  new_index = getIndex(index_pair.first, index_pair.second, new_t);
+				  new_index = getIndex(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t);
 			  }
 		  }
 
