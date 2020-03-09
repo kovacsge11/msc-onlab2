@@ -1221,7 +1221,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//handle case when there is only one in col
 					if (col_inds.size() == 1) {
 						//getIndex
-						new_index = getIndex(ts_down.first.second, act_row, act_col, ts_down.second.second);
+						new_index = getIndex(ts_down.first.second, act_row, act_col, bf.second[ts_down.second.first]);
 						updateJA(act_col, act_col, new_index, bf.first[2]);
 						updateIA(ts_down.first.second, act_row, bf.second[ts_down.second.first]);
 					}
@@ -1230,7 +1230,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 						if (ts_down.second.first == 1) {
 							//If the actual and next one isn't connected
 							if (act_vec==col_inds.begin() || !edgeExists(*(act_vec - 1), i)) {
-								new_index = getIndex(ts_down.first.second, act_row, act_col, ts_down.second.second);
+								new_index = getIndex(ts_down.first.second, act_row, act_col, bf.second[ts_down.second.first]);
 							} else{ new_index = getIndex(getRowOfExisting(*(act_vec - 1)), act_row, act_col, bf.second[ts_down.second.first]); }
 
 							updateJA(act_col, act_col, new_index, bf.first[2]);
@@ -1298,7 +1298,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					auto col_inds = indicesOfColumn(JA[i]);
 					if (col_inds.size() == 1) {
 						//getIndex
-						new_index = getIndex(act_row, ts_up.first.second, act_col, ts_up.second.second);
+						new_index = getIndex(act_row, ts_up.first.second, act_col, bf.second[ts_up.second.first]);
 						updateJA(act_col, act_col, new_index, bf.first[2]);
 						updateIA(act_row, ts_up.first.second, bf.second[ts_up.second.first]);
 					}
@@ -1307,7 +1307,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 						if (ts_up.second.first == 3) {
 							//If the actual and next one isn't connected
 							if (act_vec == col_inds.end()-1 || !edgeExists(i, *(act_vec + 1))) {
-								new_index = getIndex(act_row, ts_up.first.second, act_col, ts_up.second.second);
+								new_index = getIndex(act_row, ts_up.first.second, act_col, bf.second[ts_up.second.first]);
 							}
 							else { new_index = getIndex(act_row, getRowOfExisting(*(act_vec + 1)), act_col, bf.second[ts_up.second.first]); }
 							
