@@ -1216,43 +1216,17 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
 					violated = true;
 					int new_index;
-					//Indices downwards
-					auto col_inds = indicesOfColumn(JA[i]);
-					//handle case when there is only one in col
-					if (col_inds.size() == 1) {
-						//getIndex
-						new_index = getIndex(ts_down.first.second, act_row, act_col, bf.second[ts_down.second.first]);
+					//if inserting with 1 below the middle point
+					if (ts_down.second.first == 1) {
+						new_index = getIndex(ts_down.first.second.first, act_row, act_col, bf.second[ts_down.second.first]);
 						updateJA(act_col, act_col, new_index, bf.first[2]);
-						updateIA(ts_down.first.second, act_row, bf.second[ts_down.second.first]);
+						updateIA(ts_down.first.first, act_row, bf.second[ts_down.second.first]);
 					}
+					//if inserting with 2 below the middle point
 					else {
-						auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
-						if (ts_down.second.first == 1) {
-							//If the actual and next one isn't connected
-							if (act_vec==col_inds.begin() || !edgeExists(*(act_vec - 1), i)) {
-								new_index = getIndex(ts_down.first.second, act_row, act_col, bf.second[ts_down.second.first]);
-							} else{ new_index = getIndex(getRowOfExisting(*(act_vec - 1)), act_row, act_col, bf.second[ts_down.second.first]); }
-
-							updateJA(act_col, act_col, new_index, bf.first[2]);
-							updateIA(ts_down.first.second, act_row, bf.second[ts_down.second.first]);
-						}
-						//if inserting with 2 below the middle point
-						else {
-							//If no point on the first t down
-							if (act_vec==col_inds.begin() || !edgeExists(*(act_vec - 1), i)) {
-								throw;
-								//new_index = getIndexOnFace(false, ts_down.first.second, ??, ts_down.second.second);
-								//TODO
-								
-								//updateIA(getRowOfExisting(*(act_vec - 2)), getRowOfExisting(*(act_vec - 1)), bf.second[ts_down.second.first]);
-							}
-							else {
-								//TODO handle the case of no act_vec-2 but act_vec - 1 
-								new_index = getIndex(getRowOfExisting(*(act_vec - 2)), getRowOfExisting(*(act_vec - 1)), JA[*(act_vec - 1)], bf.second[ts_down.second.first]);
-								updateIA(getRowOfExisting(*(act_vec - 2)), getRowOfExisting(*(act_vec - 1)), bf.second[ts_down.second.first]);
-							}
-							updateJA(act_col, act_col, new_index, bf.first[2]);
-						}
+						new_index = getIndex(ts_down.first.second.second, ts_down.first.second.first, act_col, bf.second[ts_down.second.first]);
+						updateJA(act_col, act_col, new_index, bf.first[2]);
+						updateIA(ts_down.first.second.second, ts_down.first.second.first, bf.second[ts_down.second.first]);
 					}
 					
 					std::vector<double> new_ti;
@@ -1294,43 +1268,17 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
 					violated = true;
 					int new_index;
-					//Indices downwards
-					auto col_inds = indicesOfColumn(JA[i]);
-					if (col_inds.size() == 1) {
-						//getIndex
-						new_index = getIndex(act_row, ts_up.first.second, act_col, bf.second[ts_up.second.first]);
+					//if inserting with 1 above the middle point
+					if (ts_up.second.first == 3) {
+						new_index = getIndex(act_row, ts_up.first.second.first, act_col, bf.second[ts_up.second.first]);
 						updateJA(act_col, act_col, new_index, bf.first[2]);
-						updateIA(act_row, ts_up.first.second, bf.second[ts_up.second.first]);
+						updateIA(act_row, ts_up.first.second.first, bf.second[ts_up.second.first]);
 					}
+					//if inserting with 2 above the middle point
 					else {
-						auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
-						if (ts_up.second.first == 3) {
-							//If the actual and next one isn't connected
-							if (act_vec == col_inds.end()-1 || !edgeExists(i, *(act_vec + 1))) {
-								new_index = getIndex(act_row, ts_up.first.second, act_col, bf.second[ts_up.second.first]);
-							}
-							else { new_index = getIndex(act_row, getRowOfExisting(*(act_vec + 1)), act_col, bf.second[ts_up.second.first]); }
-							
-							updateJA(act_col, act_col, new_index, bf.first[2]);
-							updateIA(act_row, ts_up.first.second, bf.second[ts_up.second.first]);
-						}
-						//if inserting with 2 above the middle point
-						else {
-							//If no point on the first t up
-							if (act_vec == col_inds.end()-1 || !edgeExists(i, *(act_vec + 1))) {
-								//TODO
-								throw;
-								//new_index = getIndexOnFace(false, ??, ts_up.first.second, ts_up.second.second);
-								//updateIA(getRowOfExisting(*(act_vec + 1)), getRowOfExisting(*(act_vec + 2)), bf.second[ts_up.second.first]);
-							}
-							else {
-								//TODO handle the case of no act_vec+2 but act_vec + 1 
-								new_index = getIndex(getRowOfExisting(*(act_vec + 1)), getRowOfExisting(*(act_vec + 2)), JA[*(act_vec + 1)], bf.second[ts_up.second.first]);
-								updateIA(getRowOfExisting(*(act_vec + 1)), getRowOfExisting(*(act_vec + 2)), bf.second[ts_up.second.first]);
-							}
-							updateJA(act_col, act_col, new_index, bf.first[2]);
-							
-						}
+						new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, bf.second[ts_up.second.first]);
+						updateJA(act_col, act_col, new_index, bf.first[2]);
+						updateIA(ts_up.first.second.first, ts_up.first.second.second, bf.second[ts_up.second.first]);
 					}
 
 					std::vector<double> new_ti;
@@ -1370,25 +1318,17 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
 					violated = true;
 					int new_index;
-					
+					//if inserting with 1 below the middle point
 					if (ss_down.second.first == 1) {
 						new_index = i-1;
-						updateJA(ss_down.first.second, act_col, new_index, bf.first[ss_down.second.first]);
+						updateJA(ss_down.first.second.first, act_col, new_index, bf.first[ss_down.second.first]);
 						updateIA(act_row, act_row, bf.second[2]);
 					}
 					//if inserting with 2 below the middle point
 					else {
-						//If no point on the first s down
-						if (!edgeExists(i - 1, i)) {
-							new_index = i - 1;
-							//TODO
-							throw;
-							//updateJA(ss_down.first.second, , new_index, bf.first[ss_down.second.first]);
-						} else{
-							new_index = i - 2;
-							updateJA(ss_down.first.second, JA[i - 1], new_index, bf.first[ss_down.second.first]);
-						}
-						
+						//If no point on the first s down, then i-1 else i-2
+						new_index = (!edgeExists(i - 1, i)) ? i - 1 : i - 2;
+						updateJA(ss_down.first.second.second, ss_down.first.second.first, new_index, bf.first[ss_down.second.first]);
 						updateIA(act_row, act_row, bf.second[2]);
 					}
 
@@ -1429,26 +1369,18 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 				if (!ss_up.first.first) {
 					//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
 					violated = true;
-
+					//if inserting with 1 above the middle point
 					int new_index;
 					if (ss_up.second.first == 3) {
 						new_index = i + 1;
-						updateJA(act_col, ss_up.first.second, new_index, bf.first[ss_up.second.first]);
+						updateJA(act_col, ss_up.first.second.first, new_index, bf.first[ss_up.second.first]);
 						updateIA(act_row, act_row, bf.second[2]);
 					}
 					//if inserting with 2 above the middle point
 					else {
-						//If no point on the first s down
-						if (!edgeExists(i, i+1)) {
-							new_index = i + 1;
-							//TODO
-							throw;
-							//updateJA(JA[i + 1], ss_up.first.second, new_index, bf.first[ss_up.second.first]);
-						}
-						else {
-							new_index = i + 2;
-							updateJA(JA[i + 1], ss_up.first.second, new_index, bf.first[ss_up.second.first]);
-						}
+						//If no point on the first s up, then i+1 else i+2
+						new_index = (!edgeExists(i, i+1)) ? i + 1 : i + 2;
+						updateJA(ss_up.first.second.first, ss_up.first.second.second, new_index, bf.first[ss_up.second.first]);
 						updateIA(act_row, act_row, bf.second[2]);
 					}
 
@@ -1573,7 +1505,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		//Finding first t down according to Rule 1
 		auto t_down = checkTsDown(act_row, act_col, new_index, new_si, new_ti, 0); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
-		int down_row = t_down.first.second;
+		int down_row = t_down.first.second.first;
 		//Check all points in row for close point
 		bool is_close = false;
 		double close_value = -1.0;
@@ -1589,7 +1521,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		//Do the same upwards, only update close value if its closer than the closest downwards
 		auto t_up = checkTsUp(act_row, act_col, new_index, new_si, new_ti, 0); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
-		int up_row = t_up.first.second; //first should give true, should be existing row
+		int up_row = t_up.first.second.first; //first should give true, should be existing row
 		//Check all points in row for close point
 		for (int i = IA[up_row]; i < IA[up_row + 1]; i++) {
 			//WARNING edges and indices updated temporarily but ti and si not
@@ -1605,7 +1537,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		//Finding first s down according to Rule 1
 		auto s_down = checkSsDown(act_row, act_col, new_index, new_si, new_ti, 0); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same t exists
-		int down_col = s_down.first.second; //first should give true, should be existing col
+		int down_col = s_down.first.second.first; //first should give true, should be existing col
 		//Check all points in col for close point
 		bool is_close = false;
 		double close_value = -1.0;
@@ -1622,7 +1554,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		//Do the same upwards, only update close value if its closer than the closest downwards
 		auto s_up = checkSsUp(act_row, act_col, new_index, new_si, new_ti, 0); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
-		int up_col = s_up.first.second; //first should give true, should be existing col
+		int up_col = s_up.first.second.first; //first should give true, should be existing col
 		col_indices = indicesOfColumn(up_col);
 		//Check all points in col for close point
 		for (auto i : col_indices) {
@@ -2295,24 +2227,30 @@ void MyViewer::generateTSplineMesh() {
 
 //TODO organize postSelection blocks into these 4 checkfunctions
 
+//TODO make the return of check functions prettier
+
 /*
 Returns with
 first.first: false if the check found an error,true if not
-first.second: index of found row
+first.second.first: index of first found row
+first.second.second: index of second found row
 second.first: index of insertion in t_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, int>,std::pair<int,double>> MyViewer::checkTsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
+std::pair<std::pair<bool, std::pair<int,int>>,std::pair<int,double>> MyViewer::checkTsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
+	std::pair<int, int> ret_rows = {-1, -1};
 	while (num_found < 2) {
 		//Check whether actual row is the first one
 		if (temp_ind == 0) {
+			if(num_found == 0) ret_rows.first = act_row;
+			else ret_rows.second = act_row;
 			if (t_vec[1-num_found] != ti_array[0][2])
 				if((viol_num == 1 && t_vec[1 - num_found] < ti_array[0][2])
 					|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[0][2])
 					|| viol_num == 0)
-					return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool,int>(false,act_row), std::pair < int, double>(1-num_found, ti_array[0][2]));
+					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false,ret_rows), std::pair < int, double>(1-num_found, ti_array[0][2]));
 			num_found++;
 		}
 		else {
@@ -2328,11 +2266,13 @@ std::pair<std::pair<bool, int>,std::pair<int,double>> MyViewer::checkTsDown(int 
 					for (int j = 0; j < edges.size() && !found; j++) {
 						auto p = edges[j];
 						if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+							if (num_found == 0) ret_rows.first = act_row;
+							else ret_rows.second = act_row;
 							if (t_vec[1 - num_found] != ti_array[temp_ind - 1][2])
 								if ((viol_num == 1 && t_vec[1 - num_found] < ti_array[temp_ind - 1][2])
 									|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[temp_ind - 1][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_row), std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
 							num_found++;
 							found = true;
 						}
@@ -2347,39 +2287,45 @@ std::pair<std::pair<bool, int>,std::pair<int,double>> MyViewer::checkTsDown(int 
 				}
 				//!= if first in act_row has same s, but is in a col with greater index
 				if (getRowOfExisting(temp_ind - 1) == act_row) {
+					if (num_found == 0) ret_rows.first = act_row;
+					else ret_rows.second = act_row;
 					if (t_vec[1 - num_found] != ti_array[temp_ind - 1][2])
 						if ((viol_num == 1 && t_vec[1 - num_found] < ti_array[temp_ind - 1][2])
 							|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[temp_ind - 1][2])
 							|| viol_num == 0)
-							return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_row), std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
+							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
 					num_found++;
 				}
 			}
 			temp_ind = IA[--act_row];
 		}
 	}
-	return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(true, act_row), std::pair<int, double>(-1,0.0));
+	return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_rows), std::pair<int, double>(-1,0.0));
 }
 
 /*
 Returns with
 first.first: false if the check found an error,true if not
-first.second: index of found row
+first.second.first: index of first found row
+first.second.second: index of second found row
 second.first: index of insertion in t_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkTsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
+	std::pair<int, int> ret_rows = { -1, -1 };
 	while (num_found < 2) {
 		//Check whether actual row is the last one
 		if (temp_ind == IA[IA.size() - 2]) {
+			if (num_found == 0) ret_rows.first = act_row;
+			else ret_rows.second = act_row;
 			if (t_vec[3+num_found] != ti_array[cpnum-1][2])
 				if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[cpnum - 1][2])
 					|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[cpnum - 1][2])
 					|| viol_num == 0)
-					return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_row), std::pair < int, double>(3 + num_found, ti_array[cpnum - 1][2]));
+					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair < int, double>(3 + num_found, ti_array[cpnum - 1][2]));
 			num_found++;
 		}
 		else {
@@ -2395,11 +2341,13 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkTsUp(int 
 					for (int j = 0; j < edges.size() && !found; j++) {
 						auto p = edges[j];
 						if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+							if (num_found == 0) ret_rows.first = act_row;
+							else ret_rows.second = act_row;
 							if (t_vec[3 + num_found] != ti_array[temp_ind - 1][2])
 								if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[temp_ind - 1][2])
 									|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[temp_ind - 1][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_row), std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
 							num_found++;
 							found = true;
 						}
@@ -2414,38 +2362,44 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkTsUp(int 
 				}
 				//!= if first in act_row has same s, but is in a col with greater index
 				if (getRowOfExisting(temp_ind - 1) == act_row) {
+					if (num_found == 0) ret_rows.first = act_row;
+					else ret_rows.second = act_row;
 					if (t_vec[3 + num_found] != ti_array[temp_ind - 1][2])
 						if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[temp_ind - 1][2])
 							|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[temp_ind - 1][2])
 							|| viol_num == 0)
-							return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, act_row), std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
+							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
 					num_found++;
 				}
 			}
 			temp_ind = IA[++act_row];
 		}
 	}
-	return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(true, act_row), std::pair<int, double>(-1, 0.0));
+	return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_rows), std::pair<int, double>(-1, 0.0));
 }
 
 /*
 Returns with
 first.first: false if the check found an error,true if not
-first.second: index of found col
+first.second.first: index of first found col
+first.second.second: index of second found col
 second.first: index of insertion in s_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int i = act_col == 0 ? act_col : act_col - 1;
 	int num_found = 0;
+	std::pair<int, int> ret_cols = { -1, -1 };
 	while (num_found < 2) {
 		if (i == 0) {
 			//Check whether actual column is the first one
+			if (num_found == 0) ret_cols.first = i;
+			else ret_cols.second = i;
 			if (s_vec[1-num_found] != si_array[0][2])
 				if ((viol_num == 1 && s_vec[1 - num_found] < si_array[0][2])
 					|| (viol_num == 2 && s_vec[1 - num_found] > si_array[0][2])
 					|| viol_num == 0)
-					return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(1 - num_found, si_array[0][2]));
+					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(1 - num_found, si_array[0][2]));
 			num_found++;
 		}
 		else {
@@ -2465,11 +2419,13 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsDown(in
 					for (int k = 0; k < edges.size() && !found; k++) {
 						auto p = edges[k];
 						if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+							if (num_found == 0) ret_cols.first = i;
+							else ret_cols.second = i;
 							if (s_vec[1 - num_found] != si_array[is_of_col[j - 1]][2])
 								if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[j - 1]][2])
 									|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[j - 1]][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
 							num_found++;
 							found = true;
 						}
@@ -2485,40 +2441,46 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsDown(in
 				}
 				//j == 0 if first in act_col has same t, but is in a row with greater index
 				if (j != 0) {
+					if (num_found == 0) ret_cols.first = i;
+					else ret_cols.second = i;
 					if (s_vec[1 - num_found] != si_array[is_of_col[j - 1]][2])
 						if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[j - 1]][2])
 							|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[j - 1]][2])
 							|| viol_num == 0)
-							return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
+							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
 					num_found++;
 				}
 			}
 			--i;
 		}
 	}
-	return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(true, i), std::pair<int, double>(-1, 0.0));
+	return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_cols), std::pair<int, double>(-1, 0.0));
 }
 
 /*
 Returns with
 first.first: false if the check found an error,true if not
-first.second: index of found col
+first.second.first: index of first found col
+first.second.second: index of second found col
 second.first: index of insertion in s_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
+	std::pair<int, int> ret_cols = { -1, -1 };
 	while (num_found < 2) {
 		//Check whether actual column is the last one
 		if (i == col_num - 1) {
+			if (num_found == 0) ret_cols.first = i;
+			else ret_cols.second = i;
 			if (s_vec[3 + num_found] != si_array[cpnum - 1][2])
 				if ((viol_num == 1 && s_vec[3 + num_found] > si_array[cpnum - 1][2])
 					|| (viol_num == 2 && s_vec[3 + num_found] < si_array[cpnum - 1][2])
 					|| viol_num == 0)
-					return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair < int, double>(3 + num_found, si_array[cpnum - 1][2]));
+					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair < int, double>(3 + num_found, si_array[cpnum - 1][2]));
 			num_found++;
 		}
 		else {
@@ -2538,11 +2500,13 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsUp(int 
 					for (int k = 0; k < edges.size() && !found; k++) {
 						auto p = edges[k];
 						if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+							if (num_found == 0) ret_cols.first = i;
+							else ret_cols.second = i;
 							if (s_vec[3 + num_found] != si_array[is_of_col[j - 1]][2])
 								if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[j - 1]][2])
 									|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[j - 1]][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
 							num_found++;
 							found = true;
 						}
@@ -2558,18 +2522,20 @@ std::pair<std::pair<bool, int>, std::pair<int, double>> MyViewer::checkSsUp(int 
 				}
 				//j == 0 if first in act_col has same t, but is in a row with greater index
 				if (j != 0) {
+					if (num_found == 0) ret_cols.first = i;
+					else ret_cols.second = i;
 					if (s_vec[3 + num_found] != si_array[is_of_col[j - 1]][2])
 						if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[j - 1]][2])
 							|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[j - 1]][2])
 							|| viol_num == 0)
-							return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(false, i), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
+							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
 					num_found++;
 				}
 			}
 			++i;
 		}
 	}
-	return std::pair<std::pair<bool, int>, std::pair<int, double>>(std::pair<bool, int>(true, i), std::pair<int, double>(-1, 0.0));
+	return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_cols), std::pair<int, double>(-1, 0.0));
 }
 
 bool MyViewer::checkTSplineCorrectness() {
