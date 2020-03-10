@@ -1707,8 +1707,22 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  std::vector<double> new_si, new_ti;
 	  int new_index;
 	  double new_s, new_t;
+	  int rowOfFirst = getRowOfExisting(index_pair.first);
+	  int rowOfSecond = getRowOfExisting(index_pair.second);
 	  //If in same row, otherwise they must be in same column
-	  if (getRowOfExisting(index_pair.first) == getRowOfExisting(index_pair.second)) {
+	  if (rowOfFirst == rowOfSecond) {
+		  //Handle case of insertion on zero interval edge on end of splines
+		  //If first index is in first col 
+		  if (JA[index_pair.first] == 0) {
+			  index_pair.first++;
+			  index_pair.second++; //what if this goes to next row?? shouldnt, right? TODO
+		  }
+		  //If second index is in last col
+		  else if (JA[index_pair.second] == *std::max_element(JA.begin(), JA.end())) {
+			  index_pair.first--;
+			  index_pair.second--;
+		  }
+
 		  new_s = si_array[index_pair.first][2] + (si_array[index_pair.second][2] - si_array[index_pair.first][2])*proportion;
 		  new_t = ti_array[index_pair.first][2];
 		  new_index = index_pair.second;
@@ -1847,7 +1861,20 @@ void MyViewer::postSelection(const QPoint &p)  {
 			  IA[i] += 1;
 		  }
 	  }
-	  else {
+	  else{
+		//Handle case of insertion on zero interval edge on end of splines
+		auto col_inds = indicesOfColumn(JA[index_pair.first]);
+		//If first index is in first row
+		if (rowOfFirst == 0) {
+			index_pair.first = index_pair.second;
+			index_pair.second = col_inds[2]; //what if this is out of array?? shouldnt, right? TODO
+		}
+		//If second index is in last row
+		else if (rowOfSecond == IA.size()-2) {
+			index_pair.second = index_pair.first;
+			index_pair.first = col_inds[col_inds.size()-3];
+		}
+
 		  new_s = si_array[index_pair.first][2];
 		  new_t = ti_array[index_pair.first][2] + (ti_array[index_pair.second][2] - ti_array[index_pair.first][2])*proportion;
 		  
