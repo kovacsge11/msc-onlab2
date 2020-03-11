@@ -1320,14 +1320,14 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					int new_index;
 					//if inserting with 1 below the middle point
 					if (ss_down.second.first == 1) {
-						new_index = i-1;
+						new_index = i;
 						updateJA(ss_down.first.second.first, act_col, new_index, bf.first[ss_down.second.first]);
 						updateIA(act_row, act_row, bf.second[2]);
 					}
 					//if inserting with 2 below the middle point
 					else {
-						//If no point on the first s down, then i-1 else i-2
-						new_index = (!edgeExists(i - 1, i)) ? i - 1 : i - 2;
+						//If no point on the first s down, then i else i-1
+						new_index = (!edgeExists(i - 1, i)) ? i : i - 1;
 						updateJA(ss_down.first.second.second, ss_down.first.second.first, new_index, bf.first[ss_down.second.first]);
 						updateIA(act_row, act_row, bf.second[2]);
 					}
