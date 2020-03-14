@@ -1723,7 +1723,13 @@ void MyViewer::postSelection(const QPoint &p)  {
 			  index_pair.second--;
 		  }
 
-		  new_s = si_array[index_pair.first][2] + (si_array[index_pair.second][2] - si_array[index_pair.first][2])*proportion;
+		  //Calculating new s based on proportion
+		  float d3plusd4 = si_array[index_pair.second][2] - si_array[index_pair.first][2];
+		  float d2 = si_array[index_pair.first][2] - si_array[index_pair.first][1];
+		  float d5 = si_array[index_pair.second][3] - si_array[index_pair.second][2];
+		  float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
+
+		  new_s = si_array[index_pair.first][2] + d3;
 		  new_t = ti_array[index_pair.first][2];
 		  new_index = index_pair.second;
 
@@ -1875,8 +1881,14 @@ void MyViewer::postSelection(const QPoint &p)  {
 			index_pair.first = col_inds[col_inds.size()-3];
 		}
 
+		//Calculating new s based on proportion
+		float d3plusd4 = ti_array[index_pair.second][2] - ti_array[index_pair.first][2];
+		float d2 = ti_array[index_pair.first][2] - ti_array[index_pair.first][1];
+		float d5 = ti_array[index_pair.second][3] - ti_array[index_pair.second][2];
+		float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
+
 		  new_s = si_array[index_pair.first][2];
-		  new_t = ti_array[index_pair.first][2] + (ti_array[index_pair.second][2] - ti_array[index_pair.first][2])*proportion;
+		  new_t = ti_array[index_pair.first][2] + d3;
 		  
 		  //Finding new index
 		  new_index = getIndex(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t);
