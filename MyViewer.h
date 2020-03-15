@@ -88,7 +88,7 @@ private:
   void checkViolations(std::vector<int> excluded);
   int getIndex(int first_row, int sec_row, int act_col, double t);
   std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t);
-  int MyViewer::getRowOfExisting(int index);
+  int getRowOfExisting(int index);
   std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s);
   void updateIA(int first_row, int sec_col, double t);
   void updateJA(int first_col, int sec_col, int new_ind, double s);
