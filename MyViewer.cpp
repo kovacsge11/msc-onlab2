@@ -650,8 +650,8 @@ void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const{
 	for (auto& ind_pair : edges) {
 		if(with_names) glPushName(names_index++);
 		glBegin(GL_LINES);
-		const auto &p1 = tspline_control_points[ind_pair.first];
-		const auto &p2 = tspline_control_points[ind_pair.second];
+		const auto &p1 = tspline_control_points[ind_pair.first] / weights[ind_pair.first];
+		const auto &p2 = tspline_control_points[ind_pair.second] / weights[ind_pair.second];
 		glVertex3dv(p1);
 		glVertex3dv(p2);
 		glEnd();
@@ -663,8 +663,10 @@ void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const{
 	glPointSize(8.0);
 	glColor3d(1.0, 0.0, 1.0);
 	glBegin(GL_POINTS);
-	for (const auto &pn : tspline_control_points)
-		glVertex3dv(pn);
+	for (int i = 0; i < tspline_control_points.size(); i++) {
+		Vec coords = { (tspline_control_points[i] / weights[i]) };
+		glVertex3dv(coords);
+	}
 	glEnd();
 	glPointSize(1.0);
 	glEnable(GL_LIGHTING);
