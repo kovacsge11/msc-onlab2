@@ -1698,14 +1698,14 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  double proportion = 0.5;
 	  Vec selectedPoint;
 	  if(mid_insert){
-		  selectedPoint = (tspline_control_points[index_pair.first] + tspline_control_points[index_pair.second]) / 2.0;
+		  selectedPoint = ((tspline_control_points[index_pair.first] / weights[index_pair.first]) + (tspline_control_points[index_pair.second] / weights[index_pair.second])) / 2.0;
 	  }
 	  else {
 		  //Select point under pixel
 		  bool found;
 		  selectedPoint = camera()->pointUnderPixel(p, found);
 		  if (!found) return;
-		  proportion = (selectedPoint - tspline_control_points[index_pair.first]).norm() / (tspline_control_points[index_pair.first] - tspline_control_points[index_pair.second]).norm();
+		  proportion = (selectedPoint - tspline_control_points[index_pair.first]/weights[index_pair.first]).norm() / (tspline_control_points[index_pair.first] / weights[index_pair.first] - tspline_control_points[index_pair.second] / weights[index_pair.second]).norm();
 	  }
 
 	  std::vector<double> new_si, new_ti;
