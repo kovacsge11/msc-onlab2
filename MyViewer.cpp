@@ -823,6 +823,8 @@ int MyViewer::getIndex(int first_row, int sec_row, int act_col, double t) {
 		//Checking if in the same row as the one to be inserted
 		//TODO check more securely
 		if (ti_array[IA[i]][2] == t) {
+			//Case of zero interval insertion
+			if (i == sec_row) return IA[sec_row];
 			for (int j = IA[i]; j < IA[i + 1]; ++j) {
 				if (JA[j] > act_col) {
 					return j;
@@ -1732,6 +1734,14 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
 
 		  new_s = si_array[index_pair.first][2] + d3;
+		  while (new_s > si_array[index_pair.second][2]) {
+			  index_pair.first++;
+			  index_pair.second++;
+		  }
+		  while (new_s < si_array[index_pair.first][2]) {
+			  index_pair.first--;
+			  index_pair.second--;
+		  }
 		  new_t = ti_array[index_pair.first][2];
 		  new_index = index_pair.second;
 
@@ -1889,160 +1899,170 @@ void MyViewer::postSelection(const QPoint &p)  {
 		float d5 = ti_array[index_pair.second][3] - ti_array[index_pair.second][2];
 		float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
 
-		  new_s = si_array[index_pair.first][2];
-		  new_t = ti_array[index_pair.first][2] + d3;
+		int indOfSecInCol = std::find(col_inds.begin(), col_inds.end(), index_pair.second) - col_inds.begin();
+		int indOfFirstInCol = indOfSecInCol - 1;
+		new_s = si_array[index_pair.first][2];
+		new_t = ti_array[index_pair.first][2] + d3;
+		while (new_t > ti_array[index_pair.second][2]) {
+			index_pair.first = index_pair.second;
+			index_pair.second = col_inds[indOfSecInCol++];
+		}
+		while (new_t < ti_array[index_pair.first][2]) {
+			index_pair.second = index_pair.first;
+			index_pair.first = col_inds[indOfFirstInCol--];
+		}
 		  
-		  //Finding new index
-		  new_index = getIndex(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t);
+		//Finding new index
+		new_index = getIndex(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t);
 		  
-		  int act_col;
-		  if (!mid_insert) {
-			  //Update JA and IA temporarily
-			  updateJA(JA[index_pair.first], JA[index_pair.second], new_index, new_s);
-			  updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t);
-			  updateEdgesTemporarily(false, new_index);
+		int act_col;
+		if (!mid_insert) {
+			//Update JA and IA temporarily
+			updateJA(JA[index_pair.first], JA[index_pair.second], new_index, new_s);
+			updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t);
+			updateEdgesTemporarily(false, new_index);
 
-			  int act_row = getRowOfExisting(new_index);
-			  act_col = JA[new_index];
-			  auto opp_check = checkOpposite(act_row, act_col, new_s, new_t, false, new_index, epsilon);
-			  deleteFromJA(new_index);
-			  deleteFromIA(new_index);
-			  updateEdgesTemporarily(true, new_index);
+			int act_row = getRowOfExisting(new_index);
+			act_col = JA[new_index];
+			auto opp_check = checkOpposite(act_row, act_col, new_s, new_t, false, new_index, epsilon);
+			deleteFromJA(new_index);
+			deleteFromIA(new_index);
+			updateEdgesTemporarily(true, new_index);
 
-			  if (opp_check.first) {
-				  new_t = opp_check.second;
-				  //Updating index
-				  new_index = getIndex(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t);
-			  }
-		  }
+			if (opp_check.first) {
+				new_t = opp_check.second;
+				//Updating index
+				new_index = getIndex(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t);
+			}
+		}
 
-		  if (keep_surface) {
-			  insertRefined(new_s, new_t,new_index, index_pair.first, index_pair.second);
-			  return;
-		  }
+		if (keep_surface) {
+			insertRefined(new_s, new_t,new_index, index_pair.first, index_pair.second);
+			return;
+		}
 
-		  new_ti = { ti_array[index_pair.first][1], ti_array[index_pair.first][2], new_t, ti_array[index_pair.second][2], ti_array[index_pair.second][3] };
+		new_ti = { ti_array[index_pair.first][1], ti_array[index_pair.first][2], new_t, ti_array[index_pair.second][2], ti_array[index_pair.second][3] };
 		  
 		  
 
-		  //Finding new si
-		  new_si.clear();
-		  int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
-		  act_col = JA[index_pair.first];
+		//Finding new si
+		new_si.clear();
+		int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
+		act_col = JA[index_pair.first];
 
-		  //Check s-s downwards
-		  int i = act_col==0 ? act_col : act_col-1;
-		  int num_found = 0;
-		  while (num_found < 2) {
-			  if (i == 0) {
-				  new_si.insert(new_si.begin(),si_array[0][2]);
-				  num_found++;
-			  }
-			  else {
-				  std::vector<int> is_of_col = indicesOfColumn(i);
-				  int j = 0;
-				  for (; j < is_of_col.size() && ti_array[is_of_col[j]][2] <= new_t; j++) {
-				  }
-				  //If first in act_col has bigger t than new_t
-				  if (j == 0) {}
-				  if (ti_array[is_of_col[j-1]][2] < new_t) {
-					  //Check if not the case of last in col having smaller t than new_t
-					  if (ti_array[is_of_col[j]][2] > new_t) {
-						  //check whether there is an edge connecting temp_ind-1 and temp_ind,
-						  //meaning that a vertical ray started from the new point would cut it,
-						  //and so the t of them should be stored in new_ti
-						  bool found = false;
-						  for (int k = 0; k < edges.size(), !found; k++) {
-							  auto p = edges[k];
-							  if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
-								  new_si.insert(new_si.begin(), si_array[is_of_col[j - 1]][2]);
-								  num_found++;
-								  found = true;
-							  }
-						  }
-					  }
-				  }
-				  else {
-					  //This case occurs when ti_array[is_of_col[j-1]][2] == new_t
-					  new_si.insert(new_si.begin(), si_array[is_of_col[j - 1]][2]);
-					  num_found++;
-				  }
-				  --i;
-			  }
-		  }
+		//Check s-s downwards
+		int i = act_col==0 ? act_col : act_col-1;
+		int num_found = 0;
+		while (num_found < 2) {
+			if (i == 0) {
+				new_si.insert(new_si.begin(),si_array[0][2]);
+				num_found++;
+			}
+			else {
+				std::vector<int> is_of_col = indicesOfColumn(i);
+				int j = 0;
+				for (; j < is_of_col.size() && ti_array[is_of_col[j]][2] <= new_t; j++) {
+				}
+				//If first in act_col has bigger t than new_t
+				if (j == 0) {}
+				if (ti_array[is_of_col[j-1]][2] < new_t) {
+					//Check if not the case of last in col having smaller t than new_t
+					if (ti_array[is_of_col[j]][2] > new_t) {
+						//check whether there is an edge connecting temp_ind-1 and temp_ind,
+						//meaning that a vertical ray started from the new point would cut it,
+						//and so the t of them should be stored in new_ti
+						bool found = false;
+						for (int k = 0; k < edges.size(), !found; k++) {
+							auto p = edges[k];
+							if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+								new_si.insert(new_si.begin(), si_array[is_of_col[j - 1]][2]);
+								num_found++;
+								found = true;
+							}
+						}
+					}
+				}
+				else {
+					//This case occurs when ti_array[is_of_col[j-1]][2] == new_t
+					new_si.insert(new_si.begin(), si_array[is_of_col[j - 1]][2]);
+					num_found++;
+				}
+				--i;
+			}
+		}
 
-		  new_si.push_back(new_s);
+		new_si.push_back(new_s);
 
-		  //Check s-s upwards
-		  i = act_col == col_num-1 ? col_num-1 : act_col + 1;
-		  num_found = 0;
-		  while (num_found < 2) {
-			  if (i == col_num-1) {
-				  new_si.push_back(si_array[cpnum-1][2]);
-				  num_found++;
-			  }
-			  else {
-				  std::vector<int> is_of_col = indicesOfColumn(i);
-				  int j = 0;
-				  for (; j < is_of_col.size() && ti_array[is_of_col[j]][2] <= new_t; j++) {
-				  }
-				  //If first in act_col has bigger t than new_t
-				  if (j == 0) {}
-				  if (ti_array[is_of_col[j - 1]][2] < new_t) {
-					  //Check if not the case of last in col having smaller t than new_t
-					  if (ti_array[is_of_col[j]][2] > new_t) {
-						  //check whether there is an edge connecting temp_ind-1 and temp_ind,
-						  //meaning that a vertical ray started from the new point would cut it,
-						  //and so the t of them should be stored in new_ti
-						  bool found = false;
-						  for (int k = 0; k < edges.size(), !found; k++) {
-							  auto p = edges[k];
-							  if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
-								  new_si.push_back(si_array[is_of_col[j - 1]][2]);
-								  num_found++;
-								  found = true;
-							  }
-						  }
-					  }
-				  }
-				  else {
-					  //This case occurs when ti_array[is_of_col[j-1]][2] == new_t
-					  new_si.push_back(si_array[is_of_col[j - 1]][2]);
-					  num_found++;
-				  }
-				  ++i;
-			  }
-		  }
+		//Check s-s upwards
+		i = act_col == col_num-1 ? col_num-1 : act_col + 1;
+		num_found = 0;
+		while (num_found < 2) {
+			if (i == col_num-1) {
+				new_si.push_back(si_array[cpnum-1][2]);
+				num_found++;
+			}
+			else {
+				std::vector<int> is_of_col = indicesOfColumn(i);
+				int j = 0;
+				for (; j < is_of_col.size() && ti_array[is_of_col[j]][2] <= new_t; j++) {
+				}
+				//If first in act_col has bigger t than new_t
+				if (j == 0) {}
+				if (ti_array[is_of_col[j - 1]][2] < new_t) {
+					//Check if not the case of last in col having smaller t than new_t
+					if (ti_array[is_of_col[j]][2] > new_t) {
+						//check whether there is an edge connecting temp_ind-1 and temp_ind,
+						//meaning that a vertical ray started from the new point would cut it,
+						//and so the t of them should be stored in new_ti
+						bool found = false;
+						for (int k = 0; k < edges.size(), !found; k++) {
+							auto p = edges[k];
+							if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+								new_si.push_back(si_array[is_of_col[j - 1]][2]);
+								num_found++;
+								found = true;
+							}
+						}
+					}
+				}
+				else {
+					//This case occurs when ti_array[is_of_col[j-1]][2] == new_t
+					new_si.push_back(si_array[is_of_col[j - 1]][2]);
+					num_found++;
+				}
+				++i;
+			}
+		}
 
-		  //Updating IA and JA matrices too
-		  //Update JA
-		  JA.insert(JA.begin() + new_index, act_col);
-		  //Update IA too
-		  updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t);
+		//Updating IA and JA matrices too
+		//Update JA
+		JA.insert(JA.begin() + new_index, act_col);
+		//Update IA too
+		updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t);
 
-		  //Update neighbouring ti-s
-		  ti_array[index_pair.first][3] = new_t;
-		  ti_array[index_pair.first][4] = ti_array[index_pair.second][2];
-		  auto ts_of_actcol = indicesOfColumn(act_col);
-		  //Find the index of index_pair.first in its column
-		  bool found = false;
-		  int k = 0;
-		  for (; k < ts_of_actcol.size(), !found;k++) {
-			  if (ts_of_actcol[k] == index_pair.first) {
-				  found = true;
-				  k--;
-			  }
-		  }
-		  if (k != 0) {
-			  ti_array[ts_of_actcol[k-1]][3] = ti_array[ts_of_actcol[k]][2];
-			  ti_array[ts_of_actcol[k-1]][4] = new_t;
-		  }
-		  ti_array[index_pair.second][1] = new_t;
-		  ti_array[index_pair.second][0] = ti_array[index_pair.first][2];
-		  if (k+1 != ts_of_actcol.size()-1) {
-			  ti_array[ts_of_actcol[k+2]][1] = ti_array[ts_of_actcol[k+1]][2];
-			  ti_array[ts_of_actcol[k+2]][0] = new_t;
-		  }
+		//Update neighbouring ti-s
+		ti_array[index_pair.first][3] = new_t;
+		ti_array[index_pair.first][4] = ti_array[index_pair.second][2];
+		auto ts_of_actcol = indicesOfColumn(act_col);
+		//Find the index of index_pair.first in its column
+		bool found = false;
+		int k = 0;
+		for (; k < ts_of_actcol.size(), !found;k++) {
+			if (ts_of_actcol[k] == index_pair.first) {
+				found = true;
+				k--;
+			}
+		}
+		if (k != 0) {
+			ti_array[ts_of_actcol[k-1]][3] = ti_array[ts_of_actcol[k]][2];
+			ti_array[ts_of_actcol[k-1]][4] = new_t;
+		}
+		ti_array[index_pair.second][1] = new_t;
+		ti_array[index_pair.second][0] = ti_array[index_pair.first][2];
+		if (k+1 != ts_of_actcol.size()-1) {
+			ti_array[ts_of_actcol[k+2]][1] = ti_array[ts_of_actcol[k+1]][2];
+			ti_array[ts_of_actcol[k+2]][0] = new_t;
+		}
 
 		  
 	  }
