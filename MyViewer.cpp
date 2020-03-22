@@ -1717,23 +1717,27 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  if (rowOfFirst == rowOfSecond) {
 		  //Handle case of insertion on zero interval edge on end of splines
 		  //If first index is in first col 
-		  if (JA[index_pair.first] == 0) {
-			  index_pair.first++;
-			  index_pair.second++; //what if this goes to next row?? shouldnt, right? TODO
-		  }
-		  //If second index is in last col
-		  else if (JA[index_pair.second] == *std::max_element(JA.begin(), JA.end())) {
-			  index_pair.first--;
-			  index_pair.second--;
-		  }
+		  //if (JA[index_pair.first] == 0) {
+			 // index_pair.first++;
+			 // index_pair.second++; //what if this goes to next row?? shouldnt, right? TODO
+		  //}
+		  ////If second index is in last col
+		  //else if (JA[index_pair.second] == *std::max_element(JA.begin(), JA.end())) {
+			 // index_pair.first--;
+			 // index_pair.second--;
+		  //}
 
-		  //Calculating new s based on proportion
-		  float d3plusd4 = si_array[index_pair.second][2] - si_array[index_pair.first][2];
-		  float d2 = si_array[index_pair.first][2] - si_array[index_pair.first][1];
-		  float d5 = si_array[index_pair.second][3] - si_array[index_pair.second][2];
-		  float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
+		  ////Calculating new s based on proportion
+		  //float d3plusd4 = si_array[index_pair.second][2] - si_array[index_pair.first][2];
+		  //float d2 = si_array[index_pair.first][2] - si_array[index_pair.first][1];
+		  //float d5 = si_array[index_pair.second][3] - si_array[index_pair.second][2];
+		  //float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
+		  //new_s = si_array[index_pair.first][2] + d3;
 
-		  new_s = si_array[index_pair.first][2] + d3;
+
+		  //Calculating alpha based on refinement of blending functions - (new_s - s0)/(s3-s0) = proportion
+		  new_s = proportion * (si_array[index_pair.second][3] - si_array[index_pair.second][0]) + si_array[index_pair.second][0];
+
 		  while (new_s > si_array[index_pair.second][2]) {
 			  index_pair.first++;
 			  index_pair.second++;
@@ -1883,33 +1887,37 @@ void MyViewer::postSelection(const QPoint &p)  {
 		//Handle case of insertion on zero interval edge on end of splines
 		auto col_inds = indicesOfColumn(JA[index_pair.first]);
 		//If first index is in first row
-		if (rowOfFirst == 0) {
-			index_pair.first = index_pair.second;
-			index_pair.second = col_inds[2]; //what if this is out of array?? shouldnt, right? TODO
-		}
-		//If second index is in last row
-		else if (rowOfSecond == IA.size()-2) {
-			index_pair.second = index_pair.first;
-			index_pair.first = col_inds[col_inds.size()-3];
-		}
+		//if (rowOfFirst == 0) {
+		//	index_pair.first = index_pair.second;
+		//	index_pair.second = col_inds[2]; //what if this is out of array?? shouldnt, right? TODO
+		//}
+		////If second index is in last row
+		//else if (rowOfSecond == IA.size()-2) {
+		//	index_pair.second = index_pair.first;
+		//	index_pair.first = col_inds[col_inds.size()-3];
+		//}
 
-		//Calculating new s based on proportion
-		float d3plusd4 = ti_array[index_pair.second][2] - ti_array[index_pair.first][2];
-		float d2 = ti_array[index_pair.first][2] - ti_array[index_pair.first][1];
-		float d5 = ti_array[index_pair.second][3] - ti_array[index_pair.second][2];
-		float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
+		////Calculating new s based on proportion
+		//float d3plusd4 = ti_array[index_pair.second][2] - ti_array[index_pair.first][2];
+		//float d2 = ti_array[index_pair.first][2] - ti_array[index_pair.first][1];
+		//float d5 = ti_array[index_pair.second][3] - ti_array[index_pair.second][2];
+		//float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
+		//new_t = ti_array[index_pair.first][2] + d3;
+
+		//Calculating alpha based on refinement of blending functions - (new_t - t0)/(t3-t0) = proportion
+		new_t = proportion * (ti_array[index_pair.second][3] - ti_array[index_pair.second][0]) + ti_array[index_pair.second][0];
 
 		int indOfSecInCol = std::find(col_inds.begin(), col_inds.end(), index_pair.second) - col_inds.begin();
 		int indOfFirstInCol = indOfSecInCol - 1;
 		new_s = si_array[index_pair.first][2];
-		new_t = ti_array[index_pair.first][2] + d3;
+		
 		while (new_t > ti_array[index_pair.second][2]) {
 			index_pair.first = index_pair.second;
-			index_pair.second = col_inds[indOfSecInCol++];
+			index_pair.second = col_inds[++indOfSecInCol];
 		}
 		while (new_t < ti_array[index_pair.first][2]) {
 			index_pair.second = index_pair.first;
-			index_pair.first = col_inds[indOfFirstInCol--];
+			index_pair.first = col_inds[--indOfFirstInCol];
 		}
 		  
 		//Finding new index
