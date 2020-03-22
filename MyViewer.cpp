@@ -782,7 +782,7 @@ std::pair<bool, int> MyViewer::getRowOfNew(int first_row, int sec_row, double t)
 	//If first_row and sec_row next to each other, inserting between them
 	if(first_row + 1 == sec_row) return std::pair<bool, int>(false, sec_row);
 	else {
-		int i = first_row;
+		int i = first_row+1;
 		for (; sec_row >= i; i++) {
 			if (ti_array[IA[i]][2] == t) return std::pair<bool, int>(true, i);
 			if (ti_array[IA[i]][2] > t) {
