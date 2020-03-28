@@ -802,9 +802,9 @@ std::pair<bool, int> MyViewer::getColOfNew(int first_col, int sec_col, double s)
 	if(first_col + 1 == sec_col) return std::pair<bool, int>(false, sec_col);
 	else {
 		int i = first_col;
-		for (; sec_col > i; i++) {
+		for (; sec_col >= i; i++) {
 			auto col_ind = indicesOfColumn(i);
-			if (si_array[col_ind[0]][2] == s) return std::pair<bool, int>(true, i);
+			if (si_array[col_ind[0]][2] == s) return std::pair<bool, int>(true, i == sec_col ? i-1 : i);
 			if (si_array[col_ind[0]][2] > s) {
 				return std::pair<bool, int>(false, i);
 			}
@@ -1695,7 +1695,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  double epsilon = 0.05;
 
 	  std::pair<int, int> index_pair = edges[sel - cpnum];
-	  double proportion = 0.5;
+	  double alpha = 0.5, beta = 0.5;
 	  Vec selectedPoint;
 	  if(mid_insert){
 		  selectedPoint = ((tspline_control_points[index_pair.first] / weights[index_pair.first]) + (tspline_control_points[index_pair.second] / weights[index_pair.second])) / 2.0;
@@ -1705,8 +1705,9 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  bool found;
 		  selectedPoint = camera()->pointUnderPixel(p, found);
 		  if (!found) return;
-		  proportion = (selectedPoint - tspline_control_points[index_pair.first]/weights[index_pair.first]).norm() / (tspline_control_points[index_pair.first] / weights[index_pair.first] - tspline_control_points[index_pair.second] / weights[index_pair.second]).norm();
+		  alpha = (selectedPoint - tspline_control_points[index_pair.first]/weights[index_pair.first]).norm() / (tspline_control_points[index_pair.second] / weights[index_pair.second] - tspline_control_points[index_pair.first] / weights[index_pair.first]).norm();
 	  }
+	  beta = (alpha * weights[index_pair.first]) / (alpha * weights[index_pair.first] + (1.0 - alpha) * weights[index_pair.second]);
 
 	  std::vector<double> new_si, new_ti;
 	  int new_index;
@@ -1735,8 +1736,8 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  //new_s = si_array[index_pair.first][2] + d3;
 
 
-		  //Calculating alpha based on refinement of blending functions - (new_s - s0)/(s3-s0) = proportion
-		  new_s = proportion * (si_array[index_pair.second][3] - si_array[index_pair.second][0]) + si_array[index_pair.second][0];
+		  //Calculating beta based on refinement of blending functions - (new_s - s1)/(s4-s1) = beta
+		  new_s = beta * (si_array[index_pair.first][4] - si_array[index_pair.first][1]) + si_array[index_pair.first][1];
 
 		  while (new_s > si_array[index_pair.second][2]) {
 			  index_pair.first++;
@@ -1904,8 +1905,8 @@ void MyViewer::postSelection(const QPoint &p)  {
 		//float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
 		//new_t = ti_array[index_pair.first][2] + d3;
 
-		//Calculating alpha based on refinement of blending functions - (new_t - t0)/(t3-t0) = proportion
-		new_t = proportion * (ti_array[index_pair.second][3] - ti_array[index_pair.second][0]) + ti_array[index_pair.second][0];
+		//Calculating beta based on refinement of blending functions - (new_t - t1)/(t4-t1) = beta
+		new_t = beta * (ti_array[index_pair.first][4] - ti_array[index_pair.first][1]) + ti_array[index_pair.first][1];
 
 		int indOfSecInCol = std::find(col_inds.begin(), col_inds.end(), index_pair.second) - col_inds.begin();
 		int indOfFirstInCol = indOfSecInCol - 1;
