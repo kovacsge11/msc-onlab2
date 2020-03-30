@@ -910,7 +910,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 		if (std::find(excluded.begin(), excluded.end(), i) == excluded.end()) {
 			int act_row = getRowOfExisting(i);
 			int act_col = JA[i];
-			for (int j = 0; j < blend_functions[i].size(); j++) {
+			int jmax = blend_functions[i].size();
+			for (int j = 0; j < jmax; j++) {
 				auto bf = blend_functions[i][j];
 				auto ts_down = checkTsDown(act_row, act_col, i, bf.first, bf.second, 1);
 				if (!ts_down.first.first) {
@@ -934,6 +935,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 							refined_points[i][k] += temp_point * refined_pairs.second.first;
 							refined_weights[i][k] += temp_weight * refined_pairs.second.first;
 							exists = true;
+							jmax--;
+							j--;
 							break;
 						}
 					}
@@ -948,6 +951,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					//Indices downwards
 					auto col_inds = indicesOfColumn(JA[i]);
 					auto act_vec = std::find(col_inds.begin(),col_inds.end(),i);
+					//If no point below
+					if (act_vec == col_inds.begin()) break;
 					ref_ind = *(act_vec - 1);
 
 					//refine the blend function
@@ -1008,6 +1013,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 							refined_points[i][k] += temp_point * refined_pairs.first.first;
 							refined_weights[i][k] += temp_weight * refined_pairs.first.first;
 							exists = true;
+							jmax--;
+							j--;
 							break;
 						}
 					}
@@ -1022,6 +1029,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					//Indices downwards
 					auto col_inds = indicesOfColumn(JA[i]);
 					auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
+					//If no point after it in the col
+					if (act_vec == col_inds.end()-1) break;
 					ref_ind = *(act_vec + 1);
 
 					//refine the blend function
@@ -1082,6 +1091,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 							refined_points[i][k] += temp_point * refined_pairs.second.first;
 							refined_weights[i][k] += temp_weight * refined_pairs.second.first;
 							exists = true;
+							jmax--;
+							j--;
 							break;
 						}
 					}
@@ -1092,6 +1103,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.second.first);
 					}
 					//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
+					//If no point before it
+					if (i == IA[act_row]) break;
 					int ref_ind = i-1;
 
 					//refine the blend function
@@ -1152,6 +1165,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 							refined_points[i][k] += temp_point * refined_pairs.first.first;
 							refined_weights[i][k] += temp_weight * refined_pairs.first.first;
 							exists = true;
+							jmax--;
+							j--;
 							break;
 						}
 					}
@@ -1162,6 +1177,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.first.first);
 					}
 					//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
+					//If no point after it int the row
+					if (i+1 == IA[act_row+1]) break;
 					int ref_ind = i + 1;
 
 					//refine the blend function
@@ -2678,7 +2695,7 @@ void MyViewer::mouseMoveEvent(QMouseEvent *e) {
   if (model_type == ModelType::BEZIER_SURFACE)
     bezier_control_points[selected_vertex] = axes.position;
   if (model_type == ModelType::TSPLINE_SURFACE)
-	  tspline_control_points[selected_vertex] = axes.position;
+	  tspline_control_points[selected_vertex] = refined_points[selected_vertex][0] = axes.position;
   updateMesh();
   update();
 }
