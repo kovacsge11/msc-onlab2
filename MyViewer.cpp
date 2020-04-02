@@ -936,10 +936,12 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 			int jmax = blend_functions[i].size();
 			for (int j = 0; j < jmax; j++) {
 				auto bf = blend_functions[i][j];
+				bool actualAddedToOther = false;
 				auto ts_down = checkTsDown(act_row, act_col, i, bf.first, bf.second, 1);
 				if (!ts_down.first.first) {
 					//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
 					violated = true;
+
 
 					//Indices downwards
 					auto col_inds = indicesOfColumn(JA[i]);
@@ -966,7 +968,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 							refined_weights[i][k] += temp_weight * refined_pairs.second.first;
 							exists = true;
 							jmax--;
-							j--;
+							actualAddedToOther = true;
 							break;
 						}
 					}
@@ -975,6 +977,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 						blend_functions[i].insert(blend_functions[i].begin() + j,blend_pair);
 						refined_points[i].insert(refined_points[i].begin() + j, temp_point * refined_pairs.second.first);
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.second.first);
+						bf = blend_functions[i][j];
 					}
 					//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
 					int ref_ind = *(act_vec - 1);
@@ -1014,7 +1017,14 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 						}
 					}
 				}
-
+				
+				if (actualAddedToOther) {
+					j--;
+					break;
+				}
+				else {
+					bf = blend_functions[i][j];
+				}
 				auto ts_up = checkTsUp(act_row, act_col, i, bf.first, bf.second, 1);
 				if (!ts_up.first.first) {
 					//Refine blend func of point i by inserting at ts_up.second.first value ts_up.second.second
@@ -1045,7 +1055,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 							refined_weights[i][k] += temp_weight * refined_pairs.first.first;
 							exists = true;
 							jmax--;
-							j--;
+							actualAddedToOther = true;
 							break;
 						}
 					}
@@ -1054,6 +1064,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 						blend_functions[i].insert(blend_functions[i].begin() + j, blend_pair);
 						refined_points[i].insert(refined_points[i].begin() + j, temp_point *refined_pairs.first.first);
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.first.first);
+						bf = blend_functions[i][j];
 					}
 					//Second : getIndex of(bf.first[2], ts_up.second.second) if inserting above the middle point
 					int ref_ind = *(act_vec + 1);
@@ -1093,7 +1104,14 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 						}
 					}
 				}
-
+				
+				if (actualAddedToOther) {
+					j--;
+					break;
+				}
+				else {
+					bf = blend_functions[i][j];
+				}
 				auto ss_down = checkSsDown(act_row, act_col, i, bf.first, bf.second, 1);
 				if (!ss_down.first.first) {
 					//Refine blend func of point i by inserting at ss_down.second.first + 1 value ss_down.second.second
@@ -1121,7 +1139,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 							refined_weights[i][k] += temp_weight * refined_pairs.second.first;
 							exists = true;
 							jmax--;
-							j--;
+							actualAddedToOther = true;
 							break;
 						}
 					}
@@ -1130,6 +1148,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 						blend_functions[i].insert(blend_functions[i].begin() + j, blend_pair);
 						refined_points[i].insert(refined_points[i].begin() + j, temp_point *refined_pairs.second.first);
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.second.first);
+						bf = blend_functions[i][j];
 					}
 					//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
 					int ref_ind = i-1;
@@ -1169,7 +1188,14 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 						}
 					}
 				}
-
+				
+				if (actualAddedToOther) {
+					j--;
+					break;
+				}
+				else {
+					bf = blend_functions[i][j];
+				}
 				auto ss_up = checkSsUp(act_row, act_col, i, bf.first, bf.second, 1);
 				if (!ss_up.first.first) {
 					//Refine blend func of point i by inserting at ss_up.second.first value ss_up.second.second
@@ -1206,6 +1232,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 						blend_functions[i].insert(blend_functions[i].begin() + j, blend_pair);
 						refined_points[i].insert(refined_points[i].begin() + j, temp_point *refined_pairs.first.first);
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.first.first);
+						bf = blend_functions[i][j];
 					}
 					//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
 					int ref_ind = i + 1;
