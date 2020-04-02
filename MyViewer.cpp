@@ -831,7 +831,11 @@ std::pair<bool, int> MyViewer::getColOfNew(int first_col, int sec_col, double s,
 //Gives back index of new point based on the edge of the vertical insertion
 //New insertion can only happen on edges with positive knot value
 int MyViewer::getIndex(int first_row, int sec_row, int act_col, double t, bool maxFromEquals) {
-	//Insertion on vertical edge
+	//Insertion on vertical edge? --i dont think it's necessary it's much easier to calculate on point
+
+	//If inserting between two rows
+	if (first_row + 1 == sec_row) return IA[sec_row];
+
 	for (int i = first_row+1; i <= sec_row; ++i) {
 		//Checking if in the same row as the one to be inserted
 		//TODO check more securely

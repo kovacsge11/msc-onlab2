@@ -92,8 +92,8 @@ void MyWindow::open() {
 void MyWindow::save() {
   auto filename =
     QFileDialog::getSaveFileName(this, tr("Save File"), last_directory,
-                                 tr("Bézier surface (*.bzr);;"
-									 "TSpline surface (*.tsp);;"));
+                                 tr("TSpline surface (*.tsp);;"
+									 "Bézier surface (*.bzr);;"));
   if(filename.isEmpty())
     return;
   last_directory = QFileInfo(filename).absolutePath();
