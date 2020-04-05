@@ -712,7 +712,7 @@ void MyViewer::drawWithNames() {
 	  if (!show_control_points)
 		  return;
 	  for (size_t i = 0, ie = tspline_control_points.size(); i < ie; ++i) {
-		  Vec const &p = tspline_control_points[i];
+		  Vec const &p = tspline_control_points[i]/weights[i];
 		  glPushName(i);
 		  glRasterPos3fv(p);
 		  glPopName();
@@ -746,13 +746,14 @@ void MyViewer::endSelection(const QPoint &p) {
 	else
 	{
 		if (model_type == ModelType::TSPLINE_SURFACE) {
+			auto selBuff = selectBuffer();
 			for (int i = 0; i < nbHits; ++i)
 				//If a point is selected, too
-				if ((selectBuffer())[i * 4 + 3] < tspline_control_points.size()) {
-					setSelectedName((selectBuffer())[i * 4 + 3]);
+				if (selBuff[i * 4 + 3] < tspline_control_points.size()) {
+					setSelectedName(selBuff[i * 4 + 3]);
 					return;
 				}
-			setSelectedName((selectBuffer())[3]);
+			setSelectedName(selBuff[3]);
 		}
 	}
 }
@@ -1772,7 +1773,7 @@ void MyViewer::postSelection(const QPoint &p)  {
     axes.position = bezier_control_points[sel];
   if (model_type == ModelType::TSPLINE_SURFACE)
 	  if (sel >= cpnum) edge = true;
-	  else axes.position = tspline_control_points[sel];
+	  else axes.position = tspline_control_points[sel]/weights[sel];
   if (!edge) {
 	  double depth = camera()->projectedCoordinatesOf(axes.position)[2];
 	  Vec q1 = camera()->unprojectedCoordinatesOf(Vec(0.0, 0.0, depth));
@@ -2768,7 +2769,7 @@ void MyViewer::mouseMoveEvent(QMouseEvent *e) {
   if (model_type == ModelType::BEZIER_SURFACE)
     bezier_control_points[selected_vertex] = axes.position;
   if (model_type == ModelType::TSPLINE_SURFACE)
-	  tspline_control_points[selected_vertex] = refined_points[selected_vertex][0] = axes.position;
+	  tspline_control_points[selected_vertex] = refined_points[selected_vertex][0] = axes.position * weights[selected_vertex];
   updateMesh();
   update();
 }
