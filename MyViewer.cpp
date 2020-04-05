@@ -952,6 +952,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
 					//If no point below
 					if (act_vec == col_inds.begin()) break;
+					//If there is no point in the first t down but there is on the second down which causes a violation
+					if (getRowOfExisting(*(act_vec-1)) != ts_down.first.second.first) break;
 
 					auto refined_pairs = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second);
 					//Two insertions:
@@ -1039,6 +1041,8 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
 					//If no point after it in the col
 					if (act_vec == col_inds.end() - 1) break;
+					//If there is no point in the first t down but there is on the second down which causes a violation
+					if (getRowOfExisting(*(act_vec + 1)) != ts_up.first.second.first) break;
 
 					auto refined_pairs = refineBlend(bf.second, ts_up.second.first, ts_up.second.second);
 					//Two insertions:
@@ -1124,6 +1128,9 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					//If no point before it
 					if (i == IA[act_row]) break;
 
+					//If there is no point in the first s down but there is on the second down which causes a violation
+					if (JA[i-1] != ss_down.first.second.first) break;
+
 					auto refined_pairs = refineBlend(bf.first, ss_down.second.first + 1, ss_down.second.second);
 					//Two insertions:
 					//First: refining the actual in s direction-> refine the blend function, +multipl*d to blendMultipliers[i]
@@ -1207,6 +1214,9 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 
 					//If no point after it int the row
 					if (i + 1 == IA[act_row + 1]) break;
+
+					//If there is no point in the first s up but there is on the second up which causes a violation
+					if (JA[i + 1] != ss_up.first.second.first) break;
 
 					auto refined_pairs = refineBlend(bf.first, ss_up.second.first, ss_up.second.second);
 					//Two insertions:
