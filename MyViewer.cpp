@@ -954,7 +954,11 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 					//If no point below
 					if (act_vec == col_inds.begin()) break;
 					//If there is no point in the first t down but there is on the second down which causes a violation
-					if (getRowOfExisting(*(act_vec-1)) != ts_down.first.second.first) break;
+					if (getRowOfExisting(*(act_vec - 1)) != ts_down.first.second.first) {
+						//force inserting a point on middle place
+
+						break;
+					}
 
 					auto refined_pairs = refineBlend(bf.second, ts_down.second.first + 1, ts_down.second.second);
 					//Two insertions:
@@ -1318,9 +1322,26 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					}
 					//if inserting with 2 below the middle point
 					else {
-						new_index = getIndex(ts_down.first.second.second, ts_down.first.second.first, act_col, bf.second[ts_down.second.first], true);
-						updateJA(act_col, act_col, new_index, bf.first[2], true);
-						updateIA(ts_down.first.second.second, ts_down.first.second.first, bf.second[ts_down.second.first], true);
+						auto col_inds = indicesOfColumn(JA[i]);
+						auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
+						//If the first hit has same s as the one to be inserted and there is at least one row between them, then insert the point before the first hit
+						if (bf.second[0] == bf.second[1] && act_row-ts_down.first.second.first > 1) {
+							new_index = getIndex(ts_down.first.second.first, act_row, act_col, bf.second[1], true);
+							updateJA(act_col, act_col, new_index, bf.first[2], true);
+							updateIA(ts_down.first.first, act_row, bf.second[1], true);
+						}
+						//If there is no point in the first t down which doesn't cause violation but the second down causes a violation
+						//In this case we insert a point on the first t down
+						else if (act_vec == col_inds.begin() || getRowOfExisting(*(act_vec - 1)) != ts_down.first.second.first) {
+							new_index = getIndex(ts_down.first.second.second, act_row, act_col, bf.second[1], true);
+							updateJA(act_col, act_col, new_index, bf.first[2], true);
+							updateIA(ts_down.first.second.second, act_row, bf.second[1], true);
+						}
+						else {
+							new_index = getIndex(ts_down.first.second.second, ts_down.first.second.first, act_col, bf.second[ts_down.second.first], true);
+							updateJA(act_col, act_col, new_index, bf.first[2], true);
+							updateIA(ts_down.first.second.second, ts_down.first.second.first, bf.second[ts_down.second.first], true);
+						}
 					}
 					
 					std::vector<double> new_ti;
@@ -1371,9 +1392,26 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					}
 					//if inserting with 2 above the middle point
 					else {
-						new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, bf.second[ts_up.second.first], false);
-						updateJA(act_col, act_col, new_index, bf.first[2], false);
-						updateIA(ts_up.first.second.first, ts_up.first.second.second, bf.second[ts_up.second.first], false);
+						auto col_inds = indicesOfColumn(JA[i]);
+						auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
+						//If the first hit has same s as the one to be inserted and there is at least one row between them, then insert the point before the first hit
+						if (bf.second[3] == bf.second[4] && ts_up.first.second.first - act_row > 1) {
+							new_index = getIndex(act_row, ts_up.first.second.first, act_col, bf.second[4], false);
+							updateJA(act_col, act_col, new_index, bf.first[2], false);
+							updateIA(act_row, ts_up.first.second.first, bf.second[4], false);
+						}
+						//If there is no point in the first t up which doesn't cause violation but the second up causes a violation
+						//In this case we insert a point on first t up
+						else if (act_vec == col_inds.end()-1 || getRowOfExisting(*(act_vec + 1)) != ts_up.first.second.first) {
+							new_index = getIndex(act_row, ts_up.first.second.second, act_col, bf.second[3], false);
+							updateJA(act_col, act_col, new_index, bf.first[2], false);
+							updateIA(act_row, ts_up.first.second.second, bf.second[3], false);
+						}
+						else {
+							new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, bf.second[ts_up.second.first], false);
+							updateJA(act_col, act_col, new_index, bf.first[2], false);
+							updateIA(ts_up.first.second.first, ts_up.first.second.second, bf.second[ts_up.second.first], false);
+						}
 					}
 
 					std::vector<double> new_ti;
@@ -1422,10 +1460,25 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					}
 					//if inserting with 2 below the middle point
 					else {
-						//If no point on the first s down, then i else i-1
-						new_index = (getRowOfExisting(i-1) == act_row && si_array[i-1][2] >= bf.first[ss_down.second.first]) ? i-1 : i;
-						updateJA(ss_down.first.second.second, ss_down.first.second.first, new_index, bf.first[ss_down.second.first], true);
-						updateIA(act_row, act_row, bf.second[2], true);
+						//If the first hit has same t as the one to be inserted and there is at least one col between them, then insert the point before the first hit
+						if (bf.first[0] == bf.first[1] && act_col - ss_down.first.second.first > 1) {
+							new_index = i;
+							updateJA(ss_down.first.second.first, act_col, new_index, bf.first[1], true);
+							updateIA(act_row, act_row, bf.second[2], true);
+						}
+						//If there is no point in the first s down which doesn't cause violation but the second down causes a violation
+						//In this case we insert a point on the first s down
+						else if (i == IA[act_row] || JA[i - 1] != ss_down.first.second.first) {
+							new_index = i;
+							updateJA(ss_down.first.second.second, act_col, new_index, bf.first[1], true);
+							updateIA(act_row, act_row, bf.second[2], true);
+						}
+						else {
+							//If no point on the first s down, then i else i-1
+							new_index = (getRowOfExisting(i - 1) == act_row && si_array[i - 1][2] >= bf.first[ss_down.second.first]) ? i - 1 : i;
+							updateJA(ss_down.first.second.second, ss_down.first.second.first, new_index, bf.first[ss_down.second.first], true);
+							updateIA(act_row, act_row, bf.second[2], true);
+						}
 					}
 
 					std::vector<double> new_si;
@@ -1475,10 +1528,25 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					}
 					//if inserting with 2 above the middle point
 					else {
-						//If no point on the first s up, then i+1 else i+2
-						new_index = (getRowOfExisting(i + 1) == act_row && si_array[i + 1][2] <= bf.first[ss_up.second.first]) ? i + 2 : i + 1;
-						updateJA(ss_up.first.second.first, ss_up.first.second.second, new_index, bf.first[ss_up.second.first], false);
-						updateIA(act_row, act_row, bf.second[2], false);
+						//If the first hit has same t as the one to be inserted and there is at least one row between them, then insert the point before the first hit
+						if (bf.first[3] == bf.first[4] && ss_down.first.second.first - act_col > 1) {
+							new_index = i + 1;
+							updateJA(act_col, ss_up.first.second.first, new_index, bf.first[4], false);
+							updateIA(act_row, act_row, bf.second[2], false);
+						}
+						//If there is no point in the first s down which doesn't cause violation but the second down causes a violation
+						//In this case we insert a point on the first s down
+						if (i + 1 == IA[act_row + 1] || JA[i + 1] != ss_up.first.second.first) {
+							new_index = i + 1;
+							updateJA(act_col, ss_up.first.second.second, new_index, bf.first[3], false);
+							updateIA(act_row, act_row, bf.second[2], false);
+						}
+						else {
+							//If no point on the first s up, then i+1 else i+2
+							new_index = (getRowOfExisting(i + 1) == act_row && si_array[i + 1][2] <= bf.first[ss_up.second.first]) ? i + 2 : i + 1;
+							updateJA(ss_up.first.second.first, ss_up.first.second.second, new_index, bf.first[ss_up.second.first], false);
+							updateIA(act_row, act_row, bf.second[2], false);
+						}
 					}
 
 					std::vector<double> new_si;

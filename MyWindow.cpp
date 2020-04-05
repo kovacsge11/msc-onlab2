@@ -30,7 +30,8 @@ MyWindow::MyWindow(QApplication *parent) :
   connect(openAction, SIGNAL(triggered()), this, SLOT(open()));
 
   auto saveAction = new QAction(tr("&Save as.."), this);
-  saveAction->setStatusTip(tr("Save a Bézier surface to a file"));
+  saveAction->setStatusTip(tr("Save a surface to a file"));
+  saveAction->setShortcut(tr("Ctrl+S"));
   connect(saveAction, SIGNAL(triggered()), this, SLOT(save()));
 
   auto quitAction = new QAction(tr("&Quit"), this);
