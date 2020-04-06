@@ -930,7 +930,7 @@ bool MyViewer::edgeExists(int first_ind, int sec_ind) {
 	return (std::find(edges.begin(), edges.end(), temp_pair) != edges.end());
 }
 
-bool MyViewer::checkForViol1(std::vector<int> excluded) {
+bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded) {
 	bool violated = false;
 	int cpnum = tspline_control_points.size();
 	for (int i = 0; i < cpnum;i++) {
@@ -942,7 +942,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 			for (int j = 0; j < jmax; j++) {
 				auto bf = blend_functions[i][j];
 				bool actualAddedToOther = false;
-				auto ts_down = checkTsDown(act_row, act_col, i, bf.first, bf.second, 1);
+				auto ts_down = checkTsDown(act_row, act_col, i, bf.first, bf.second, 1, newlyAdded);
 				if (!ts_down.first.first) {
 					//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
 					violated = true;
@@ -1036,7 +1036,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 				else {
 					bf = blend_functions[i][j];
 				}
-				auto ts_up = checkTsUp(act_row, act_col, i, bf.first, bf.second, 1);
+				auto ts_up = checkTsUp(act_row, act_col, i, bf.first, bf.second, 1, newlyAdded);
 				if (!ts_up.first.first) {
 					//Refine blend func of point i by inserting at ts_up.second.first value ts_up.second.second
 					violated = true;
@@ -1125,7 +1125,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 				else {
 					bf = blend_functions[i][j];
 				}
-				auto ss_down = checkSsDown(act_row, act_col, i, bf.first, bf.second, 1);
+				auto ss_down = checkSsDown(act_row, act_col, i, bf.first, bf.second, 1, newlyAdded);
 				if (!ss_down.first.first) {
 					//Refine blend func of point i by inserting at ss_down.second.first + 1 value ss_down.second.second
 					violated = true;
@@ -1212,7 +1212,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 				else {
 					bf = blend_functions[i][j];
 				}
-				auto ss_up = checkSsUp(act_row, act_col, i, bf.first, bf.second, 1);
+				auto ss_up = checkSsUp(act_row, act_col, i, bf.first, bf.second, 1, newlyAdded);
 				if (!ss_up.first.first) {
 					//Refine blend func of point i by inserting at ss_up.second.first value ss_up.second.second
 					violated = true;
@@ -1297,7 +1297,7 @@ bool MyViewer::checkForViol1(std::vector<int> excluded) {
 	return violated;
 }
 
-std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> excluded) {
+std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkForViol2(std::vector<int> excluded, std::vector<int> newlyAdded) {
 	bool violated = false;
 	int cpnum = tspline_control_points.size();
 	for (int i = 0; i < cpnum; i++) {
@@ -1308,7 +1308,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 			for (int j = 0; j < blend_functions[i].size(); j++) {
 				auto bf = blend_functions[i][j];
 				bool needsOneMoreIter = false;
-				auto ts_down = checkTsDown(act_row, act_col, i, bf.first, bf.second, 2);
+				auto ts_down = checkTsDown(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
 				if (!ts_down.first.first) {
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
 					violated = true;
@@ -1365,6 +1365,12 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Handle index changes due to new point inserted- to still check all points
 					cpnum++;
 					if (new_index <= i) i++;
+					//Update newlyAdded
+					for (int na = 0; na < newlyAdded.size(); na++) {
+						if (new_index <= newlyAdded[na]) newlyAdded[na]++;
+					}
+					newlyAdded.push_back(new_index);
+
 					//Update excluded accordingly too
 					for (int ex = 0; ex < excluded.size(); ex++) {
 						if (excluded[ex] >= new_index) excluded[ex]++;
@@ -1378,7 +1384,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					}
 				}
 
-				auto ts_up = checkTsUp(act_row, act_col, i, bf.first, bf.second, 2);
+				auto ts_up = checkTsUp(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
 				if (!ts_up.first.first) {
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
 					violated = true;
@@ -1434,6 +1440,12 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Handle index changes due to new point inserted- to still check all points
 					cpnum++;
 					if (new_index <= i) i++;
+					//Update newlyAdded
+					for (int na = 0; na < newlyAdded.size(); na++) {
+						if (new_index <= newlyAdded[na]) newlyAdded[na]++;
+					}
+					newlyAdded.push_back(new_index);
+
 					//Update excluded accordingly too
 					for (int ex = 0; ex < excluded.size(); ex++) {
 						if (excluded[ex] >= new_index) excluded[ex]++;
@@ -1446,7 +1458,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					}
 				}
 
-				auto ss_down = checkSsDown(act_row, act_col, i, bf.first, bf.second, 2);
+				auto ss_down = checkSsDown(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
 				if (!ss_down.first.first) {
 					//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
 					violated = true;
@@ -1502,6 +1514,11 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Handle index changes due to new point inserted- to still check all points
 					cpnum++;
 					if (new_index <= i) i++;
+					//Update newlyAdded
+					for (int na = 0; na < newlyAdded.size(); na++) {
+						if (new_index <= newlyAdded[na]) newlyAdded[na]++;
+					}
+					newlyAdded.push_back(new_index);
 					//Update excluded accordingly too
 					for (int ex = 0; ex < excluded.size();ex++) {
 						if (excluded[ex] >= new_index) excluded[ex]++;
@@ -1514,7 +1531,7 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					}
 				}
 
-				auto ss_up = checkSsUp(act_row, act_col, i, bf.first, bf.second, 2);
+				auto ss_up = checkSsUp(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
 				if (!ss_up.first.first) {
 					//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
 					violated = true;
@@ -1570,6 +1587,11 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 					//Handle index changes due to new point inserted- to still check all points
 					cpnum++;
 					if (new_index <= i) i++;
+					//Update newlyAdded
+					for (int na = 0; na < newlyAdded.size(); na++) {
+						if (new_index <= newlyAdded[na]) newlyAdded[na]++;
+					}
+					newlyAdded.push_back(new_index);
 					//Update excluded accordingly too
 					for (int ex = 0; ex < excluded.size(); ex++) {
 						if (excluded[ex] >= new_index) excluded[ex]++;
@@ -1587,17 +1609,19 @@ std::pair<bool, std::vector<int>> MyViewer::checkForViol2(std::vector<int> exclu
 			}
 		}
 	}
-	std::pair<bool, std::vector<int>> ret_pair(violated,excluded);
+	std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> ret_pair(violated, std::pair<std::vector<int>, std::vector<int>>(excluded,newlyAdded));
 	return ret_pair;
 }
 
 void MyViewer::checkViolations(std::vector<int> excluded) {
 	bool viol1 = false, viol2 = false;
+	std::vector<int> newlyAdded = {excluded};
 	do {
-		viol1 = checkForViol1(excluded);
+		viol1 = checkForViol1(excluded, newlyAdded);
 		excluded = {};
-		std::pair<bool, std::vector<int>> viol2_pair = checkForViol2(excluded);
-		excluded = viol2_pair.second;
+		std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> viol2_pair = checkForViol2(excluded, newlyAdded);
+		excluded = viol2_pair.second.first;
+		newlyAdded = viol2_pair.second.second;
 		viol2 = viol2_pair.first;
 	} while (viol1 || viol2);
 
@@ -1654,9 +1678,9 @@ void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int
 	//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
 	updateEdgesTemporarily(false, new_ind);
 	//And replace the edge which was inserted on with the two new edges
-	edges.erase(std::find(edges.begin(), edges.end(), std::pair<int, int>(first_ind, sec_ind+1)));
+	/*edges.erase(std::find(edges.begin(), edges.end(), std::pair<int, int>(first_ind, sec_ind+1)));
 	edges.push_back(std::pair<int,int>(first_ind, new_ind));
-	edges.push_back(std::pair<int, int>(new_ind, sec_ind+1));
+	edges.push_back(std::pair<int, int>(new_ind, sec_ind+1));*/
 	
 	checkViolations(excluded);
 	updateEdgeTopology();
@@ -1668,9 +1692,10 @@ void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int
 std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double s, double t, bool horizontal_insertion, int new_index, double epsilon) {
 	std::vector<double> new_ti = { -1, -1, t, -1, -1 }; //TODO shift min to 0,0 in openTSpline - so no minus values will occur
 	std::vector<double> new_si = { -1, -1, s, -1, -1 };
+	std::vector<int> newlyAdded = {new_index};
 	if (horizontal_insertion) {
 		//Finding first t down according to Rule 1
-		auto t_down = checkTsDown(act_row, act_col, new_index, new_si, new_ti, 0); //second.first should be 1/first check should give error/, first should be false
+		auto t_down = checkTsDown(act_row, act_col, new_index, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
 		int down_row = t_down.first.second.first;
 		//Check all points in row for close point
@@ -1686,7 +1711,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		}
 
 		//Do the same upwards, only update close value if its closer than the closest downwards
-		auto t_up = checkTsUp(act_row, act_col, new_index, new_si, new_ti, 0); //second.first should be 1/first check should give error/, first should be false
+		auto t_up = checkTsUp(act_row, act_col, new_index, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
 		int up_row = t_up.first.second.first; //first should give true, should be existing row
 		//Check all points in row for close point
@@ -1702,7 +1727,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 	}
 	else {
 		//Finding first s down according to Rule 1
-		auto s_down = checkSsDown(act_row, act_col, new_index, new_si, new_ti, 0); //second.first should be 1/first check should give error/, first should be false
+		auto s_down = checkSsDown(act_row, act_col, new_index, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same t exists
 		int down_col = s_down.first.second.first; //first should give true, should be existing col
 		//Check all points in col for close point
@@ -1719,7 +1744,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		}
 
 		//Do the same upwards, only update close value if its closer than the closest downwards
-		auto s_up = checkSsUp(act_row, act_col, new_index, new_si, new_ti, 0); //second.first should be 1/first check should give error/, first should be false
+		auto s_up = checkSsUp(act_row, act_col, new_index, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
 		int up_col = s_up.first.second.first; //first should give true, should be existing col
 		col_indices = indicesOfColumn(up_col);
@@ -2470,7 +2495,7 @@ first.second.second: index of second found row
 second.first: index of insertion in t_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int,int>>,std::pair<int,double>> MyViewer::checkTsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
+std::pair<std::pair<bool, std::pair<int,int>>,std::pair<int,double>> MyViewer::checkTsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded) {
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	std::pair<int, int> ret_rows = {-1, -1};
@@ -2496,16 +2521,27 @@ std::pair<std::pair<bool, std::pair<int,int>>,std::pair<int,double>> MyViewer::c
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the t of them should be the 1-num_found-th element of ti array of our point
 					bool found = false;
+					int first_tmp = temp_ind - 1;
+					int sec_tmp = temp_ind;
+					//If one of temp_ind or temp_ind -1 is in excluded, we must check the next index accordingly
+					//in order to keep the checking correct by checking only edges which were originally included
+					while (getRowOfExisting(first_tmp) == act_row && std::find(excluded.begin(), excluded.end(), first_tmp) != excluded.end()) {
+						first_tmp--;
+					}
+					while (getRowOfExisting(sec_tmp) == act_row && std::find(excluded.begin(), excluded.end(), sec_tmp) != excluded.end()) {
+						sec_tmp++;
+					}
+
 					for (int j = 0; j < edges.size() && !found; j++) {
 						auto p = edges[j];
-						if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+						if ((p.first == first_tmp) && (p.second == sec_tmp)) {
 							if (num_found == 0) ret_rows.first = act_row;
 							else ret_rows.second = act_row;
-							if (t_vec[1 - num_found] != ti_array[temp_ind - 1][2])
-								if ((viol_num == 1 && t_vec[1 - num_found] < ti_array[temp_ind - 1][2])
-									|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[temp_ind - 1][2])
+							if (t_vec[1 - num_found] != ti_array[first_tmp][2])
+								if ((viol_num == 1 && t_vec[1 - num_found] < ti_array[first_tmp][2])
+									|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[first_tmp][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(1 - num_found, ti_array[first_tmp][2]));
 							num_found++;
 							found = true;
 						}
@@ -2544,7 +2580,7 @@ first.second.second: index of second found row
 second.first: index of insertion in t_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded) {
 	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
@@ -2571,16 +2607,26 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the t of them should be the 3+num_found-th element of ti array of our point
 					bool found = false;
+					int first_tmp = temp_ind - 1;
+					int sec_tmp = temp_ind;
+					//If one of temp_ind or temp_ind -1 is in excluded, we must check the next index accordingly
+					//in order to keep the checking correct by checking only edges which were originally included
+					while (getRowOfExisting(first_tmp) == act_row && std::find(excluded.begin(), excluded.end(), first_tmp) != excluded.end()) {
+						first_tmp--;
+					}
+					while (getRowOfExisting(sec_tmp) == act_row && std::find(excluded.begin(), excluded.end(), sec_tmp) != excluded.end()) {
+						sec_tmp++;
+					}
 					for (int j = 0; j < edges.size() && !found; j++) {
 						auto p = edges[j];
-						if ((p.first == temp_ind - 1) && (p.second == temp_ind)) {
+						if ((p.first == first_tmp) && (p.second == sec_tmp)) {
 							if (num_found == 0) ret_rows.first = act_row;
 							else ret_rows.second = act_row;
-							if (t_vec[3 + num_found] != ti_array[temp_ind - 1][2])
-								if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[temp_ind - 1][2])
-									|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[temp_ind - 1][2])
+							if (t_vec[3 + num_found] != ti_array[first_tmp][2])
+								if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[first_tmp][2])
+									|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[first_tmp][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(3 + num_found, ti_array[first_tmp][2]));
 							num_found++;
 							found = true;
 						}
@@ -2619,7 +2665,7 @@ first.second.second: index of second found col
 second.first: index of insertion in s_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded) {
 	int i = act_col == 0 ? act_col : act_col - 1;
 	int num_found = 0;
 	std::pair<int, int> ret_cols = { -1, -1 };
@@ -2649,16 +2695,26 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the s of them should be the 1-num_found-th element of si array of our point
 					bool found = false;
+					int first_tmp = j - 1;
+					int sec_tmp = j;
+					//If one of j or j -1 is in excluded, we must check the next index accordingly
+					//in order to keep the checking correct by checking only edges which were originally included
+					while(first_tmp>0 && std::find(excluded.begin(), excluded.end(), is_of_col[first_tmp]) != excluded.end()) {
+						first_tmp--;
+					}
+					while (sec_tmp < is_of_col.size()-1 && std::find(excluded.begin(), excluded.end(), is_of_col[sec_tmp]) != excluded.end()) {
+						sec_tmp++;
+					}
 					for (int k = 0; k < edges.size() && !found; k++) {
 						auto p = edges[k];
-						if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+						if ((p.first == is_of_col[first_tmp]) && (p.second == is_of_col[sec_tmp])) {
 							if (num_found == 0) ret_cols.first = i;
 							else ret_cols.second = i;
-							if (s_vec[1 - num_found] != si_array[is_of_col[j - 1]][2])
-								if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[j - 1]][2])
-									|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[j - 1]][2])
+							if (s_vec[1 - num_found] != si_array[is_of_col[first_tmp]][2])
+								if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[first_tmp]][2])
+									|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[first_tmp]][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(1 - num_found, si_array[is_of_col[first_tmp]][2]));
 							num_found++;
 							found = true;
 						}
@@ -2698,7 +2754,7 @@ first.second.second: index of second found col
 second.first: index of insertion in s_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded) {
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
 	int num_found = 0;
@@ -2730,16 +2786,26 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 					//meaning that a vertical ray started from our point would cut it,
 					//and so the s of them should be the 3+num_found-th element of si array of our point
 					bool found = false;
+					int first_tmp = j - 1;
+					int sec_tmp = j;
+					//If one of j or j -1 is in excluded, we must check the next index accordingly
+					//in order to keep the checking correct by checking only edges which were originally included
+					while (first_tmp > 0 && std::find(excluded.begin(), excluded.end(), is_of_col[first_tmp]) != excluded.end()) {
+						first_tmp--;
+					}
+					while (sec_tmp < is_of_col.size() - 1 && std::find(excluded.begin(), excluded.end(), is_of_col[sec_tmp]) != excluded.end()) {
+						sec_tmp++;
+					}
 					for (int k = 0; k < edges.size() && !found; k++) {
 						auto p = edges[k];
-						if ((p.first == is_of_col[j - 1]) && (p.second == is_of_col[j])) {
+						if ((p.first == is_of_col[first_tmp]) && (p.second == is_of_col[sec_tmp])) {
 							if (num_found == 0) ret_cols.first = i;
 							else ret_cols.second = i;
-							if (s_vec[3 + num_found] != si_array[is_of_col[j - 1]][2])
-								if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[j - 1]][2])
-									|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[j - 1]][2])
+							if (s_vec[3 + num_found] != si_array[is_of_col[first_tmp]][2])
+								if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[first_tmp]][2])
+									|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[first_tmp]][2])
 									|| viol_num == 0)
-									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(3 + num_found, si_array[is_of_col[first_tmp]][2]));
 							num_found++;
 							found = true;
 						}
@@ -2804,14 +2870,15 @@ bool MyViewer::checkTSplineCorrectness() {
 
 bool MyViewer::checkTSplineTopology() {
 	int cpnum = tspline_control_points.size();
+	std::vector<int> empty = {};
 	//Check correctness of topology
 	for (int i = 0; i < cpnum; i++) {
 		int act_row = getRowOfExisting(i);
 		int act_col = JA[i];
-		if (!checkTsDown(act_row, act_col, i,si_array[i], ti_array[i], 0).first.first) return false;
-		if (!checkTsUp(act_row, act_col, i, si_array[i], ti_array[i], 0).first.first) return false;
-		if (!checkSsDown(act_row, act_col, i, si_array[i], ti_array[i], 0).first.first) return false;
-		if (!checkSsUp(act_row, act_col, i, si_array[i], ti_array[i], 0).first.first) return false;
+		if (!checkTsDown(act_row, act_col, i,si_array[i], ti_array[i], 0, empty).first.first) return false;
+		if (!checkTsUp(act_row, act_col, i, si_array[i], ti_array[i], 0, empty).first.first) return false;
+		if (!checkSsDown(act_row, act_col, i, si_array[i], ti_array[i], 0, empty).first.first) return false;
+		if (!checkSsUp(act_row, act_col, i, si_array[i], ti_array[i], 0, empty).first.first) return false;
 	}
 	return true;
 }
