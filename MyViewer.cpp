@@ -1653,7 +1653,11 @@ void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int
 
 	//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
 	updateEdgesTemporarily(false, new_ind);
-
+	//And replace the edge which was inserted on with the two new edges
+	edges.erase(std::find(edges.begin(), edges.end(), std::pair<int, int>(first_ind, sec_ind+1)));
+	edges.push_back(std::pair<int,int>(first_ind, new_ind));
+	edges.push_back(std::pair<int, int>(new_ind, sec_ind+1));
+	
 	checkViolations(excluded);
 	updateEdgeTopology();
 	updateMesh();
