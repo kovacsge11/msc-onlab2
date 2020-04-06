@@ -947,16 +947,27 @@ bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAd
 					//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
 					violated = true;
 
-
 					//Indices downwards
 					auto col_inds = indicesOfColumn(JA[i]);
 					auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
 					//If no point below
-					if (act_vec == col_inds.begin()) break;
+					if (act_vec == col_inds.begin()) {
+						//force inserting a point first place
+						int new_index = getIndex(ts_down.first.second.first-1,act_row,act_col,ts_down.second.second, true);
+						updateJA(act_col, act_col, new_index, bf.first[2], false);
+						updateIA(ts_down.first.second.first - 1, act_row, ts_down.second.second, true);
+						std::vector<double> new_ti = { ts_down.second.second, ts_down.second.second, ts_down.second.second, bf.second[2], bf.second[3]};
+
+						auto ret_pair = insertAfterViol(new_index, bf.first, new_ti, excluded, newlyAdded);
+						excluded = ret_pair.first;
+						newlyAdded = ret_pair.second;
+						//Handle index changes due to new point inserted- to still check all points
+						cpnum++;
+						if (new_index <= i) i++;
+						break;
+					}
 					//If there is no point in the first t down but there is on the second down which causes a violation
 					if (getRowOfExisting(*(act_vec - 1)) != ts_down.first.second.first) {
-						//force inserting a point on middle place
-
 						break;
 					}
 
@@ -1045,7 +1056,21 @@ bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAd
 					auto col_inds = indicesOfColumn(JA[i]);
 					auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
 					//If no point after it in the col
-					if (act_vec == col_inds.end() - 1) break;
+					if (act_vec == col_inds.end() - 1) {
+						//force inserting a point first place
+						int new_index = getIndex(act_row, ts_up.first.second.first + 1, act_col, ts_up.second.second, false);
+						updateJA(act_col, act_col, new_index, bf.first[2], false);
+						updateIA(act_row, ts_up.first.second.first + 1, ts_up.second.second, false);
+						std::vector<double> new_ti = { bf.second[1], bf.second[2], ts_up.second.second, ts_up.second.second, ts_up.second.second };
+
+						auto ret_pair = insertAfterViol(new_index, bf.first, new_ti, excluded, newlyAdded);
+						excluded = ret_pair.first;
+						newlyAdded = ret_pair.second;
+						//Handle index changes due to new point inserted- to still check all points
+						cpnum++;
+						if (new_index <= i) i++;
+						break;
+					}
 					//If there is no point in the first t down but there is on the second down which causes a violation
 					if (getRowOfExisting(*(act_vec + 1)) != ts_up.first.second.first) break;
 
@@ -1131,7 +1156,21 @@ bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAd
 					violated = true;
 
 					//If no point before it
-					if (i == IA[act_row]) break;
+					if (i == IA[act_row]) {
+						//force inserting a point first place
+						int new_index = i;
+						updateJA(ss_down.first.second.first - 1, act_col, new_index, ss_down.second.second, true);
+						updateIA(act_row, act_row, bf.second[2], true);
+						std::vector<double> new_si = { ss_down.second.second, ss_down.second.second, ss_down.second.second, bf.first[2], bf.first[3] };
+
+						auto ret_pair = insertAfterViol(new_index, new_si, bf.second, excluded, newlyAdded);
+						excluded = ret_pair.first;
+						newlyAdded = ret_pair.second;
+						//Handle index changes due to new point inserted- to still check all points
+						cpnum++;
+						if (new_index <= i) i++;
+						break;
+					}
 
 					//If there is no point in the first s down but there is on the second down which causes a violation
 					if (JA[i-1] != ss_down.first.second.first) break;
@@ -1218,7 +1257,21 @@ bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAd
 					violated = true;
 
 					//If no point after it int the row
-					if (i + 1 == IA[act_row + 1]) break;
+					if (i + 1 == IA[act_row + 1]) {
+						//force inserting a point first place
+						int new_index = i+1;
+						updateJA(act_col, ss_up.first.second.first + 1, new_index, ss_up.second.second, false);
+						updateIA(act_row, act_row, bf.second[2], false);
+						std::vector<double> new_si = { bf.first[1], bf.first[2], ss_up.second.second, ss_up.second.second, ss_up.second.second };
+
+						auto ret_pair = insertAfterViol(new_index, new_si, bf.second, excluded, newlyAdded);
+						excluded = ret_pair.first;
+						newlyAdded = ret_pair.second;
+						//Handle index changes due to new point inserted- to still check all points
+						cpnum++;
+						if (new_index <= i) i++;
+						break;
+					}
 
 					//If there is no point in the first s up but there is on the second up which causes a violation
 					if (JA[i + 1] != ss_up.first.second.first) break;
@@ -1348,40 +1401,15 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					//Isn't going to be good in all cases, but best guess for lower indices: the value of index from Rule1
 					if (ts_down.second.first == 1) new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[2], bf.second[3] };
 					else new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[1], bf.second[2] };
-					ti_array.insert(ti_array.begin() + new_index, new_ti);
-					//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
-					si_array.insert(si_array.begin() + new_index, bf.first);
-					std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
-					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
-					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
-					//New point can't influence others, so it doesn't need a good new_point and new_weight
-					std::vector<Vec> new_point = { Vec() };
-					refined_points.insert(refined_points.begin() + new_index, new_point);
-					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
-					std::vector<double> new_weight = { 0.0 };
-					refined_weights.insert(refined_weights.begin() + new_index, new_weight);
-					tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
-					weights.insert(weights.begin() + new_index, new_weight[0]);
+					
+					auto ret_pair = insertAfterViol(new_index,bf.first,new_ti,excluded,newlyAdded);
+					excluded = ret_pair.first;
+					newlyAdded = ret_pair.second;
+
 					//Handle index changes due to new point inserted- to still check all points
 					cpnum++;
 					if (new_index <= i) i++;
-					//Update newlyAdded
-					for (int na = 0; na < newlyAdded.size(); na++) {
-						if (new_index <= newlyAdded[na]) newlyAdded[na]++;
-					}
-					newlyAdded.push_back(new_index);
-
-					//Update excluded accordingly too
-					for (int ex = 0; ex < excluded.size(); ex++) {
-						if (excluded[ex] >= new_index) excluded[ex]++;
-					}
-					excluded.push_back(new_index);
-
-					//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
-					for (int e = 0; e < edges.size(); e++) {
-						if (edges[e].first >= new_index) edges[e].first++;
-						if (edges[e].second >= new_index) edges[e].second++;
-					}
+					
 				}
 
 				auto ts_up = checkTsUp(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
@@ -1423,39 +1451,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					std::vector<double> new_ti;
 					if (ts_up.second.first == 3) new_ti = { bf.second[1], bf.second[2], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
 					else new_ti = { bf.second[2], bf.second[3], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
-					ti_array.insert(ti_array.begin() + new_index, new_ti);
-					//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
-					si_array.insert(si_array.begin() + new_index, bf.first);
-					std::pair<std::vector<double>, std::vector<double>> vec_pair(bf.first, new_ti);
-					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
-					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
-					//New point can't influence others, so it doesn't need a good new_point and new_weight
-					std::vector<Vec> new_point = { Vec() };
-					refined_points.insert(refined_points.begin() + new_index, new_point);
-					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
-					std::vector<double> new_weight = { 0.0 };
-					refined_weights.insert(refined_weights.begin() + new_index, new_weight);
-					tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
-					weights.insert(weights.begin() + new_index, new_weight[0]);
+					
+					auto ret_pair = insertAfterViol(new_index, bf.first, new_ti, excluded, newlyAdded);
+					excluded = ret_pair.first;
+					newlyAdded = ret_pair.second;
+
 					//Handle index changes due to new point inserted- to still check all points
 					cpnum++;
 					if (new_index <= i) i++;
-					//Update newlyAdded
-					for (int na = 0; na < newlyAdded.size(); na++) {
-						if (new_index <= newlyAdded[na]) newlyAdded[na]++;
-					}
-					newlyAdded.push_back(new_index);
-
-					//Update excluded accordingly too
-					for (int ex = 0; ex < excluded.size(); ex++) {
-						if (excluded[ex] >= new_index) excluded[ex]++;
-					}
-					excluded.push_back(new_index);
-					//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
-					for (int e = 0; e < edges.size(); e++) {
-						if (edges[e].first >= new_index) edges[e].first++;
-						if (edges[e].second >= new_index) edges[e].second++;
-					}
 				}
 
 				auto ss_down = checkSsDown(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
@@ -1497,38 +1500,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
 					if (ss_down.second.first == 1) new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[2], bf.first[3] };
 					else new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[1], bf.first[2] };
-					si_array.insert(si_array.begin() + new_index, new_si);
-					//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
-					ti_array.insert(ti_array.begin() + new_index, bf.second);
-					std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, bf.second);
-					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
-					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
-					//New point can't influence others, so it doesn't need a good new_point and new_weight
-					std::vector<Vec> new_point = { Vec() };
-					refined_points.insert(refined_points.begin() + new_index, new_point);
-					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
-					std::vector<double> new_weight = { 0.0 };
-					refined_weights.insert(refined_weights.begin() + new_index, new_weight);
-					tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
-					weights.insert(weights.begin() + new_index, new_weight[0]);
+					
+					auto ret_pair = insertAfterViol(new_index, new_si, bf.second, excluded, newlyAdded);
+					excluded = ret_pair.first;
+					newlyAdded = ret_pair.second;
+
 					//Handle index changes due to new point inserted- to still check all points
 					cpnum++;
 					if (new_index <= i) i++;
-					//Update newlyAdded
-					for (int na = 0; na < newlyAdded.size(); na++) {
-						if (new_index <= newlyAdded[na]) newlyAdded[na]++;
-					}
-					newlyAdded.push_back(new_index);
-					//Update excluded accordingly too
-					for (int ex = 0; ex < excluded.size();ex++) {
-						if (excluded[ex] >= new_index) excluded[ex]++;
-					}
-					excluded.push_back(new_index);
-					//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
-					for (int e = 0; e < edges.size(); e++) {
-						if (edges[e].first >= new_index) edges[e].first++;
-						if (edges[e].second >= new_index) edges[e].second++;
-					}
 				}
 
 				auto ss_up = checkSsUp(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
@@ -1570,38 +1549,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					//Isn't be good in all cases, but best guess for lower indices: the value of index from Rule1
 					if (ss_up.second.first == 3) new_si = { bf.first[1], bf.first[2], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
 					else new_si = { bf.first[2], bf.first[3], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
-					si_array.insert(si_array.begin() + new_index, new_si);
-					//Insert with new index into ti_array - needs to be corrected anyway probably, so ti of point i
-					ti_array.insert(ti_array.begin() + new_index, bf.second);
-					std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, bf.second);
-					std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
-					blend_functions.insert(blend_functions.begin() + new_index, new_blend);
-					//New point can't influence others, so it doesn't need a good new_point and new_weight
-					std::vector<Vec> new_point = { Vec() };
-					refined_points.insert(refined_points.begin() + new_index, new_point);
-					//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
-					std::vector<double> new_weight = { 0.0 };
-					refined_weights.insert(refined_weights.begin() + new_index, new_weight);
-					tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
-					weights.insert(weights.begin() + new_index, new_weight[0]);
+
+					auto ret_pair = insertAfterViol(new_index, new_si, bf.second, excluded, newlyAdded);
+					excluded = ret_pair.first;
+					newlyAdded = ret_pair.second;
+
 					//Handle index changes due to new point inserted- to still check all points
 					cpnum++;
 					if (new_index <= i) i++;
-					//Update newlyAdded
-					for (int na = 0; na < newlyAdded.size(); na++) {
-						if (new_index <= newlyAdded[na]) newlyAdded[na]++;
-					}
-					newlyAdded.push_back(new_index);
-					//Update excluded accordingly too
-					for (int ex = 0; ex < excluded.size(); ex++) {
-						if (excluded[ex] >= new_index) excluded[ex]++;
-					}
-					excluded.push_back(new_index);
-					//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
-					for (int e = 0; e < edges.size(); e++) {
-						if (edges[e].first >= new_index) edges[e].first++;
-						if (edges[e].second >= new_index) edges[e].second++;
-					}
 				}
 
 				//Recheck if needed -- could be solved better, less resource demanding
@@ -1610,6 +1565,44 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 		}
 	}
 	std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> ret_pair(violated, std::pair<std::vector<int>, std::vector<int>>(excluded,newlyAdded));
+	return ret_pair;
+}
+
+std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_index, std::vector<double> new_si, std::vector<double> new_ti, std::vector<int> excluded, std::vector<int> newlyAdded) {
+	ti_array.insert(ti_array.begin() + new_index, new_ti);
+	//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
+	si_array.insert(si_array.begin() + new_index, new_si);
+	std::pair<std::vector<double>, std::vector<double>> vec_pair(new_si, new_ti);
+	std::vector<std::pair<std::vector<double>, std::vector<double>>> new_blend = { vec_pair };
+	blend_functions.insert(blend_functions.begin() + new_index, new_blend);
+	//New point can't influence others, so it doesn't need a good new_point and new_weight
+	std::vector<Vec> new_point = { Vec() };
+	refined_points.insert(refined_points.begin() + new_index, new_point);
+	//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
+	std::vector<double> new_weight = { 0.0 };
+	refined_weights.insert(refined_weights.begin() + new_index, new_weight);
+	tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
+	weights.insert(weights.begin() + new_index, new_weight[0]);
+
+	//Update newlyAdded
+	for (int na = 0; na < newlyAdded.size(); na++) {
+		if (new_index <= newlyAdded[na]) newlyAdded[na]++;
+	}
+	newlyAdded.push_back(new_index);
+
+	//Update excluded accordingly too
+	for (int ex = 0; ex < excluded.size(); ex++) {
+		if (excluded[ex] >= new_index) excluded[ex]++;
+	}
+	excluded.push_back(new_index);
+
+	//Update edges temporarily with keeping old points but refreshing their indices - this way checkT/SUp/Down still functions correctly
+	for (int e = 0; e < edges.size(); e++) {
+		if (edges[e].first >= new_index) edges[e].first++;
+		if (edges[e].second >= new_index) edges[e].second++;
+	}
+
+	std::pair<std::vector<int>, std::vector<int>> ret_pair(std::pair<std::vector<int>, std::vector<int>>(excluded, newlyAdded));
 	return ret_pair;
 }
 

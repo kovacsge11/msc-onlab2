@@ -85,6 +85,7 @@ private:
   std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
   bool checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded);
   std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol2(std::vector<int> excluded, std::vector<int> newlyAdded);
+  std::pair<std::vector<int>, std::vector<int>> insertAfterViol(int new_index, std::vector<double> new_si, std::vector<double> new_ti, std::vector<int> excluded, std::vector<int> newlyAdded);
   void checkViolations(std::vector<int> excluded);
   int getIndex(int first_row, int sec_row, int act_col, double t, bool maxFromEquals);
   std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals);
