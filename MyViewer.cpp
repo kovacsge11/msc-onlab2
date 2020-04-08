@@ -524,13 +524,13 @@ void MyViewer::updateEdgeTopology() {
 		std::vector<int> col_indices = indicesOfColumn(i);
 		for (int j = 0; j < col_indices.size(); ++j) {
 			//If last or first in column or is not connected with next in column /this way the topology is surely true to rule 2/
-			if (j==col_indices.size()-1 || j==0 || (ti_array[col_indices[j]][2] != ti_array[col_indices[j-1]][3])) {
+			if (j==col_indices.size()-1 || j==0 || (ti_array[col_indices[j]][3] != ti_array[col_indices[j+1]][2])) {
 				if (!first) {
 					first = true;
 					std::pair<int, int> ind_pair = std::pair<int, int>(col_indices[j - 1], col_indices[j]);
 					edges.push_back(ind_pair);
 				}
-				else { first = false; }
+				else { if(j != (col_indices.size()-1) && ti_array[col_indices[j]][3] == ti_array[col_indices[j + 1]][2]) first = false; }
 			}
 			else {
 				if (first) {
