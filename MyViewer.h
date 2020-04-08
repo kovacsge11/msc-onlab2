@@ -83,7 +83,7 @@ private:
   std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded);
   std::pair<std::vector<int>, std::vector<double>> refineRowCol(double new_value, int row_col_ind, bool is_row);
   std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
-  bool checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded);
+  std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded);
   std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol2(std::vector<int> excluded, std::vector<int> newlyAdded);
   std::pair<std::vector<int>, std::vector<int>> insertAfterViol(int new_index, std::vector<double> new_si, std::vector<double> new_ti, std::vector<int> excluded, std::vector<int> newlyAdded);
   void checkViolations(std::vector<int> excluded);

@@ -930,8 +930,10 @@ bool MyViewer::edgeExists(int first_ind, int sec_ind) {
 	return (std::find(edges.begin(), edges.end(), temp_pair) != edges.end());
 }
 
-bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded) {
+//returns true if violated and the newlyAdded vec refreshed
+std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded) {
 	bool violated = false;
+	int origExcSize = excluded.size();
 	int cpnum = tspline_control_points.size();
 	for (int i = 0; i < cpnum;i++) {
 		//Check only for points which are not in the excluded
@@ -953,10 +955,12 @@ bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAd
 					//If no point below
 					if (act_vec == col_inds.begin()) {
 						//force inserting a point first place
-						int new_index = getIndex(ts_down.first.second.first-1,act_row,act_col,ts_down.second.second, true);
+						//Two cases: no point and first t violated or no point but only the second t violated
+						double new_value = ts_down.second.first == 1 ? ts_down.second.second : bf.second[1];
+						int new_index = getIndex(ts_down.first.second.first-1,act_row,act_col,new_value, true);
 						updateJA(act_col, act_col, new_index, bf.first[2], false);
-						updateIA(ts_down.first.second.first - 1, act_row, ts_down.second.second, true);
-						std::vector<double> new_ti = { ts_down.second.second, ts_down.second.second, ts_down.second.second, bf.second[2], bf.second[3]};
+						updateIA(ts_down.first.second.first - 1, act_row, new_value, true);
+						std::vector<double> new_ti = { bf.second[0], bf.second[0], new_value, bf.second[2], bf.second[3]};
 
 						auto ret_pair = insertAfterViol(new_index, bf.first, new_ti, excluded, newlyAdded);
 						excluded = ret_pair.first;
@@ -1058,10 +1062,12 @@ bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAd
 					//If no point after it in the col
 					if (act_vec == col_inds.end() - 1) {
 						//force inserting a point first place
-						int new_index = getIndex(act_row, ts_up.first.second.first + 1, act_col, ts_up.second.second, false);
+						//Two cases: no point and first t violated or no point but only the second t violated
+						double new_value = ts_up.second.first == 3 ? ts_up.second.second : bf.second[3];
+						int new_index = getIndex(act_row, ts_up.first.second.first + 1, act_col, new_value, false);
 						updateJA(act_col, act_col, new_index, bf.first[2], false);
-						updateIA(act_row, ts_up.first.second.first + 1, ts_up.second.second, false);
-						std::vector<double> new_ti = { bf.second[1], bf.second[2], ts_up.second.second, ts_up.second.second, ts_up.second.second };
+						updateIA(act_row, ts_up.first.second.first + 1, new_value, false);
+						std::vector<double> new_ti = { bf.second[1], bf.second[2], new_value, bf.second[4], bf.second[4] };
 
 						auto ret_pair = insertAfterViol(new_index, bf.first, new_ti, excluded, newlyAdded);
 						excluded = ret_pair.first;
@@ -1158,10 +1164,12 @@ bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAd
 					//If no point before it
 					if (i == IA[act_row]) {
 						//force inserting a point first place
+						//Two cases: no point and first s violated or no point but only the second s violated
+						double new_value = ss_down.second.first == 1 ? ss_down.second.second : bf.first[1];
 						int new_index = i;
-						updateJA(ss_down.first.second.first - 1, act_col, new_index, ss_down.second.second, true);
+						updateJA(ss_down.first.second.first - 1, act_col, new_index, new_value, true);
 						updateIA(act_row, act_row, bf.second[2], true);
-						std::vector<double> new_si = { ss_down.second.second, ss_down.second.second, ss_down.second.second, bf.first[2], bf.first[3] };
+						std::vector<double> new_si = { bf.first[0], bf.first[0], new_value, bf.first[2], bf.first[3] };
 
 						auto ret_pair = insertAfterViol(new_index, new_si, bf.second, excluded, newlyAdded);
 						excluded = ret_pair.first;
@@ -1260,9 +1268,11 @@ bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAd
 					if (i + 1 == IA[act_row + 1]) {
 						//force inserting a point first place
 						int new_index = i+1;
-						updateJA(act_col, ss_up.first.second.first + 1, new_index, ss_up.second.second, false);
+						//Two cases: no point and first s violated or no point but only the second s violated
+						double new_value = ss_up.second.first == 3 ? ss_up.second.second : bf.first[3];
+						updateJA(act_col, ss_up.first.second.first + 1, new_index, new_value, false);
 						updateIA(act_row, act_row, bf.second[2], false);
-						std::vector<double> new_si = { bf.first[1], bf.first[2], ss_up.second.second, ss_up.second.second, ss_up.second.second };
+						std::vector<double> new_si = { bf.first[1], bf.first[2], new_value, bf.first[4], bf.first[4] };
 
 						auto ret_pair = insertAfterViol(new_index, new_si, bf.second, excluded, newlyAdded);
 						excluded = ret_pair.first;
@@ -1347,7 +1357,9 @@ bool MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAd
 			}
 		}
 	}
-	return violated;
+
+	excluded.erase(excluded.begin(), excluded.begin() + origExcSize);
+	return std::pair<bool, std::pair<std::vector<int>, std::vector<int>>>(violated, std::pair<std::vector<int>, std::vector<int>>(excluded,newlyAdded));
 }
 
 std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkForViol2(std::vector<int> excluded, std::vector<int> newlyAdded) {
@@ -1611,8 +1623,10 @@ void MyViewer::checkViolations(std::vector<int> excluded) {
 	bool viol1 = false, viol2 = false;
 	std::vector<int> newlyAdded = {excluded};
 	do {
-		viol1 = checkForViol1(excluded, newlyAdded);
-		excluded = {};
+		auto viol1_pair = checkForViol1(excluded, newlyAdded);
+		viol1 = viol1_pair.first;
+		newlyAdded = viol1_pair.second.second;
+		excluded = viol1_pair.second.first;
 		std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> viol2_pair = checkForViol2(excluded, newlyAdded);
 		excluded = viol2_pair.second.first;
 		newlyAdded = viol2_pair.second.second;
