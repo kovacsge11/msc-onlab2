@@ -2498,11 +2498,16 @@ std::pair<std::pair<bool, std::pair<int,int>>,std::pair<int,double>> MyViewer::c
 		if (temp_ind == 0) {
 			if(num_found == 0) ret_rows.first = act_row;
 			else ret_rows.second = act_row;
-			if (t_vec[1-num_found] != ti_array[0][2])
-				if((viol_num == 1 && t_vec[1 - num_found] < ti_array[0][2])
+			if (t_vec[1 - num_found] != ti_array[0][2]) {
+				//If checking for viol 1 but before that a viol2 occurs
+				//In this case we should return with true(?)
+				if (viol_num == 1 && t_vec[1 - num_found] > ti_array[0][2])
+					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_rows), std::pair<int, double>(-1, 0.0));
+				if ((viol_num == 1 && t_vec[1 - num_found] < ti_array[0][2])
 					|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[0][2])
 					|| viol_num == 0)
-					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false,ret_rows), std::pair < int, double>(1-num_found, ti_array[0][2]));
+					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair < int, double>(1 - num_found, ti_array[0][2]));
+			}
 			num_found++;
 		}
 		else {
@@ -2531,11 +2536,16 @@ std::pair<std::pair<bool, std::pair<int,int>>,std::pair<int,double>> MyViewer::c
 						if ((p.first == first_tmp) && (p.second == sec_tmp)) {
 							if (num_found == 0) ret_rows.first = act_row;
 							else ret_rows.second = act_row;
-							if (t_vec[1 - num_found] != ti_array[first_tmp][2])
+							if (t_vec[1 - num_found] != ti_array[first_tmp][2]) {
+								//If checking for viol 1 but before that a viol2 occurs
+								//In this case we should return with true(?)
+								if (viol_num == 1 && t_vec[1 - num_found] > ti_array[first_tmp][2])
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_rows), std::pair<int, double>(-1, 0.0));
 								if ((viol_num == 1 && t_vec[1 - num_found] < ti_array[first_tmp][2])
 									|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[first_tmp][2])
 									|| viol_num == 0)
 									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(1 - num_found, ti_array[first_tmp][2]));
+							}
 							num_found++;
 							found = true;
 						}
@@ -2552,11 +2562,16 @@ std::pair<std::pair<bool, std::pair<int,int>>,std::pair<int,double>> MyViewer::c
 				if (getRowOfExisting(temp_ind - 1) == act_row) {
 					if (num_found == 0) ret_rows.first = act_row;
 					else ret_rows.second = act_row;
-					if (t_vec[1 - num_found] != ti_array[temp_ind - 1][2])
+					if (t_vec[1 - num_found] != ti_array[temp_ind - 1][2]) {
+						//If checking for viol 1 but before that a viol2 occurs
+						//In this case we should return with true(?)
+						if (viol_num == 1 && t_vec[1 - num_found] > ti_array[temp_ind - 1][2])
+							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_rows), std::pair<int, double>(-1, 0.0));
 						if ((viol_num == 1 && t_vec[1 - num_found] < ti_array[temp_ind - 1][2])
 							|| (viol_num == 2 && t_vec[1 - num_found] > ti_array[temp_ind - 1][2])
 							|| viol_num == 0)
 							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(1 - num_found, ti_array[temp_ind - 1][2]));
+					}
 					num_found++;
 				}
 			}
@@ -2584,11 +2599,16 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 		if (temp_ind == IA[IA.size() - 2]) {
 			if (num_found == 0) ret_rows.first = act_row;
 			else ret_rows.second = act_row;
-			if (t_vec[3+num_found] != ti_array[cpnum-1][2])
+			if (t_vec[3 + num_found] != ti_array[cpnum - 1][2]) {
+				//If checking for viol 1 but before that a viol2 occurs
+				//In this case we should return with true(?)
+				if (viol_num == 1 && t_vec[3 + num_found] < ti_array[cpnum - 1][2])
+					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_rows), std::pair<int, double>(-1, 0.0));
 				if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[cpnum - 1][2])
 					|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[cpnum - 1][2])
 					|| viol_num == 0)
 					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair < int, double>(3 + num_found, ti_array[cpnum - 1][2]));
+			}
 			num_found++;
 		}
 		else {
@@ -2616,11 +2636,16 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 						if ((p.first == first_tmp) && (p.second == sec_tmp)) {
 							if (num_found == 0) ret_rows.first = act_row;
 							else ret_rows.second = act_row;
-							if (t_vec[3 + num_found] != ti_array[first_tmp][2])
+							if (t_vec[3 + num_found] != ti_array[first_tmp][2]) {
+								//If checking for viol 1 but before that a viol2 occurs
+								//In this case we should return with true(?)
+								if (viol_num == 1 && t_vec[3 + num_found] < ti_array[first_tmp][2])
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_rows), std::pair<int, double>(-1, 0.0));
 								if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[first_tmp][2])
 									|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[first_tmp][2])
 									|| viol_num == 0)
 									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(3 + num_found, ti_array[first_tmp][2]));
+							}
 							num_found++;
 							found = true;
 						}
@@ -2637,11 +2662,16 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 				if (getRowOfExisting(temp_ind - 1) == act_row) {
 					if (num_found == 0) ret_rows.first = act_row;
 					else ret_rows.second = act_row;
-					if (t_vec[3 + num_found] != ti_array[temp_ind - 1][2])
+					if (t_vec[3 + num_found] != ti_array[temp_ind - 1][2]) {
+						//If checking for viol 1 but before that a viol2 occurs
+						//In this case we should return with true(?)
+						if (viol_num == 1 && t_vec[3 + num_found] < ti_array[temp_ind - 1][2])
+							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_rows), std::pair<int, double>(-1, 0.0));
 						if ((viol_num == 1 && t_vec[3 + num_found] > ti_array[temp_ind - 1][2])
 							|| (viol_num == 2 && t_vec[3 + num_found] < ti_array[temp_ind - 1][2])
 							|| viol_num == 0)
 							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_rows), std::pair<int, double>(3 + num_found, ti_array[temp_ind - 1][2]));
+					}
 					num_found++;
 				}
 			}
@@ -2668,11 +2698,16 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 			//Check whether actual column is the first one
 			if (num_found == 0) ret_cols.first = i;
 			else ret_cols.second = i;
-			if (s_vec[1-num_found] != si_array[0][2])
+			if (s_vec[1 - num_found] != si_array[0][2]) {
+				//If checking for viol 1 but before that a viol2 occurs
+				//In this case we should return with true(?)
+				if (viol_num == 1 && s_vec[1 - num_found] > si_array[0][2])
+					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_cols), std::pair<int, double>(-1, 0.0));
 				if ((viol_num == 1 && s_vec[1 - num_found] < si_array[0][2])
 					|| (viol_num == 2 && s_vec[1 - num_found] > si_array[0][2])
 					|| viol_num == 0)
 					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(1 - num_found, si_array[0][2]));
+			}
 			num_found++;
 		}
 		else {
@@ -2704,11 +2739,16 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 						if ((p.first == is_of_col[first_tmp]) && (p.second == is_of_col[sec_tmp])) {
 							if (num_found == 0) ret_cols.first = i;
 							else ret_cols.second = i;
-							if (s_vec[1 - num_found] != si_array[is_of_col[first_tmp]][2])
+							if (s_vec[1 - num_found] != si_array[is_of_col[first_tmp]][2]) {
+								//If checking for viol 1 but before that a viol2 occurs
+								//In this case we should return with true(?)
+								if (viol_num == 1 && s_vec[1 - num_found] > si_array[is_of_col[first_tmp]][2])
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_cols), std::pair<int, double>(-1, 0.0));
 								if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[first_tmp]][2])
 									|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[first_tmp]][2])
 									|| viol_num == 0)
 									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(1 - num_found, si_array[is_of_col[first_tmp]][2]));
+							}
 							num_found++;
 							found = true;
 						}
@@ -2726,11 +2766,16 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 				if (j != 0) {
 					if (num_found == 0) ret_cols.first = i;
 					else ret_cols.second = i;
-					if (s_vec[1 - num_found] != si_array[is_of_col[j - 1]][2])
+					if (s_vec[1 - num_found] != si_array[is_of_col[j - 1]][2]) {
+						//If checking for viol 1 but before that a viol2 occurs
+								//In this case we should return with true(?)
+						if (viol_num == 1 && s_vec[1 - num_found] > si_array[is_of_col[j - 1]][2])
+							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_cols), std::pair<int, double>(-1, 0.0));
 						if ((viol_num == 1 && s_vec[1 - num_found] < si_array[is_of_col[j - 1]][2])
 							|| (viol_num == 2 && s_vec[1 - num_found] > si_array[is_of_col[j - 1]][2])
 							|| viol_num == 0)
 							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(1 - num_found, si_array[is_of_col[j - 1]][2]));
+					}
 					num_found++;
 				}
 			}
@@ -2759,11 +2804,17 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 		if (i == col_num - 1) {
 			if (num_found == 0) ret_cols.first = i;
 			else ret_cols.second = i;
-			if (s_vec[3 + num_found] != si_array[cpnum - 1][2])
+			if (s_vec[3 + num_found] != si_array[cpnum - 1][2]) {
+				//If checking for viol 1 but before that a viol2 occurs
+				//In this case we should return with true(?)
+				if (viol_num == 1 && s_vec[3 + num_found] < si_array[cpnum - 1][2])
+					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_cols), std::pair<int, double>(-1, 0.0));
+				//Checking any violations
 				if ((viol_num == 1 && s_vec[3 + num_found] > si_array[cpnum - 1][2])
 					|| (viol_num == 2 && s_vec[3 + num_found] < si_array[cpnum - 1][2])
 					|| viol_num == 0)
 					return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair < int, double>(3 + num_found, si_array[cpnum - 1][2]));
+			}
 			num_found++;
 		}
 		else {
@@ -2795,11 +2846,16 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 						if ((p.first == is_of_col[first_tmp]) && (p.second == is_of_col[sec_tmp])) {
 							if (num_found == 0) ret_cols.first = i;
 							else ret_cols.second = i;
-							if (s_vec[3 + num_found] != si_array[is_of_col[first_tmp]][2])
+							if (s_vec[3 + num_found] != si_array[is_of_col[first_tmp]][2]) {
+								//If checking for viol 1 but before that a viol2 occurs
+								//In this case we should return with true(?)
+								if (viol_num == 1 && s_vec[3 + num_found] < si_array[is_of_col[first_tmp]][2])
+									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_cols), std::pair<int, double>(-1, 0.0));
 								if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[first_tmp]][2])
 									|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[first_tmp]][2])
 									|| viol_num == 0)
 									return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(3 + num_found, si_array[is_of_col[first_tmp]][2]));
+							}
 							num_found++;
 							found = true;
 						}
@@ -2817,11 +2873,16 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 				if (j != 0) {
 					if (num_found == 0) ret_cols.first = i;
 					else ret_cols.second = i;
-					if (s_vec[3 + num_found] != si_array[is_of_col[j - 1]][2])
+					if (s_vec[3 + num_found] != si_array[is_of_col[j - 1]][2]) {
+						//If checking for viol 1 but before that a viol2 occurs
+						//In this case we should return with true(?)
+						if (viol_num == 1 && s_vec[3 + num_found] < si_array[is_of_col[j - 1]][2])
+							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(true, ret_cols), std::pair<int, double>(-1, 0.0));
 						if ((viol_num == 1 && s_vec[3 + num_found] > si_array[is_of_col[j - 1]][2])
 							|| (viol_num == 2 && s_vec[3 + num_found] < si_array[is_of_col[j - 1]][2])
 							|| viol_num == 0)
 							return std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>>(std::pair<bool, std::pair<int, int>>(false, ret_cols), std::pair<int, double>(3 + num_found, si_array[is_of_col[j - 1]][2]));
+					}
 					num_found++;
 				}
 			}
