@@ -9,6 +9,8 @@
 
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Tools/Smoother/JacobiLaplaceSmootherT.hh>
+#include "Eigen/Dense"
+using namespace Eigen;
 
 // #define BETTER_MEAN_CURVATURE
 
@@ -1912,26 +1914,6 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  int rowOfSecond = getRowOfExisting(index_pair.second);
 	  //If in same row, otherwise they must be in same column
 	  if (rowOfFirst == rowOfSecond) {
-		  //Handle case of insertion on zero interval edge on end of splines
-		  //If first index is in first col 
-		  //if (JA[index_pair.first] == 0) {
-			 // index_pair.first++;
-			 // index_pair.second++; //what if this goes to next row?? shouldnt, right? TODO
-		  //}
-		  ////If second index is in last col
-		  //else if (JA[index_pair.second] == *std::max_element(JA.begin(), JA.end())) {
-			 // index_pair.first--;
-			 // index_pair.second--;
-		  //}
-
-		  ////Calculating new s based on proportion
-		  //float d3plusd4 = si_array[index_pair.second][2] - si_array[index_pair.first][2];
-		  //float d2 = si_array[index_pair.first][2] - si_array[index_pair.first][1];
-		  //float d5 = si_array[index_pair.second][3] - si_array[index_pair.second][2];
-		  //float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
-		  //new_s = si_array[index_pair.first][2] + d3;
-
-
 		  //Calculating beta based on refinement of blending functions - (new_s - s1)/(s4-s1) = beta
 		  new_s = beta * (si_array[index_pair.first][4] - si_array[index_pair.first][1]) + si_array[index_pair.first][1];
 
@@ -2081,26 +2063,7 @@ void MyViewer::postSelection(const QPoint &p)  {
 		  }
 	  }
 	  else{
-		//Handle case of insertion on zero interval edge on end of splines
 		auto col_inds = indicesOfColumn(JA[index_pair.first]);
-		//If first index is in first row
-		//if (rowOfFirst == 0) {
-		//	index_pair.first = index_pair.second;
-		//	index_pair.second = col_inds[2]; //what if this is out of array?? shouldnt, right? TODO
-		//}
-		////If second index is in last row
-		//else if (rowOfSecond == IA.size()-2) {
-		//	index_pair.second = index_pair.first;
-		//	index_pair.first = col_inds[col_inds.size()-3];
-		//}
-
-		////Calculating new s based on proportion
-		//float d3plusd4 = ti_array[index_pair.second][2] - ti_array[index_pair.first][2];
-		//float d2 = ti_array[index_pair.first][2] - ti_array[index_pair.first][1];
-		//float d5 = ti_array[index_pair.second][3] - ti_array[index_pair.second][2];
-		//float d3 = (d2 + d5 + d3plusd4)*proportion - d2;
-		//new_t = ti_array[index_pair.first][2] + d3;
-
 		//Calculating beta based on refinement of blending functions - (new_t - t1)/(t4-t1) = beta
 		new_t = beta * (ti_array[index_pair.first][4] - ti_array[index_pair.first][1]) + ti_array[index_pair.first][1];
 
@@ -2113,6 +2076,12 @@ void MyViewer::postSelection(const QPoint &p)  {
 			index_pair.second = col_inds[++indOfSecInCol];
 		}
 		while (new_t < ti_array[index_pair.first][2]) {
+			//Case when first in col has greater t than 0 but new_t is lower than this t
+			//We insert a point with t = 0 and then another one on the edge connecting these two
+			/*if (indOfFirstInCol == 0 && keep_surface) {
+				int addInd = getIndex(1, 1, JA[index_pair.first], 0.0, true);
+				insertRefined(new_s,0.0,addInd,addInd-1,addInd);
+			}*/
 			index_pair.second = index_pair.first;
 			index_pair.first = col_inds[--indOfFirstInCol];
 		}
@@ -2329,6 +2298,10 @@ void MyViewer::keyPressEvent(QKeyEvent *e) {
 		mid_insert = !mid_insert;
 		update();
 		break;
+	case Qt::Key_4:
+		generatePointsAndFit();
+		update();
+		break;
     case Qt::Key_F:
       fairMesh();
       update();
@@ -2457,8 +2430,6 @@ void MyViewer::generateTSplineMesh() {
 
 	mesh.clear();
 	std::vector<MyMesh::VertexHandle> handles, tri;
-
-	std::vector<double> coeff_s, coeff_t;
 	for (size_t i = 0; i < resolution; ++i) {
 		double s = smallest_s + (s_range * (double)i / (double)(resolution - 1));
 		for (size_t j = 0; j < resolution; ++j) {
@@ -2950,6 +2921,113 @@ bool MyViewer::checkTSplineTopology() {
 		if (!checkSsUp(act_row, act_col, i, si_array[i], ti_array[i], 0, empty).first.first) return false;
 	}
 	return true;
+}
+
+void removeEigenMColumn(MatrixXd& matrix, unsigned int colToRemove)
+{
+	unsigned int numRows = matrix.rows();
+	unsigned int numCols = matrix.cols() - 1;
+
+	if (colToRemove < numCols)
+		matrix.block(0, colToRemove, numRows, numCols - colToRemove) = matrix.rightCols(numCols - colToRemove);
+
+	matrix.conservativeResize(numRows, numCols);
+}
+
+//Suppose we are looking at s,t in [0,1]
+void MyViewer::generatePointsAndFit() {
+	std::vector<Vec> points;
+	int n = 8;
+	int cpnum = weights.size();
+	//Assuming that the last point is the one with both the biggest s and biggest t -->cause surface cpts: rectangle
+	double biggest_s = si_array[cpnum - 1][2];
+	double biggest_t = ti_array[cpnum - 1][2];
+	//Assuming that the first point is the one with both the smallest s and smallest t
+	double smallest_s = si_array[0][2];
+	double smallest_t = ti_array[0][2];
+	double s_range = biggest_s - smallest_s;
+	double t_range = biggest_t - smallest_t;
+	//A small offset, cause point generation doesn't work on edge of topology(true?)
+	double s_epsilon = s_range / (double)((n - 1)*(n - 1));
+	double t_epsilon = t_range / (double)((n - 1)*(n - 1));
+	smallest_s += s_epsilon;
+	smallest_t += t_epsilon;
+	biggest_s -= s_epsilon;
+	biggest_t -= t_epsilon;
+	s_range -= 2 * s_epsilon;
+	t_range -= 2 * t_epsilon;
+
+	for (size_t i = 0; i < n; ++i) {
+		double t = smallest_t + (t_range * (double)i / (double)(n - 1));
+		for (size_t j = 0; j < n; ++j) {
+			double s = smallest_s + (s_range * (double)j / (double)(n - 1));
+			Vec p(0.0, 0.0, 0.0);
+			double nominator = 0.0;
+			for (size_t k = 0; k < cpnum; ++k) {
+				double B_k = cubicBSplineBasis(s, si_array[k]) * cubicBSplineBasis(t, ti_array[k]);
+				p += tspline_control_points[k] * B_k;
+				nominator += weights[k] * B_k;
+			}
+			if (abs(nominator) > 0.0) p /= nominator;
+			points.push_back(p);
+		}
+	}
+	
+	fit4by4Bezier(points);
+}
+
+//S the nxn incoming points
+void MyViewer::fit4by4Bezier(std::vector<Vec> S) {
+	int n = sqrt(S.size());
+	Eigen::MatrixXd A(n*n,16), B(n*n,3);
+	std::vector<Vec> P(16,Vec(0.0, 0.0, 0.0));
+	std::vector<double> Bs, tempB;
+	for (int i = 0; i < n; i++) {
+		bernsteinAll(3, (float)i/float(n-1), tempB);
+		Bs.insert(std::end(Bs), std::begin(tempB), std::end(tempB));
+	}
+	
+	P[0] = S[0];
+	P[3] = S[n-1];
+	P[12] = S[(n-1)*n];
+	P[15] = S[n*n-1];
+	for(int t=0; t<n; t++){
+		for(int s=0; s<n; s++){
+			B.row(n*t + s) << S[n*t + s][0], S[n*t + s][1], S[n*t + s][2];
+			for(int k=0;k<16;k++){
+				A(n*t+s,k) = (Bs[s*4 + (k/4)] * Bs[t * 4 + (k % 4)]);
+			}
+		}
+	}
+
+	for(int t=0; t<n; t++){
+		for(int s=0; s<n; s++){
+			Vec temp = A(n*t+s,0) * P[0] + A(n*t+s,3) * P[3] + A(n*t+s, 12) * P[12] + A(n*t+s, 15) * P[15];
+			B(n*t + s,0) -= temp[0];
+			B(n*t + s,1) -= temp[1];
+			B(n*t + s,2) -= temp[2];
+		}
+	}
+
+	removeEigenMColumn(A, 15);
+	removeEigenMColumn(A, 12);
+	removeEigenMColumn(A, 3);
+	removeEigenMColumn(A, 0);
+
+	MatrixXd X = A.colPivHouseholderQr().solve(B);
+	for(int i=0;i<12;i++){
+		int pInd = i + 1;
+		if (i >= 2) pInd++;
+		if (i >= 10) pInd++;
+		P[pInd] = Vec(X(i,0), X(i, 1), X(i, 2));
+	}
+	
+	bezier_control_points = P;
+	degree[0] = 3;
+	degree[1] = 3;
+	model_type = ModelType::BEZIER_SURFACE;
+	saveBezier("fittedBezier.bzr");
+	openBezier("fittedBezier.bzr");
 }
 
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {

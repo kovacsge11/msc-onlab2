@@ -98,6 +98,8 @@ private:
   bool edgeExists(int first_ind, int sec_ind);
   void insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind);
   std::pair<bool, double> checkOpposite(int act_row, int act_col, double s, double t, bool horizontal_insertion, int new_index, double epsilon);
+  void fit4by4Bezier(std::vector<Vec> S);
+  void generatePointsAndFit();
 
   // Visualization
   void setupCamera();
