@@ -2995,7 +2995,7 @@ void MyViewer::fit4by4Bezier(std::vector<Vec> S) {
 		for(int s=0; s<n; s++){
 			B.row(n*t + s) << S[n*t + s][0], S[n*t + s][1], S[n*t + s][2];
 			for(int k=0;k<16;k++){
-				A(n*t+s,k) = (Bs[s*4 + (k/4)] * Bs[t * 4 + (k % 4)]);
+				A(n*t+s,k) = (Bs[s*4 + (k % 4)] * Bs[t * 4 + (k / 4)]);
 			}
 		}
 	}
