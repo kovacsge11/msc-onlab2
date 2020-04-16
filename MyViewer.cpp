@@ -2354,20 +2354,29 @@ void MyViewer::bernsteinAll(size_t n, double u, std::vector<double> &coeff) {
 
 double MyViewer::cubicBSplineBasis(double param, std::vector<double> knots) {
 	double u = param;
-	size_t p = 3, i;
+	int p = 3, i;
+	int end = knots.size()-2;
+	for (int j = knots.size()-2; j >= 0; j--) {
+		if (knots[j] >= knots[end+1]) {
+			end = j-1;
+		}
+		else break;
+	}
+
 	if (u < knots.front() || u > knots.back())
 		return 0.0;
 	if (u == knots.back())
-		i = knots.size() - 1;
-	else
-		i = (std::upper_bound(knots.begin(), knots.end(), u) - knots.begin()) - 1;
-	std::vector<double> coeff; coeff.resize(p + 1, 0.0);
+		i = end;
+	else i = (std::upper_bound(knots.begin(), knots.end(), u) - knots.begin()) - 1;
+	std::vector<double> coeff;
+	coeff.resize(p+1, 0.0);
 	coeff[i] = 1.0;
-	for (size_t j = 1; j <= p; ++j)
-		for (size_t k = 0; k <= p - j; ++k)
+
+	for (int j = 1; j <= p; ++j)
+		for (int k = 0; k < (knots.size()-1) - j; ++k)
 			coeff[k] =
-			(coeff[k] ? coeff[k] * (u - knots[k]) / (knots[k + j] - knots[k]) : 0.0) +
-			(coeff[k + 1] ? coeff[k + 1] * (knots[k + j + 1] - u) / (knots[k + j + 1] - knots[k + 1]) : 0.0);
+			(coeff[k] && (knots[k + j] - knots[k]) != 0.0 ? coeff[k] * (u - knots[k]) / (knots[k + j] - knots[k]) : 0.0) +
+			(coeff[k + 1] && (knots[k + j + 1] - knots[k + 1]) != 0.0 ? coeff[k + 1] * (knots[k + j + 1] - u) / (knots[k + j + 1] - knots[k + 1]) : 0.0);
 	return coeff[0];
 }
 
@@ -2410,30 +2419,13 @@ void MyViewer::generateBezierMesh() {
 void MyViewer::generateTSplineMesh() {
 	size_t resolution = 50;
 	size_t cpnum = weights.size();
-	//Assuming that the last point is the one with both the biggest s and biggest t -->cause surface cpts: rectangle
-	double biggest_s = si_array[cpnum-1][2];
-	double biggest_t = ti_array[cpnum-1][2];
-	//Assuming that the first point is the one with both the smallest s and smallest t
-	double smallest_s = si_array[0][2];
-	double smallest_t = ti_array[0][2];
-	double s_range = biggest_s - smallest_s;
-	double t_range = biggest_t - smallest_t;
-	//A small offset, cause point generation doesn't work on edge of topology(true?)
-	double s_epsilon = s_range / (double)((resolution-1)*(resolution - 1));
-	double t_epsilon = t_range / (double)((resolution - 1)*(resolution - 1));
-	smallest_s += s_epsilon;
-	smallest_t += t_epsilon;
-	biggest_s -= s_epsilon;
-	biggest_t -= t_epsilon;
-	s_range -= 2 * s_epsilon;
-	t_range -= 2 * t_epsilon;
 
 	mesh.clear();
 	std::vector<MyMesh::VertexHandle> handles, tri;
 	for (size_t i = 0; i < resolution; ++i) {
-		double s = smallest_s + (s_range * (double)i / (double)(resolution - 1));
+		double s = (double)i / (double)(resolution - 1);
 		for (size_t j = 0; j < resolution; ++j) {
-			double t = smallest_t + (t_range * (double)j / (double)(resolution - 1));
+			double t = (double)j / (double)(resolution - 1);
 			Vec p(0.0, 0.0, 0.0);
 			double nominator = 0.0;
 			for (size_t k = 0; k < cpnum; ++k) {
@@ -2448,13 +2440,13 @@ void MyViewer::generateTSplineMesh() {
 	for (size_t i = 0; i < resolution - 1; ++i)
 		for (size_t j = 0; j < resolution - 1; ++j) {
 			tri.clear();
-			tri.push_back(handles[i * resolution + j + 1]);
 			tri.push_back(handles[i * resolution + j]);
+			tri.push_back(handles[i * resolution + j + 1]);
 			tri.push_back(handles[(i + 1) * resolution + j]);
 			mesh.add_face(tri);
 			tri.clear();
-			tri.push_back(handles[i * resolution + j + 1]);
 			tri.push_back(handles[(i + 1) * resolution + j]);
+			tri.push_back(handles[i * resolution + j + 1]);
 			tri.push_back(handles[(i + 1) * resolution + j + 1]);
 			mesh.add_face(tri);
 		}
@@ -2939,28 +2931,11 @@ void MyViewer::generatePointsAndFit() {
 	std::vector<Vec> points;
 	int n = 8;
 	int cpnum = weights.size();
-	//Assuming that the last point is the one with both the biggest s and biggest t -->cause surface cpts: rectangle
-	double biggest_s = si_array[cpnum - 1][2];
-	double biggest_t = ti_array[cpnum - 1][2];
-	//Assuming that the first point is the one with both the smallest s and smallest t
-	double smallest_s = si_array[0][2];
-	double smallest_t = ti_array[0][2];
-	double s_range = biggest_s - smallest_s;
-	double t_range = biggest_t - smallest_t;
-	//A small offset, cause point generation doesn't work on edge of topology(true?)
-	double s_epsilon = s_range / (double)((n - 1)*(n - 1));
-	double t_epsilon = t_range / (double)((n - 1)*(n - 1));
-	smallest_s += s_epsilon;
-	smallest_t += t_epsilon;
-	biggest_s -= s_epsilon;
-	biggest_t -= t_epsilon;
-	s_range -= 2 * s_epsilon;
-	t_range -= 2 * t_epsilon;
 
 	for (size_t i = 0; i < n; ++i) {
-		double t = smallest_t + (t_range * (double)i / (double)(n - 1));
+		double t = (double)i / (double)(n - 1);
 		for (size_t j = 0; j < n; ++j) {
-			double s = smallest_s + (s_range * (double)j / (double)(n - 1));
+			double s = (double)j / (double)(n - 1);
 			Vec p(0.0, 0.0, 0.0);
 			double nominator = 0.0;
 			for (size_t k = 0; k < cpnum; ++k) {
@@ -3022,7 +2997,10 @@ void MyViewer::fit4by4Bezier(std::vector<Vec> S) {
 		P[pInd] = Vec(X(i,0), X(i, 1), X(i, 2));
 	}
 	
-	bezier_control_points = P;
+	bezier_control_points.resize(16);
+	for (int i = 0; i < 16; i++) {
+		bezier_control_points[i] = P[(i%4)*4 + i/4];
+	}
 	degree[0] = 3;
 	degree[1] = 3;
 	model_type = ModelType::BEZIER_SURFACE;
