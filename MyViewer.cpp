@@ -12,7 +12,7 @@
 #include "Eigen/Dense"
 using namespace Eigen;
 
-// #define BETTER_MEAN_CURVATURE
+//#define BETTER_MEAN_CURVATURE
 
 #ifdef BETTER_MEAN_CURVATURE
 #include "Eigen/Eigenvalues"
@@ -2448,13 +2448,13 @@ void MyViewer::generateTSplineMesh() {
 	for (size_t i = 0; i < resolution - 1; ++i)
 		for (size_t j = 0; j < resolution - 1; ++j) {
 			tri.clear();
-			tri.push_back(handles[i * resolution + j]);
 			tri.push_back(handles[i * resolution + j + 1]);
+			tri.push_back(handles[i * resolution + j]);
 			tri.push_back(handles[(i + 1) * resolution + j]);
 			mesh.add_face(tri);
 			tri.clear();
-			tri.push_back(handles[(i + 1) * resolution + j]);
 			tri.push_back(handles[i * resolution + j + 1]);
+			tri.push_back(handles[(i + 1) * resolution + j]);
 			tri.push_back(handles[(i + 1) * resolution + j + 1]);
 			mesh.add_face(tri);
 		}
