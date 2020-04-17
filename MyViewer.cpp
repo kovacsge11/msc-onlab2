@@ -2929,7 +2929,7 @@ void removeEigenMColumn(MatrixXd& matrix, unsigned int colToRemove)
 //Suppose we are looking at s,t in [0,1]
 void MyViewer::generatePointsAndFit() {
 	std::vector<Vec> points;
-	int n = 8;
+	int n = 10;
 	int cpnum = weights.size();
 
 	for (size_t i = 0; i < n; ++i) {
