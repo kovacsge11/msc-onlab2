@@ -100,6 +100,8 @@ private:
   std::pair<bool, double> checkOpposite(int act_row, int act_col, double s, double t, bool horizontal_insertion, int new_index, double epsilon);
   void fit4by4Bezier(std::vector<Vec> S);
   void generatePointsAndFit();
+  void bezierToTspline();
+  void bring4by4ToOrig();
 
   // Visualization
   void setupCamera();
@@ -132,6 +134,7 @@ private:
   std::vector<Vec> tspline_control_points;
   std::vector<int> IA;
   std::vector<int> JA;
+  std::string fileName;
 
   std::vector<std::vector<double>> si_array;
   std::vector<std::vector<double>> ti_array;

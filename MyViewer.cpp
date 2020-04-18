@@ -359,6 +359,7 @@ bool MyViewer::openBezier(const std::string &filename) {
   } catch(std::ifstream::failure &) {
     return false;
   }
+  fileName = filename;
   model_type = ModelType::BEZIER_SURFACE;
   updateMesh();
   setupCamera();
@@ -383,6 +384,7 @@ bool MyViewer::saveBezier(const std::string &filename) {
 
 bool MyViewer::openTSpline(const std::string &filename) {
 	//https://www.geeksforgeeks.org/sparse-matrix-representations-set-3-csr/
+	fileName = filename;
 
 	size_t cpnum, ia_size;
 	try {
@@ -2299,7 +2301,7 @@ void MyViewer::keyPressEvent(QKeyEvent *e) {
 		update();
 		break;
 	case Qt::Key_4:
-		generatePointsAndFit();
+		bring4by4ToOrig();
 		update();
 		break;
     case Qt::Key_F:
@@ -3004,8 +3006,89 @@ void MyViewer::fit4by4Bezier(std::vector<Vec> S) {
 	degree[0] = 3;
 	degree[1] = 3;
 	model_type = ModelType::BEZIER_SURFACE;
-	saveBezier("fittedBezier.bzr");
-	openBezier("fittedBezier.bzr");
+	/*saveBezier("fittedBezier.bzr");
+	openBezier("fittedBezier.bzr");*/
+}
+
+void MyViewer::bezierToTspline() {
+	tspline_control_points.resize(16);
+	tspline_control_points = bezier_control_points;
+	ti_array.resize(16);
+	si_array.resize(16);
+	JA.resize(16);
+	weights.resize(16,1.0);
+	blend_functions.resize(16);
+	refined_points.resize(16);
+	refined_weights.resize(16, { 1.0 });
+	for (int i = 0; i < 16; i++) {
+		tspline_control_points[i] = bezier_control_points[(i % 4) * 4 + i / 4];
+		si_array[i] = i % 4 == 0 ? std::vector<double>{0,0,0,0,1} : (i%4 == 1 ? std::vector<double>{0, 0, 0, 1, 1} : (i%4==2 ? std::vector<double>{0, 0, 1, 1, 1} : std::vector<double>{ 0,1,1,1,1 }));
+		ti_array[i] = i / 4 == 0 ? std::vector<double>{0, 0, 0, 0, 1} : (i / 4 == 1 ? std::vector<double>{0, 0, 0, 1, 1} : (i / 4 == 2 ? std::vector<double>{0, 0, 1, 1, 1} : std::vector<double>{ 0,1,1,1,1 }));
+		JA[i] = i % 4;
+		refined_points[i] = { tspline_control_points[i] };
+		blend_functions[i] = { std::pair<std::vector<double>,std::vector<double>>(si_array[i],ti_array[i]) };
+	}
+
+	IA.resize(5);
+	for (int i = 0; i < 5; i++) {
+		IA[i] = i * 4;
+	}
+
+	updateEdgeTopology();
+
+	std::string newFileName = fileName;
+	newFileName.erase(newFileName.end()-4,newFileName.end());
+	newFileName += "_bzr_to_tsp.tsp";
+	model_type = ModelType::TSPLINE_SURFACE;
+	/*saveTSpline(newFileName);
+	openTSpline(newFileName);*/
+	fileName = newFileName;
+}
+
+void MyViewer::bring4by4ToOrig() {
+	//Store original knot values
+	std::string origFileName = fileName;
+	std::vector<std::vector<double>> origin_sarray(si_array), origin_tarray(ti_array);
+
+	//fit4by4
+	//Convert fitted bezier into tspline
+	generatePointsAndFit();
+	bezierToTspline();
+
+	//insert points until same knots->
+	//calculate difference
+	//color them accordingly
+	bool viol = false;
+	do {
+		viol = false;
+		for (int i = 0; i < tspline_control_points.size(); i++) {
+			int act_row = getRowOfExisting(i);
+			int act_col = JA[i];
+			auto ss_up = checkSsUp(act_row,act_col,i,origin_sarray[i], origin_tarray[i],2,std::vector<int>());
+			if (!ss_up.first.first) {
+				int new_index;
+				if(ss_up.second.first == 4) new_index = (getRowOfExisting(i + 1) == act_row && si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]) ? i + 2 : i + 1;
+				else new_index = i + 1;
+				insertRefined(origin_sarray[i][ss_up.second.first],ti_array[i][2],new_index, ss_up.second.first == 4 ? i+1 : i, ss_up.second.first == 4 ? i+2 : i+1);
+				viol = true;
+				break;
+			}
+			auto ts_up = checkTsUp(act_row, act_col, i, origin_sarray[i], origin_tarray[i], 2, std::vector<int>());
+			if (!ts_up.first.first) {
+				auto col_inds = indicesOfColumn(act_col);
+				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
+				int new_index;
+				if (ts_up.second.first == 3)
+					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[i][ts_up.second.first], false);
+				else new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
+				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, ts_up.second.first == 4 ? col_inds[indInCol + 1] : i, ts_up.second.first == 4 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
+				viol = true;
+				break;
+			}
+		}
+	} while (viol);
+
+	saveTSpline(fileName);
 }
 
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {
