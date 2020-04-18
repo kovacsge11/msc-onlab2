@@ -101,6 +101,7 @@ private:
   void fit4by4Bezier(std::vector<Vec> S);
   void generatePointsAndFit();
   void bezierToTspline();
+  void colorDistances(std::vector<Vec> fittedPts);
   void bring4by4ToOrig();
 
   // Visualization
@@ -146,6 +147,9 @@ private:
   std::vector<std::vector<Vec>> refined_points;
   //For every blend function of every point stores the weight of actual point of origin multiplied by the factor of refinements
   std::vector<std::vector<double>> refined_weights;
+
+  bool distMode = false;
+  std::vector<Vec> distColors;
 
   bool keep_surface, mid_insert;
 

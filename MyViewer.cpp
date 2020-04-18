@@ -437,6 +437,7 @@ bool MyViewer::openTSpline(const std::string &filename) {
 	if (!checkTSplineTopology()) return false;
 	updateMesh();
 	setupCamera();
+	distMode = false;
 	return true;
 }
 
@@ -665,9 +666,13 @@ void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const{
 	//Drawing points
 	glLineWidth(1.0);
 	glPointSize(8.0);
-	glColor3d(1.0, 0.0, 1.0);
 	glBegin(GL_POINTS);
 	for (int i = 0; i < tspline_control_points.size(); i++) {
+		if (distMode) {
+			Vec pColor = distColors[i];
+			glColor3d(pColor[0],pColor[1], pColor[2]);
+		}
+		else glColor3d(1.0, 0.0, 1.0);
 		Vec coords = { (tspline_control_points[i] / weights[i]) };
 		glVertex3dv(coords);
 	}
@@ -3045,6 +3050,22 @@ void MyViewer::bezierToTspline() {
 	fileName = newFileName;
 }
 
+void MyViewer::colorDistances(std::vector<Vec> fittedPts) {
+	if (fittedPts.size() != tspline_control_points.size()) return;
+	std::vector<double> distances;
+	for (int i = 0; i < fittedPts.size(); i++) {
+		distances.push_back((tspline_control_points[i]-fittedPts[i]).norm());
+	}
+	double red = 0, green = 120, blue = 240; // Hue
+	double max_dist = *std::max_element(distances.begin(),distances.end());
+	distColors.clear();
+	for (int i = 0; i < distances.size(); i++) {
+		double alpha = distances[i]/max_dist;
+		distColors.push_back(HSV2RGB({ green * (1 - alpha) + red * alpha, 1, 1 }));
+	}
+	distMode = true;
+}
+
 void MyViewer::bring4by4ToOrig() {
 	//Store original knot values
 	std::string origFileName = fileName;
@@ -3089,6 +3110,11 @@ void MyViewer::bring4by4ToOrig() {
 	} while (viol);
 
 	saveTSpline(fileName);
+
+	std::vector<Vec> fittedCps = tspline_control_points;
+	openTSpline(origFileName);
+
+	colorDistances(fittedCps);
 }
 
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {
