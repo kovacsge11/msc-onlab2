@@ -438,6 +438,7 @@ bool MyViewer::openTSpline(const std::string &filename) {
 	updateMesh();
 	setupCamera();
 	distMode = false;
+	distColorMode = false;
 	return true;
 }
 
@@ -668,7 +669,7 @@ void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const{
 	glPointSize(8.0);
 	glBegin(GL_POINTS);
 	for (int i = 0; i < tspline_control_points.size(); i++) {
-		if (distMode) {
+		if (distColorMode) {
 			Vec pColor = distColors[i];
 			glColor3d(pColor[0],pColor[1], pColor[2]);
 		}
@@ -767,19 +768,19 @@ void MyViewer::endSelection(const QPoint &p) {
 	}
 }
 
-std::vector<int> MyViewer::indicesOfColumn(int colindex) {
+std::vector<int> MyViewer::indicesOfColumn(int colindex, bool inOrig) {
 	std::vector<int> ret_vec;
 	ret_vec.clear();
-	for (int i = 0; i < JA.size(); i++) {
-		if (JA[i] == colindex) ret_vec.push_back(i);
+	for (int i = 0; i < (inOrig ? JAOrig.size() : JA.size()); i++) {
+		if ((inOrig ? JAOrig[i] : JA[i]) == colindex) ret_vec.push_back(i);
 	}
 	return ret_vec;
 }
 
 //Returns with index of row
-int MyViewer::getRowOfExisting(int index) {
+int MyViewer::getRowOfExisting(int index, bool inOrig) {
 	int i = 0;
-	for (; IA[i] <= index; i++) {
+	for (; (inOrig ? IAOrig[i] : IA[i]) <= index; i++) {
 	}
 	return i - 1;
 }
@@ -1590,6 +1591,34 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 	return ret_pair;
 }
 
+void MyViewer::updateOrigs(double s, double t, int act_ind) {
+	int first_orig = indsInOrig[act_ind - 1], sec_orig = indsInOrig[act_ind];
+	//If they are in same orig row
+	if (rowsInOrig[act_ind - 1] == rowsInOrig[act_ind]) {
+		int temp_ind = first_orig + 1;
+		while (origin_sarray[temp_ind][2] <= s) { temp_ind++; }
+		temp_ind--;
+		indsInOrig.emplace(indsInOrig.begin() + act_ind, temp_ind);
+		rowsInOrig.emplace(rowsInOrig.begin() + act_ind, rowsInOrig[act_ind - 1]);
+		colsInOrig.emplace(colsInOrig.begin() + act_ind, JAOrig[temp_ind]);
+	}
+	else {
+		//Finding the greatest row which has equal 
+		int temp_row = rowsInOrig[act_ind - 1];
+		int sec_row = rowsInOrig[act_ind];
+		while (origin_tarray[IAOrig[temp_row]][2] <= t && temp_row <= sec_row) { temp_row++; }
+		temp_row--;
+
+		int temp_ind = IAOrig[temp_row];
+		while (origin_sarray[temp_ind][2] <= s && temp_ind <= IAOrig[temp_row+1]) { temp_ind++; }
+		temp_ind--;
+		indsInOrig.emplace(indsInOrig.begin() + act_ind, temp_ind);
+		rowsInOrig.emplace(rowsInOrig.begin() + act_ind, temp_row);
+		colsInOrig.emplace(colsInOrig.begin() + act_ind, JAOrig[temp_ind]);
+		//TODO maybe handle case, where we have to go back one row
+	}
+}
+
 std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_index, std::vector<double> new_si, std::vector<double> new_ti, std::vector<int> excluded, std::vector<int> newlyAdded) {
 	ti_array.insert(ti_array.begin() + new_index, new_ti);
 	//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
@@ -1622,6 +1651,11 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 	for (int e = 0; e < edges.size(); e++) {
 		if (edges[e].first >= new_index) edges[e].first++;
 		if (edges[e].second >= new_index) edges[e].second++;
+	}
+
+	//TODO - update indsInOrig, rowsInOrig, colsInOrig
+	if (distMode) {
+		updateOrigs(new_si[2],new_ti[2],new_index); 
 	}
 
 	std::pair<std::vector<int>, std::vector<int>> ret_pair(std::pair<std::vector<int>, std::vector<int>>(excluded, newlyAdded));
@@ -2256,82 +2290,6 @@ void MyViewer::postSelection(const QPoint &p)  {
 	  updateMesh();
 	  update();
   }
-}
-
-void MyViewer::keyPressEvent(QKeyEvent *e) {
-  if (e->modifiers() == Qt::NoModifier)
-    switch (e->key()) {
-    case Qt::Key_O:
-      if (camera()->type() == qglviewer::Camera::PERSPECTIVE)
-        camera()->setType(qglviewer::Camera::ORTHOGRAPHIC);
-      else
-        camera()->setType(qglviewer::Camera::PERSPECTIVE);
-      update();
-      break;
-    case Qt::Key_P:
-      visualization = Visualization::PLAIN;
-      update();
-      break;
-    case Qt::Key_M:
-      visualization = Visualization::MEAN;
-      update();
-      break;
-    case Qt::Key_L:
-      visualization = Visualization::SLICING;
-      update();
-      break;
-    case Qt::Key_I:
-      visualization = Visualization::ISOPHOTES;
-      update();
-      break;
-    case Qt::Key_C:
-      show_control_points = !show_control_points;
-      update();
-      break;
-    case Qt::Key_S:
-      show_solid = !show_solid;
-      update();
-      break;
-    case Qt::Key_W:
-      show_wireframe = !show_wireframe;
-      update();
-      break;
-	case Qt::Key_K:
-		keep_surface = !keep_surface;
-		update();
-		break;
-	//TODO do this more user-friendly
-	case Qt::Key_E:
-		mid_insert = !mid_insert;
-		update();
-		break;
-	case Qt::Key_4:
-		bring4by4ToOrig();
-		update();
-		break;
-    case Qt::Key_F:
-      fairMesh();
-      update();
-      break;
-    default:
-      QGLViewer::keyPressEvent(e);
-    }
-  else if (e->modifiers() == Qt::KeypadModifier)
-    switch (e->key()) {
-    case Qt::Key_Plus:
-      slicing_scaling *= 2;
-      update();
-      break;
-    case Qt::Key_Minus:
-      slicing_scaling /= 2;
-      update();
-      break;
-    case Qt::Key_Asterisk:
-      slicing_dir = Vector(static_cast<double *>(camera()->viewDirection()));
-      update();
-      break;
-    } else
-    QGLViewer::keyPressEvent(e);
 }
 
 Vec MyViewer::intersectLines(const Vec &ap, const Vec &ad, const Vec &bp, const Vec &bd) {
@@ -3050,26 +3008,24 @@ void MyViewer::bezierToTspline() {
 	fileName = newFileName;
 }
 
-void MyViewer::colorDistances(std::vector<Vec> fittedPts) {
-	if (fittedPts.size() != tspline_control_points.size()) return;
-	std::vector<double> distances;
-	for (int i = 0; i < fittedPts.size(); i++) {
-		distances.push_back((tspline_control_points[i]-fittedPts[i]).norm());
-	}
+void MyViewer::colorDistances(std::string origFileName) {
+	distColorMode = true;
+	openTSpline(origFileName);
 	double red = 0, green = 120, blue = 240; // Hue
-	double max_dist = *std::max_element(distances.begin(),distances.end());
+	double max_dist = *std::max_element(fitDistances.begin(), fitDistances.end());
 	distColors.clear();
-	for (int i = 0; i < distances.size(); i++) {
-		double alpha = distances[i]/max_dist;
+	for (int i = 0; i < fitDistances.size(); i++) {
+		double alpha = fitDistances[i]/max_dist;
 		distColors.push_back(HSV2RGB({ green * (1 - alpha) + red * alpha, 1, 1 }));
 	}
-	distMode = true;
 }
 
 void MyViewer::bring4by4ToOrig() {
 	//Store original knot values
 	std::string origFileName = fileName;
-	std::vector<std::vector<double>> origin_sarray(si_array), origin_tarray(ti_array);
+	origin_sarray = si_array;
+	origin_tarray = ti_array;
+	std::vector<Vec> orig_cps = tspline_control_points;
 
 	//fit4by4
 	//Convert fitted bezier into tspline
@@ -3111,10 +3067,170 @@ void MyViewer::bring4by4ToOrig() {
 
 	saveTSpline(fileName);
 
-	std::vector<Vec> fittedCps = tspline_control_points;
-	openTSpline(origFileName);
+	distMode = true;
+	fitDistances.clear();
+	for (int i = 0; i < tspline_control_points.size(); i++) {
+		fitDistances.push_back((orig_cps[i] - tspline_control_points[i]).norm());
+	}
 
-	colorDistances(fittedCps);
+	//colorDistances(origFileName);
+
+	int max_col = JA[JA.size() - 1];
+	int max_row = IA.size() - 2;
+	//Pushing back indices of bezier in original surface
+	indsInOrig.clear();
+	indsInOrig.push_back(0);
+	indsInOrig.push_back(1);
+	indsInOrig.push_back(IA[1]-2);
+	indsInOrig.push_back(IA[1] - 1);
+	indsInOrig.push_back(IA[1]);
+	indsInOrig.push_back(IA[1] + 1);
+	indsInOrig.push_back(IA[2] - 2);
+	indsInOrig.push_back(IA[2] - 1);  
+	indsInOrig.push_back(IA[max_row-1]);
+	indsInOrig.push_back(IA[max_row - 1]+1);
+	indsInOrig.push_back(IA[max_row] - 2);
+	indsInOrig.push_back(IA[max_row] - 1);
+	indsInOrig.push_back(IA[max_row]);
+	indsInOrig.push_back(IA[max_row] + 1);
+	indsInOrig.push_back(IA[max_row+1] - 2);
+	indsInOrig.push_back(IA[max_row+1] - 1);
+	JAOrig = JA;
+	IAOrig = IA;
+	rowsInOrig.clear();
+	colsInOrig.clear();
+	for (int i = 0; i < 16; i++) {
+		rowsInOrig.emplace_back(i / 4 < 2 ? i / 4 : max_row - 1 + i / 4 - 2);
+		colsInOrig.emplace_back(i % 4 < 2 ? i % 4 : max_col - 1 + i % 4 - 2);
+	}
+	//std::transform(indsInOrig.begin(), indsInOrig.end(), rowsInOrig.begin(), [this](int ind)->int { return getRowOfExisting(ind); });
+	//std::transform(indsInOrig.begin(), indsInOrig.end(), colsInOrig.begin(), [&JA=JA](int ind)->int { return JA[ind]; });
+	bezierToTspline();
+}
+
+bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_col) {
+	int ind = IA[act_row];
+	while (JA[ind] <= left_col) {
+		ind++;
+	}
+	ind--;
+
+	//Traverse through edges
+	do
+	{
+		//More efficiently?
+		if (std::find(edges.begin(), edges.end(), std::pair<int, int>(ind, ind + 1)) == edges.end()) {
+			return true;
+		}
+	} while (JA[ind] < right_col);
+	return false;
+}
+
+bool MyViewer::expandRectangleHorizontally(int act_col, int top_row, int bot_row) {
+	auto col_inds = indicesOfColumn(act_col);
+	int ind = 0;
+	while (getRowOfExisting(col_inds[ind]) <= bot_row) {
+		ind++;
+	}
+	ind--;
+
+	//Traverse through edges
+	do
+	{
+		//More efficiently?
+		if (std::find(edges.begin(), edges.end(), std::pair<int, int>(col_inds[ind], col_inds[ind+1])) == edges.end()) {
+			return true;
+		}
+	} while (JA[ind] < top_row);
+	return false;
+}
+
+//Get the indices of the faces which the point belongs to in the case of inserting by point removal
+std::vector<int> MyViewer::getFaceRectangle(int index, int act_row, int act_col, double s, double t) {
+	//Find bottom row
+	auto ts_down = checkTsDown(act_row, act_col, index, { 0,0,s,1,1 }, { -1,-1,t,1,1 }, 1, {});
+	auto ts_up = checkTsUp(act_row, act_col, index, { 0,0,s,1,1 }, { 0,0,t,2,2 }, 1, {});
+	auto ss_down = checkSsDown(act_row, act_col, index, { -1,-1,s,1,1 }, { 0,0,t,1,1 }, 1, {});
+	auto ss_up = checkSsUp(act_row, act_col, index, { 0,0,s,2,2 }, { 0,0,t,1,1 }, 1, {});
+	int bot_row = ts_down.first.second.first;
+	int top_row = ts_up.first.second.first;
+	int left_col = ss_down.first.second.first;
+	int right_col = ss_up.first.second.first;
+
+	while (expandRectangleVertically(bot_row, right_col, left_col)) { bot_row--; }
+	while (expandRectangleVertically(top_row, right_col, left_col)) { top_row++; }
+	while (expandRectangleHorizontally(left_col, top_row, bot_row)) { left_col--; }
+	while (expandRectangleHorizontally(right_col, top_row, bot_row)) { right_col++; }
+	return std::vector<int>{bot_row,left_col,top_row,right_col};
+}
+
+void MyViewer::insertMaxDistanced() {
+	int max_dist_ind = std::max_element(fitDistances.begin(), fitDistances.end()) - fitDistances.begin();
+	double new_s = origin_sarray[max_dist_ind][2];
+	double new_t = origin_tarray[max_dist_ind][2];
+	int new_ind = std::upper_bound(indsInOrig.begin(),indsInOrig.end(),max_dist_ind)-indsInOrig.begin();
+	int act_row = std::lower_bound(rowsInOrig.begin(), rowsInOrig.end(), getRowOfExisting(max_dist_ind,true)) - rowsInOrig.begin();
+	auto temp_colsInOrig = colsInOrig;
+	int act_col = std::lower_bound(colsInOrig.begin(), colsInOrig.end(), JAOrig[max_dist_ind]) - colsInOrig.begin();
+
+	fitDistances[max_dist_ind] = -1;
+
+	auto recEdges = getFaceRectangle(new_ind, act_row, act_col, new_s, new_t);
+	//Transform into orig rows and cols
+	int bot_row = rowsInOrig[IA[recEdges[0]]];
+	int left_col = colsInOrig[indicesOfColumn(recEdges[1])[0]];
+	int top_row = rowsInOrig[IA[recEdges[2]]];
+	int right_col = colsInOrig[indicesOfColumn(recEdges[3])[0]];
+
+	//Only works correctly in cases of regular nxm grid TODO
+	int vertLen = top_row - bot_row;
+	int horLen = right_col - left_col;
+	int botLeft = IAOrig[bot_row] + left_col;
+	int topRight = IAOrig[top_row] + right_col;
+	//Inserting on vertical sides
+	if (vertLen > horLen) {
+		//Only works correctly in cases of regular nxm grid TODO
+		int ins_row = bot_row + (vertLen + 1) / 2;
+		int origInd1 = IAOrig[ins_row] + left_col;
+		int new_ind1 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+		rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, ins_row);
+		colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col);
+		//get indices of left col in actual
+		auto first_col_inds = indicesOfColumn(recEdges[1]);
+		//Find ind in left col in actual just below new one in order to be able to insert
+		int botLeftAct = 0;
+		while (origin_tarray[origInd1][2] <= ti_array[first_col_inds[botLeftAct]][2] && getRowOfExisting(first_col_inds[botLeftAct]) < recEdges[0]) { botLeftAct++; }
+		insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, first_col_inds[botLeftAct], first_col_inds[botLeftAct+1]);
+
+		int origInd2 = IAOrig[ins_row] + right_col;
+		int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+		rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, ins_row);
+		colsInOrig.emplace(colsInOrig.begin() + new_ind2, right_col);
+		//get indices of right col in actual
+		auto sec_col_inds = indicesOfColumn(recEdges[3]);
+		//Find ind in right col in actual just below new one in order to be able to insert
+		int botRightAct = 0;
+		while (origin_tarray[origInd2][2] <= ti_array[sec_col_inds[botRightAct]][2] && getRowOfExisting(sec_col_inds[botRightAct]) < recEdges[0]) { botRightAct++; }
+		insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, sec_col_inds[botRightAct], sec_col_inds[botRightAct + 1]);
+
+	}
+	//Inserting on horizontal sides
+	else {
+		//Inserting on middle of bottom face row
+		int origInd1 = botLeft + (horLen + 1) / 2;
+		int new_ind1 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+		indsInOrig.emplace(indsInOrig.begin() + new_ind1, origInd1);
+		rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, bot_row);
+		colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col+ (horLen + 1) / 2);
+		insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, new_ind1, new_ind1 + 1);
+		//Inserting on middle of top face row
+		int origInd2 = topRight - (horLen + 1) / 2;
+		int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+		indsInOrig.emplace(indsInOrig.begin() + new_ind2, origInd2);
+		rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, top_row);
+		colsInOrig.emplace(colsInOrig.begin() + new_ind2, left_col + (horLen + 1) / 2);
+		insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, new_ind2, new_ind2 + 1);
+	}
 }
 
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {
@@ -3145,6 +3261,87 @@ void MyViewer::mouseMoveEvent(QMouseEvent *e) {
 	  tspline_control_points[selected_vertex] = refined_points[selected_vertex][0] = axes.position * weights[selected_vertex];
   updateMesh();
   update();
+}
+
+void MyViewer::keyPressEvent(QKeyEvent *e) {
+	if (e->modifiers() == Qt::NoModifier)
+		switch (e->key()) {
+		case Qt::Key_O:
+			if (camera()->type() == qglviewer::Camera::PERSPECTIVE)
+				camera()->setType(qglviewer::Camera::ORTHOGRAPHIC);
+			else
+				camera()->setType(qglviewer::Camera::PERSPECTIVE);
+			update();
+			break;
+		case Qt::Key_P:
+			visualization = Visualization::PLAIN;
+			update();
+			break;
+		case Qt::Key_M:
+			visualization = Visualization::MEAN;
+			update();
+			break;
+		case Qt::Key_L:
+			visualization = Visualization::SLICING;
+			update();
+			break;
+		case Qt::Key_I:
+			visualization = Visualization::ISOPHOTES;
+			update();
+			break;
+		case Qt::Key_C:
+			show_control_points = !show_control_points;
+			update();
+			break;
+		case Qt::Key_S:
+			show_solid = !show_solid;
+			update();
+			break;
+		case Qt::Key_W:
+			show_wireframe = !show_wireframe;
+			update();
+			break;
+		case Qt::Key_K:
+			keep_surface = !keep_surface;
+			update();
+			break;
+			//TODO do this more user-friendly
+		case Qt::Key_E:
+			mid_insert = !mid_insert;
+			update();
+			break;
+		case Qt::Key_4:
+			bring4by4ToOrig();
+			update();
+			break;
+		case Qt::Key_5:
+			insertMaxDistanced();
+			update();
+			break;
+		case Qt::Key_F:
+			fairMesh();
+			update();
+			break;
+		default:
+			QGLViewer::keyPressEvent(e);
+		}
+	else if (e->modifiers() == Qt::KeypadModifier)
+		switch (e->key()) {
+		case Qt::Key_Plus:
+			slicing_scaling *= 2;
+			update();
+			break;
+		case Qt::Key_Minus:
+			slicing_scaling /= 2;
+			update();
+			break;
+		case Qt::Key_Asterisk:
+			slicing_dir = Vector(static_cast<double *>(camera()->viewDirection()));
+			update();
+			break;
+		}
+	else
+		QGLViewer::keyPressEvent(e);
 }
 
 QString MyViewer::helpString() const {

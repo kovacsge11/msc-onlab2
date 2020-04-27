@@ -76,7 +76,6 @@ private:
   void updateEdgesTemporarily(bool remove, int temp_index);
   bool checkTSplineCorrectness();
   bool checkTSplineTopology();
-  std::vector<int> indicesOfColumn(int colindex);
   std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded);
   std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded);
   std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded);
@@ -85,11 +84,13 @@ private:
   std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
   std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded);
   std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol2(std::vector<int> excluded, std::vector<int> newlyAdded);
+  void updateOrigs(double s, double t, int act_ind);
   std::pair<std::vector<int>, std::vector<int>> insertAfterViol(int new_index, std::vector<double> new_si, std::vector<double> new_ti, std::vector<int> excluded, std::vector<int> newlyAdded);
   void checkViolations(std::vector<int> excluded);
+  std::vector<int> indicesOfColumn(int colindex, bool inOrig = false);
   int getIndex(int first_row, int sec_row, int act_col, double t, bool maxFromEquals);
   std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals);
-  int getRowOfExisting(int index);
+  int getRowOfExisting(int index, bool inOrig = false);
   std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s, bool maxFromEquals);
   void updateIA(int first_row, int sec_col, double t, bool maxFromEquals);
   void updateJA(int first_col, int sec_col, int new_ind, double s, bool maxFromEquals);
@@ -101,8 +102,12 @@ private:
   void fit4by4Bezier(std::vector<Vec> S);
   void generatePointsAndFit();
   void bezierToTspline();
-  void colorDistances(std::vector<Vec> fittedPts);
+  void colorDistances(std::string origFileName);
   void bring4by4ToOrig();
+  void insertMaxDistanced();
+  std::vector<int> getFaceRectangle(int index, int act_row, int act_col, double s, double t);
+  bool expandRectangleVertically(int act_row, int right_col, int left_col);
+  bool expandRectangleHorizontally(int act_col, int top_row, int bot_row);
 
   // Visualization
   void setupCamera();
@@ -148,8 +153,11 @@ private:
   //For every blend function of every point stores the weight of actual point of origin multiplied by the factor of refinements
   std::vector<std::vector<double>> refined_weights;
 
-  bool distMode = false;
+  std::vector<std::vector<double>> origin_sarray, origin_tarray;
+  bool distMode = false, distColorMode = false;
   std::vector<Vec> distColors;
+  std::vector<double> fitDistances;
+  std::vector<int> indsInOrig,IAOrig, JAOrig, rowsInOrig, colsInOrig;
 
   bool keep_surface, mid_insert;
 
