@@ -1,10 +1,11 @@
 # msc-onlab2
-My code to subject "Önálló laboratórium 2" at masters.
-I used the framework implemented by Peter Salvi: https://github.com/salvipeter/sample-framework/tree/757a0b1af2f4a17fb536777664c68145f386b65e.
+My code to subject "Önálló laboratórium 2 and Diplomaterv 1" at masters.
+I used the framework implemented by Peter Salvi: https://github.com/salvipeter/sample-framework/tree/757a0b1af2f4a17fb536777664c68145f386b65e and implemented T-Splines in it. Right now the program is able to load and save a T-Spline, check the validity of them. Insertion of a new control point is also available with optionally keeping the original surface. You can choose whether you want to insert on the half of the edge or exactly where you click. I started implementing point removal, now you can fit a 4x4 Bezier to the actual surface and transform it with insertions to match the original. After this you can see the differences between the control points of the original and the newly transformed on the original in color-coding of the control points.
 
 ## Added key actions
 - With key K you can change whether you want surface-keeping insertion or not (the latter is the default).
 - With key E you can change whether you want insertions at any given point of an edge (this is the default) or at the half of the edge.
+- With key 4 you can do fitting of a 4x4 Bezier, transforming it with insertions to match the original and see the differences between the control points of the original and the newly transformed on the original in color-coding.
 
 ## Rule checking
 According to the publication [T-Splines and T-NURCCs by Sederberg et al. 2003](https://www.researchgate.net/publication/234827617_T-splines_and_T-NURCCs) two rules of T-mesh have to be checked in order to validate the correctness of the topology. 
