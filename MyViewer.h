@@ -105,7 +105,7 @@ private:
   void colorDistances(std::string origFileName);
   void bring4by4ToOrig();
   void insertMaxDistanced();
-  std::vector<int> getFaceRectangle(int index, int act_row, int act_col, double s, double t);
+  std::vector<int> getFaceRectangle(int index, int act_row, int act_col, double s, double t, bool new_row, bool new_col);
   bool expandRectangleVertically(int act_row, int right_col, int left_col);
   bool expandRectangleHorizontally(int act_col, int top_row, int bot_row);
 

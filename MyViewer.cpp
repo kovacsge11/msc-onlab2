@@ -3119,9 +3119,11 @@ bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_co
 	do
 	{
 		//More efficiently?
+		//ISSUE newly inserted counted too
 		if (std::find(edges.begin(), edges.end(), std::pair<int, int>(ind, ind + 1)) == edges.end()) {
 			return true;
 		}
+		++ind;
 	} while (JA[ind] < right_col);
 	return false;
 }
@@ -3141,12 +3143,13 @@ bool MyViewer::expandRectangleHorizontally(int act_col, int top_row, int bot_row
 		if (std::find(edges.begin(), edges.end(), std::pair<int, int>(col_inds[ind], col_inds[ind+1])) == edges.end()) {
 			return true;
 		}
+		++ind;
 	} while (JA[ind] < top_row);
 	return false;
 }
 
 //Get the indices of the faces which the point belongs to in the case of inserting by point removal
-std::vector<int> MyViewer::getFaceRectangle(int index, int act_row, int act_col, double s, double t) {
+std::vector<int> MyViewer::getFaceRectangle(int index, int act_row, int act_col, double s, double t, bool new_row, bool new_col) {
 	//Find bottom row
 	auto ts_down = checkTsDown(act_row, act_col, index, { 0,0,s,1,1 }, { -1,-1,t,1,1 }, 1, {});
 	auto ts_up = checkTsUp(act_row, act_col, index, { 0,0,s,1,1 }, { 0,0,t,2,2 }, 1, {});
@@ -3157,6 +3160,17 @@ std::vector<int> MyViewer::getFaceRectangle(int index, int act_row, int act_col,
 	int left_col = ss_down.first.second.first;
 	int right_col = ss_up.first.second.first;
 
+	deleteFromJA(index);
+	deleteFromIA(index);
+	if (new_row) {
+		if (top_row > act_row) --top_row;
+		if (bot_row > act_row) --bot_row;
+	}
+	if (new_col) {
+		if (right_col > act_col) --right_col;
+		if (left_col > act_col) --left_col;
+	}
+
 	while (expandRectangleVertically(bot_row, right_col, left_col)) { bot_row--; }
 	while (expandRectangleVertically(top_row, right_col, left_col)) { top_row++; }
 	while (expandRectangleHorizontally(left_col, top_row, bot_row)) { left_col--; }
@@ -3164,18 +3178,76 @@ std::vector<int> MyViewer::getFaceRectangle(int index, int act_row, int act_col,
 	return std::vector<int>{bot_row,left_col,top_row,right_col};
 }
 
+void sortArr(std::vector<std::pair<int, int> > &vp, std::vector<int> vec)
+{
+	// Inserting element in pair vector 
+	// to keep track of previous indexes 
+	for (int i = 0; i < vec.size(); ++i) {
+		vp.push_back(std::make_pair(vec[i], i));
+	}
+
+	// Sorting pair vector 
+	std::stable_sort(vp.begin(), vp.end());
+}
+
 void MyViewer::insertMaxDistanced() {
 	int max_dist_ind = std::max_element(fitDistances.begin(), fitDistances.end()) - fitDistances.begin();
 	double new_s = origin_sarray[max_dist_ind][2];
 	double new_t = origin_tarray[max_dist_ind][2];
+	//Get new ind, the one from actuals which has smallest geq origind
 	int new_ind = std::upper_bound(indsInOrig.begin(),indsInOrig.end(),max_dist_ind)-indsInOrig.begin();
-	int act_row = std::lower_bound(rowsInOrig.begin(), rowsInOrig.end(), getRowOfExisting(max_dist_ind,true)) - rowsInOrig.begin();
-	auto temp_colsInOrig = colsInOrig;
-	int act_col = std::lower_bound(colsInOrig.begin(), colsInOrig.end(), JAOrig[max_dist_ind]) - colsInOrig.begin();
+	bool new_row = false, new_col = true;
 
+	//Get actual row of newly inserted
+	int orig_row = getRowOfExisting(max_dist_ind,true);
+	int act_row;
+	//If new in same orig_row as second one
+	if (rowsInOrig[new_ind] == orig_row) {
+		act_row = getRowOfExisting(new_ind);
+		updateIA(act_row,act_row,new_t,false);
+	}
+	//If new in same orig_row as first one
+	else if (rowsInOrig[new_ind - 1] == orig_row) {
+		act_row = getRowOfExisting(new_ind - 1);
+		updateIA(act_row, act_row, new_t, false);
+	}
+	//If between two rows
+	else {
+		act_row = getRowOfExisting(new_ind);
+		updateIA(getRowOfExisting(new_ind - 1), act_row, new_t, false);
+		new_row = true;
+	}
+
+	//Get actual col of newly inserted
+	int orig_col = JAOrig[max_dist_ind];
+	int act_col;
+	auto existing_col = std::find(colsInOrig.begin(), colsInOrig.end(), JAOrig[max_dist_ind]);
+	//If inserting in a col already existing
+	if (existing_col != colsInOrig.end()) {
+		act_col = JA[existing_col - colsInOrig.begin()];
+		updateJA(act_col, act_col, new_ind, new_s, false);
+		new_col = false;
+	}
+	//If not in existing col but inserting in a row
+	else if (rowsInOrig[new_ind] == rowsInOrig[new_ind - 1]) {
+		updateJA(JA[new_ind-1],JA[new_ind],new_ind,new_s,false);
+		act_col = JA[new_ind];
+	}
+	//If new col and the three are not in same row
+	else {
+		std::vector<std::pair<int, int>> vp;
+		sortArr(vp, colsInOrig);
+		auto lb = std::lower_bound(vp.begin(),vp.end(),std::make_pair(orig_col,0));
+		act_col = lb->second;
+		updateJA(act_col,act_col+1,new_ind,new_s,false);
+	}
+	
 	fitDistances[max_dist_ind] = -1;
 
-	auto recEdges = getFaceRectangle(new_ind, act_row, act_col, new_s, new_t);
+	//ISSUE finding multiple faces
+	auto recEdges = getFaceRectangle(new_ind, act_row, act_col, new_s, new_t, new_row, new_col);
+
+	
 	//Transform into orig rows and cols
 	int bot_row = rowsInOrig[IA[recEdges[0]]];
 	int left_col = colsInOrig[indicesOfColumn(recEdges[1])[0]];
@@ -3222,14 +3294,14 @@ void MyViewer::insertMaxDistanced() {
 		indsInOrig.emplace(indsInOrig.begin() + new_ind1, origInd1);
 		rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, bot_row);
 		colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col+ (horLen + 1) / 2);
-		insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, new_ind1, new_ind1 + 1);
+		insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, new_ind1-1, new_ind1);
 		//Inserting on middle of top face row
 		int origInd2 = topRight - (horLen + 1) / 2;
-		int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+		int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd2) - indsInOrig.begin();
 		indsInOrig.emplace(indsInOrig.begin() + new_ind2, origInd2);
 		rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, top_row);
 		colsInOrig.emplace(colsInOrig.begin() + new_ind2, left_col + (horLen + 1) / 2);
-		insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, new_ind2, new_ind2 + 1);
+		insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, new_ind2-1, new_ind2);
 	}
 }
 
