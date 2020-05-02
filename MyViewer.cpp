@@ -894,7 +894,7 @@ void MyViewer::updateIA(int first_row, int sec_row, double t, bool maxFromEquals
 
 void MyViewer::deleteFromIA(int del_ind) {
 	int row = getRowOfExisting(del_ind);
-	//If it was the only one in the col
+	//If it was the only one in the row
 	if (IA[row] == del_ind && IA[row + 1] == del_ind + 1) {
 		for (int i = row + 1; i < IA.size(); ++i) {
 			IA[i]--;
@@ -902,7 +902,7 @@ void MyViewer::deleteFromIA(int del_ind) {
 		IA.erase(IA.begin() + row);
 	}
 	else{
-		int i = (IA[row] == del_ind) ? row : row + 1;
+		int i = row + 1;
 		for (; i < IA.size(); ++i) {
 			IA[i]--;
 		}
@@ -1294,6 +1294,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						break;
 					}
 
+					//ISSUE here, constantly breaks, problem wont get solved
 					//If there is no point in the first s up but there is on the second up which causes a violation
 					if (JA[i + 1] != ss_up.first.second.first) break;
 
@@ -3109,6 +3110,12 @@ void MyViewer::bring4by4ToOrig() {
 	}
 	//std::transform(indsInOrig.begin(), indsInOrig.end(), rowsInOrig.begin(), [this](int ind)->int { return getRowOfExisting(ind); });
 	//std::transform(indsInOrig.begin(), indsInOrig.end(), colsInOrig.begin(), [&JA=JA](int ind)->int { return JA[ind]; });
+
+	//IF coloring, need to be removed
+	for each (int var in indsInOrig)
+	{
+		fitDistances[var] = -1.0;
+	}
 	bezierToTspline();
 }
 
@@ -3119,6 +3126,7 @@ bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_co
 	}
 	ind--;
 
+	if (ind == excluded) return true;
 	//Traverse through edges
 	do
 	{
