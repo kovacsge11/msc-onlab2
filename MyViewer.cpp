@@ -3160,6 +3160,8 @@ bool MyViewer::expandRectangleHorizontally(int act_col, int top_row, int bot_row
 //Get the indices of the faces which the point belongs to in the case of inserting by point removal
 std::pair<int,std::vector<int>> MyViewer::getFaceRectangle(int index, int act_row, int act_col, double s, double t, bool new_row, bool new_col) {
 	updateEdgesTemporarily(false,index);
+	ti_array.emplace(ti_array.begin() + index, std::vector<double>{-1, -1, t, -1, -1});
+	si_array.emplace(si_array.begin() + index, std::vector<double>{-1,-1,s,-1,-1});
 	//Find bottom row
 	auto ts_down = checkTsDown(act_row, act_col, index, { 0,0,s,1,1 }, { -1,-1,t,1,1 }, 1, {});
 	auto ts_up = checkTsUp(act_row, act_col, index, { 0,0,s,1,1 }, { 0,0,t,2,2 }, 1, {});
@@ -3200,6 +3202,8 @@ std::pair<int,std::vector<int>> MyViewer::getFaceRectangle(int index, int act_ro
 	updateEdgesTemporarily(true, index);
 	deleteFromJA(index);
 	deleteFromIA(index);
+	ti_array.erase(ti_array.begin() + index);
+	si_array.erase(si_array.begin() + index);
 	if (sliceCol && sliceRow) {
 		return { 4, {bot_row,left_col,act_row,act_col,  bot_row,act_col,act_row,right_col,  act_row,left_col,top_row,act_col,  act_row,act_col,top_row,right_col} };
 	}
@@ -3228,6 +3232,7 @@ void sortArr(std::vector<std::pair<int, int> > &vp, std::vector<int> vec)
 
 void MyViewer::insertMaxDistanced() {
 	int max_dist_ind = std::max_element(fitDistances.begin(), fitDistances.end()) - fitDistances.begin();
+	if (fitDistances[max_dist_ind] == -1.0) return;
 	double new_s = origin_sarray[max_dist_ind][2];
 	double new_t = origin_tarray[max_dist_ind][2];
 	//Get new ind, the one from actuals which has smallest geq origind
@@ -3278,17 +3283,25 @@ void MyViewer::insertMaxDistanced() {
 		updateJA(act_col,act_col+1,new_ind,new_s,false);
 	}
 	
-	//ISSUE how to delete from fitDistances??
-
-	//ISSUE finding multiple faces
 	auto recEdges = getFaceRectangle(new_ind, act_row, act_col, new_s, new_t, new_row, new_col);
 
-	for(int i=0;i<recEdges.first;i++){
+	//bot_row,left_col,top_row,right_col
+	std::vector<int> orig_data;
+
+	//Calculating original data before inserting anything
+	for (int i = 0; i < recEdges.first; i++) {
 		//Transform into orig rows and cols
-		int bot_row = rowsInOrig[IA[recEdges.second[4*i + 0]]];
-		int left_col = colsInOrig[indicesOfColumn(recEdges.second[4 * i + 1])[0]];
-		int top_row = rowsInOrig[IA[recEdges.second[4 * i + 2]]];
-		int right_col = colsInOrig[indicesOfColumn(recEdges.second[4 * i + 3])[0]];
+		orig_data.emplace_back(rowsInOrig[IA[recEdges.second[4 * i + 0]]]);
+		orig_data.emplace_back(colsInOrig[indicesOfColumn(recEdges.second[4 * i + 1])[0]]);
+		orig_data.emplace_back(rowsInOrig[IA[recEdges.second[4 * i + 2]]]);
+		orig_data.emplace_back(colsInOrig[indicesOfColumn(recEdges.second[4 * i + 3])[0]]);
+	}
+	//ISSUE when multiple faces->cols/rows need to be updated after first insertions
+	for(int i=0;i<recEdges.first;i++){
+		int bot_row = orig_data[4 * i];
+		int left_col = orig_data[4 * i+1];
+		int top_row = orig_data[4 * i+2];
+		int right_col = orig_data[4 * i+3];
 
 		//Only works correctly in cases of regular nxm grid TODO
 		int vertLen = top_row - bot_row;
@@ -3302,29 +3315,43 @@ void MyViewer::insertMaxDistanced() {
 			int origInd1 = IAOrig[ins_row] + left_col;
 			if (fitDistances[origInd1] != -1.0) {
 				int new_ind1 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+				fitDistances[origInd1] = -1;
+				//get indices of left col in orig
+				auto first_col_inds = indicesOfColumn(left_col,true);
+				int botLeftOrig = 0;
+				//Find orig in left_col which is in actual too and just under new one
+				while (getRowOfExisting(first_col_inds[botLeftOrig],true) < ins_row) { ++botLeftOrig; }
+				int topLeftOrig = 1+botLeftOrig--;
+				while (fitDistances[first_col_inds[botLeftOrig]] != -1) { --botLeftOrig; }
+				while (fitDistances[first_col_inds[topLeftOrig]] != -1) { ++topLeftOrig; }
+				//Transforming to actual
+				int botLeftAct = std::distance(indsInOrig.begin(),std::find(indsInOrig.begin(), indsInOrig.end(), first_col_inds[botLeftOrig]));
+				int topLeftAct = std::distance(indsInOrig.begin(),std::find(indsInOrig.begin(), indsInOrig.end(), first_col_inds[topLeftOrig]));
+				indsInOrig.emplace(indsInOrig.begin() + new_ind1, origInd1);
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, ins_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col);
-				fitDistances[origInd1] = -1;
-				//get indices of left col in actual
-				auto first_col_inds = indicesOfColumn(recEdges.second[4 * i + 1]);
-				//Find ind in left col in actual just below new one in order to be able to insert
-				int botLeftAct = 0;
-				while (origin_tarray[origInd1][2] <= ti_array[first_col_inds[botLeftAct]][2] && getRowOfExisting(first_col_inds[botLeftAct]) < recEdges.second[4 * i + 0]) { botLeftAct++; }
-				insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, first_col_inds[botLeftAct], first_col_inds[botLeftAct + 1]);
+				insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, botLeftAct, topLeftAct);
 			}
 
 			int origInd2 = IAOrig[ins_row] + right_col;
 			if (fitDistances[origInd2] != -1.0) {
-				int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+				int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd2) - indsInOrig.begin();
+				fitDistances[origInd2] = -1;
+				//get indices of right col in orig
+				auto sec_col_inds = indicesOfColumn(right_col, true);
+				int botRightOrig = 0;
+				//Find orig in right_col which is in actual too and just under new one
+				while (getRowOfExisting(sec_col_inds[botRightOrig], true) < ins_row) { ++botRightOrig; }
+				int topRightOrig = 1 + botRightOrig--;
+				while (fitDistances[sec_col_inds[botRightOrig]] != -1) { --botRightOrig; }
+				while (fitDistances[sec_col_inds[topRightOrig]] != -1) { ++topRightOrig; }
+				//Transforming to actual
+				int botRightAct = std::distance(indsInOrig.begin(), std::find(indsInOrig.begin(), indsInOrig.end(), sec_col_inds[botRightOrig]));
+				int topRightAct = std::distance(indsInOrig.begin(), std::find(indsInOrig.begin(), indsInOrig.end(), sec_col_inds[topRightOrig]));
+				indsInOrig.emplace(indsInOrig.begin() + new_ind2, origInd2);
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, ins_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind2, right_col);
-				fitDistances[origInd2] = -1;
-				//get indices of right col in actual
-				auto sec_col_inds = indicesOfColumn(recEdges.second[4 * i + 3]);
-				//Find ind in right col in actual just below new one in order to be able to insert
-				int botRightAct = 0;
-				while (origin_tarray[origInd2][2] <= ti_array[sec_col_inds[botRightAct]][2] && getRowOfExisting(sec_col_inds[botRightAct]) < recEdges.second[4 * i + 0]) { botRightAct++; }
-				insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, sec_col_inds[botRightAct], sec_col_inds[botRightAct + 1]);
+				insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, botRightAct, topRightAct);
 			}
 
 		}
