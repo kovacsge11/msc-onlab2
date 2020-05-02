@@ -3112,7 +3112,7 @@ void MyViewer::bring4by4ToOrig() {
 	bezierToTspline();
 }
 
-bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_col) {
+bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_col, int excluded) {
 	int ind = IA[act_row];
 	while (JA[ind] <= left_col) {
 		ind++;
@@ -3122,9 +3122,9 @@ bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_co
 	//Traverse through edges
 	do
 	{
+		if (ind == excluded) { ++ind; }
 		//More efficiently?
-		//ISSUE newly inserted counted too
-		if (std::find(edges.begin(), edges.end(), std::pair<int, int>(ind, ind + 1)) == edges.end()) {
+		if (std::find(edges.begin(), edges.end(), std::pair<int, int>(ind, ind+1 == excluded ? ind + 2 : ind + 1)) == edges.end()) {
 			return true;
 		}
 		++ind;
@@ -3132,7 +3132,7 @@ bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_co
 	return false;
 }
 
-bool MyViewer::expandRectangleHorizontally(int act_col, int top_row, int bot_row) {
+bool MyViewer::expandRectangleHorizontally(int act_col, int top_row, int bot_row, int excluded) {
 	auto col_inds = indicesOfColumn(act_col);
 	int ind = 0;
 	while (getRowOfExisting(col_inds[ind]) <= bot_row) {
@@ -3143,17 +3143,22 @@ bool MyViewer::expandRectangleHorizontally(int act_col, int top_row, int bot_row
 	//Traverse through edges
 	do
 	{
-		//More efficiently?
-		if (std::find(edges.begin(), edges.end(), std::pair<int, int>(col_inds[ind], col_inds[ind+1])) == edges.end()) {
-			return true;
+		if (col_inds[ind] != excluded) {
+			if (col_inds[ind + 1] == excluded && ind + 2 >= col_inds.size()) {
+				return true;
+			}
+			//More efficiently?
+			if (std::find(edges.begin(), edges.end(), std::pair<int, int>(col_inds[ind], (col_inds[ind + 1] == excluded ? col_inds[ind + 2] : col_inds[ind + 1]))) == edges.end()) {
+				return true;
+			}
 		}
 		++ind;
-	} while (JA[ind] < top_row);
+	} while (ind < col_inds.size()-1 && getRowOfExisting(col_inds[ind]) < top_row);
 	return false;
 }
 
 //Get the indices of the faces which the point belongs to in the case of inserting by point removal
-std::vector<int> MyViewer::getFaceRectangle(int index, int act_row, int act_col, double s, double t, bool new_row, bool new_col) {
+std::pair<int,std::vector<int>> MyViewer::getFaceRectangle(int index, int act_row, int act_col, double s, double t, bool new_row, bool new_col) {
 	updateEdgesTemporarily(false,index);
 	//Find bottom row
 	auto ts_down = checkTsDown(act_row, act_col, index, { 0,0,s,1,1 }, { -1,-1,t,1,1 }, 1, {});
@@ -3164,23 +3169,49 @@ std::vector<int> MyViewer::getFaceRectangle(int index, int act_row, int act_col,
 	int top_row = ts_up.first.second.first;
 	int left_col = ss_down.first.second.first;
 	int right_col = ss_up.first.second.first;
-	updateEdgesTemporarily(true, index);
-	deleteFromJA(index);
-	deleteFromIA(index);
+
+	while (expandRectangleVertically(bot_row, right_col, left_col,index)) { bot_row--; }
+	while (expandRectangleVertically(top_row, right_col, left_col, index)) { top_row++; }
+	while (expandRectangleHorizontally(left_col, top_row, bot_row, index)) { left_col--; }
+	while (expandRectangleHorizontally(right_col, top_row, bot_row, index)) { right_col++; }
+
+	bool sliceRow = false, sliceCol = false;
 	if (new_row) {
 		if (top_row > act_row) --top_row;
 		if (bot_row > act_row) --bot_row;
+	}
+	else if (act_row < top_row && act_row > bot_row) {
+		//Check whether on horizontal slicing edge of face
+		if (!expandRectangleVertically(act_row, right_col, left_col,index)) {
+			sliceRow = true;
+		}
 	}
 	if (new_col) {
 		if (right_col > act_col) --right_col;
 		if (left_col > act_col) --left_col;
 	}
+	else if (act_col < right_col && act_col > left_col) {
+		//Check whether on horizontal slicing edge of face
+		if (!expandRectangleHorizontally(act_col, top_row, bot_row, index)) {
+			sliceCol = true;
+		}
+	}
 
-	while (expandRectangleVertically(bot_row, right_col, left_col)) { bot_row--; }
-	while (expandRectangleVertically(top_row, right_col, left_col)) { top_row++; }
-	while (expandRectangleHorizontally(left_col, top_row, bot_row)) { left_col--; }
-	while (expandRectangleHorizontally(right_col, top_row, bot_row)) { right_col++; }
-	return std::vector<int>{bot_row,left_col,top_row,right_col};
+	updateEdgesTemporarily(true, index);
+	deleteFromJA(index);
+	deleteFromIA(index);
+	if (sliceCol && sliceRow) {
+		return { 4, {bot_row,left_col,act_row,act_col,  bot_row,act_col,act_row,right_col,  act_row,left_col,top_row,act_col,  act_row,act_col,top_row,right_col} };
+	}
+	else if (sliceRow) {
+		return { 2, {bot_row,left_col,act_row,right_col,  act_row,left_col,top_row,right_col} };
+	}
+	else if (sliceCol) {
+		return { 2, {bot_row,left_col,top_row,act_col,  bot_row,act_col,top_row,right_col} };
+	}
+	else {
+		return {1,{bot_row,left_col,top_row,right_col} };
+	}
 }
 
 void sortArr(std::vector<std::pair<int, int> > &vp, std::vector<int> vec)
@@ -3252,72 +3283,73 @@ void MyViewer::insertMaxDistanced() {
 	//ISSUE finding multiple faces
 	auto recEdges = getFaceRectangle(new_ind, act_row, act_col, new_s, new_t, new_row, new_col);
 
-	
-	//Transform into orig rows and cols
-	int bot_row = rowsInOrig[IA[recEdges[0]]];
-	int left_col = colsInOrig[indicesOfColumn(recEdges[1])[0]];
-	int top_row = rowsInOrig[IA[recEdges[2]]];
-	int right_col = colsInOrig[indicesOfColumn(recEdges[3])[0]];
+	for(int i=0;i<recEdges.first;i++){
+		//Transform into orig rows and cols
+		int bot_row = rowsInOrig[IA[recEdges.second[4*i + 0]]];
+		int left_col = colsInOrig[indicesOfColumn(recEdges.second[4 * i + 1])[0]];
+		int top_row = rowsInOrig[IA[recEdges.second[4 * i + 2]]];
+		int right_col = colsInOrig[indicesOfColumn(recEdges.second[4 * i + 3])[0]];
 
-	//Only works correctly in cases of regular nxm grid TODO
-	int vertLen = top_row - bot_row;
-	int horLen = right_col - left_col;
-	int botLeft = IAOrig[bot_row] + left_col;
-	int topRight = IAOrig[top_row] + right_col;
-	//Inserting on vertical sides
-	if (vertLen > horLen) {
 		//Only works correctly in cases of regular nxm grid TODO
-		int ins_row = bot_row + (vertLen + 1) / 2;
-		int origInd1 = IAOrig[ins_row] + left_col;
-		if (fitDistances[origInd1] != -1.0) {
-			int new_ind1 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
-			rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, ins_row);
-			colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col);
-			fitDistances[origInd1] = -1;
-			//get indices of left col in actual
-			auto first_col_inds = indicesOfColumn(recEdges[1]);
-			//Find ind in left col in actual just below new one in order to be able to insert
-			int botLeftAct = 0;
-			while (origin_tarray[origInd1][2] <= ti_array[first_col_inds[botLeftAct]][2] && getRowOfExisting(first_col_inds[botLeftAct]) < recEdges[0]) { botLeftAct++; }
-			insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, first_col_inds[botLeftAct], first_col_inds[botLeftAct + 1]);
-		}
+		int vertLen = top_row - bot_row;
+		int horLen = right_col - left_col;
+		int botLeft = IAOrig[bot_row] + left_col;
+		int topRight = IAOrig[top_row] + right_col;
+		//Inserting on vertical sides
+		if (vertLen > horLen) {
+			//Only works correctly in cases of regular nxm grid TODO
+			int ins_row = bot_row + (vertLen + 1) / 2;
+			int origInd1 = IAOrig[ins_row] + left_col;
+			if (fitDistances[origInd1] != -1.0) {
+				int new_ind1 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+				rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, ins_row);
+				colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col);
+				fitDistances[origInd1] = -1;
+				//get indices of left col in actual
+				auto first_col_inds = indicesOfColumn(recEdges.second[4 * i + 1]);
+				//Find ind in left col in actual just below new one in order to be able to insert
+				int botLeftAct = 0;
+				while (origin_tarray[origInd1][2] <= ti_array[first_col_inds[botLeftAct]][2] && getRowOfExisting(first_col_inds[botLeftAct]) < recEdges.second[4 * i + 0]) { botLeftAct++; }
+				insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, first_col_inds[botLeftAct], first_col_inds[botLeftAct + 1]);
+			}
 
-		int origInd2 = IAOrig[ins_row] + right_col;
-		if (fitDistances[origInd2] != -1.0) {
-			int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
-			rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, ins_row);
-			colsInOrig.emplace(colsInOrig.begin() + new_ind2, right_col);
-			fitDistances[origInd2] = -1;
-			//get indices of right col in actual
-			auto sec_col_inds = indicesOfColumn(recEdges[3]);
-			//Find ind in right col in actual just below new one in order to be able to insert
-			int botRightAct = 0;
-			while (origin_tarray[origInd2][2] <= ti_array[sec_col_inds[botRightAct]][2] && getRowOfExisting(sec_col_inds[botRightAct]) < recEdges[0]) { botRightAct++; }
-			insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, sec_col_inds[botRightAct], sec_col_inds[botRightAct + 1]);
-		}
+			int origInd2 = IAOrig[ins_row] + right_col;
+			if (fitDistances[origInd2] != -1.0) {
+				int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+				rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, ins_row);
+				colsInOrig.emplace(colsInOrig.begin() + new_ind2, right_col);
+				fitDistances[origInd2] = -1;
+				//get indices of right col in actual
+				auto sec_col_inds = indicesOfColumn(recEdges.second[4 * i + 3]);
+				//Find ind in right col in actual just below new one in order to be able to insert
+				int botRightAct = 0;
+				while (origin_tarray[origInd2][2] <= ti_array[sec_col_inds[botRightAct]][2] && getRowOfExisting(sec_col_inds[botRightAct]) < recEdges.second[4 * i + 0]) { botRightAct++; }
+				insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, sec_col_inds[botRightAct], sec_col_inds[botRightAct + 1]);
+			}
 
-	}
-	//Inserting on horizontal sides
-	else {
-		//Inserting on middle of bottom face row
-		int origInd1 = botLeft + (horLen + 1) / 2;
-		if (fitDistances[origInd1] != -1.0) {
-			int new_ind1 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
-			indsInOrig.emplace(indsInOrig.begin() + new_ind1, origInd1);
-			rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, bot_row);
-			colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col + (horLen + 1) / 2);
-			fitDistances[origInd1] = -1;
-			insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, new_ind1 - 1, new_ind1);
 		}
-		//Inserting on middle of top face row
-		int origInd2 = topRight - (horLen) / 2;
-		if (fitDistances[origInd2] != -1.0) {
-			int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd2) - indsInOrig.begin();
-			indsInOrig.emplace(indsInOrig.begin() + new_ind2, origInd2);
-			rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, top_row);
-			colsInOrig.emplace(colsInOrig.begin() + new_ind2, left_col + (horLen + 1) / 2);
-			fitDistances[origInd2] = -1;
-			insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, new_ind2 - 1, new_ind2);
+		//Inserting on horizontal sides
+		else {
+			//Inserting on middle of bottom face row
+			int origInd1 = botLeft + (horLen + 1) / 2;
+			if (fitDistances[origInd1] != -1.0) {
+				int new_ind1 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
+				indsInOrig.emplace(indsInOrig.begin() + new_ind1, origInd1);
+				rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, bot_row);
+				colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col + (horLen + 1) / 2);
+				fitDistances[origInd1] = -1;
+				insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, new_ind1 - 1, new_ind1);
+			}
+			//Inserting on middle of top face row
+			int origInd2 = topRight - (horLen) / 2;
+			if (fitDistances[origInd2] != -1.0) {
+				int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd2) - indsInOrig.begin();
+				indsInOrig.emplace(indsInOrig.begin() + new_ind2, origInd2);
+				rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, top_row);
+				colsInOrig.emplace(colsInOrig.begin() + new_ind2, left_col + (horLen + 1) / 2);
+				fitDistances[origInd2] = -1;
+				insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, new_ind2 - 1, new_ind2);
+			}
 		}
 	}
 }
