@@ -3128,6 +3128,7 @@ void MyViewer::bring4by4ToOrig() {
 
 bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_col, int excluded) {
 	int ind = IA[act_row];
+	if (JA[ind] > left_col) return true;
 	while (JA[ind] <= left_col) {
 		ind++;
 	}
@@ -3150,6 +3151,7 @@ bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_co
 bool MyViewer::expandRectangleHorizontally(int act_col, int top_row, int bot_row, int excluded) {
 	auto col_inds = indicesOfColumn(act_col);
 	int ind = 0;
+	if (getRowOfExisting(col_inds[ind]) > bot_row) return true;
 	while (getRowOfExisting(col_inds[ind]) <= bot_row) {
 		ind++;
 	}
