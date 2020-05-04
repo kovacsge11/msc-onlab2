@@ -3119,7 +3119,7 @@ void MyViewer::bring4by4ToOrig() {
 	//std::transform(indsInOrig.begin(), indsInOrig.end(), colsInOrig.begin(), [&JA=JA](int ind)->int { return JA[ind]; });
 
 	//IF coloring, need to be removed
-	for each (int var in indsInOrig)
+	for (int var : indsInOrig)
 	{
 		fitDistances[var] = -1.0;
 	}

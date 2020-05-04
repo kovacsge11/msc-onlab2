@@ -1,0 +1,9 @@
+*~
+Makefile
+*.o
+sample-framework
+moc_*
+qrc_*
+.qgl*
+*.tsp
+*.stash
