@@ -5,6 +5,7 @@
 
 #include <QGLViewer/qglviewer.h>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
+#include "Eigen/Core"
 
 using qglviewer::Vec;
 
@@ -103,7 +104,10 @@ private:
   void generatePointsAndFit();
   void bezierToTspline();
   void colorDistances(std::string origFileName);
+  void updateM(int origInd1, int origInd2, double value);
   void bring4by4ToOrig();
+  void bringToOrig();
+  void calcPointsBasedOnM();
   void insertMaxDistanced();
   std::pair<int, std::vector<int>> getFaceRectangle(int index, int act_row, int act_col, double s, double t, bool new_row, bool new_col);
   bool expandRectangleVertically(int act_row, int right_col, int left_col, int excluded);
@@ -154,10 +158,12 @@ private:
   std::vector<std::vector<double>> refined_weights;
 
   std::vector<std::vector<double>> origin_sarray, origin_tarray;
-  bool distMode = false, distColorMode = false;
+  std::vector<Vec> orig_cps;
+  bool distMode = false, distColorMode = false, bringBackMode = false;
   std::vector<Vec> distColors;
-  std::vector<double> fitDistances;
-  std::vector<int> indsInOrig,IAOrig, JAOrig, rowsInOrig, colsInOrig;
+  std::vector<double> fitDistances, orig_weights;
+  std::vector<int> baseIndsInOrig, indsInOrig,IAOrig, JAOrig, rowsInOrig, colsInOrig;
+  Eigen::MatrixXd M;
 
   bool keep_surface, mid_insert;
 

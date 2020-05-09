@@ -439,6 +439,7 @@ bool MyViewer::openTSpline(const std::string &filename) {
 	setupCamera();
 	distMode = false;
 	distColorMode = false;
+	bringBackMode = false;
 	return true;
 }
 
@@ -1017,8 +1018,13 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.second.first);
 						bf = blend_functions[i][j];
 					}
+					//Update M matrix
+					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first);
 					//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
 					int ref_ind = *(act_vec - 1);
+
+					//Update M matrix
+					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first);
 
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ multipl*c to blend_multipliers[ref_ind][ind of same blend]
@@ -1125,8 +1131,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.first.first);
 						bf = blend_functions[i][j];
 					}
+					//Update M matrix
+					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first);
+
 					//Second : getIndex of(bf.first[2], ts_up.second.second) if inserting above the middle point
 					int ref_ind = *(act_vec + 1);
+
+					//Update M matrix
+					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first);
 
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
@@ -1230,8 +1242,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.second.first);
 						bf = blend_functions[i][j];
 					}
+					//Update M matrix
+					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first);
+
 					//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
 					int ref_ind = i-1;
+
+					//Update M matrix
+					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first);
 
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ c to blend_multipliers[ref_ind][ind of same blend]
@@ -1335,8 +1353,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.first.first);
 						bf = blend_functions[i][j];
 					}
+					//Update M matrix
+					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first);
+
 					//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
 					int ref_ind = i + 1;
+
+					//Update M matrix
+					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first);
 
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
@@ -1611,7 +1635,10 @@ void MyViewer::updateOrigs(double s, double t, int act_ind) {
 		indsInOrig.emplace(indsInOrig.begin() + act_ind, temp_ind);
 		rowsInOrig.emplace(rowsInOrig.begin() + act_ind, rowsInOrig[act_ind - 1]);
 		colsInOrig.emplace(colsInOrig.begin() + act_ind, JAOrig[temp_ind]);
-		fitDistances[temp_ind] = -1;
+		if (distMode) {
+			baseIndsInOrig.emplace(baseIndsInOrig.begin() + act_ind, temp_ind);
+			fitDistances[temp_ind] = -1;
+		}
 	}
 	else {
 		//Finding the greatest row which has equal 
@@ -1626,7 +1653,10 @@ void MyViewer::updateOrigs(double s, double t, int act_ind) {
 		indsInOrig.emplace(indsInOrig.begin() + act_ind, temp_ind);
 		rowsInOrig.emplace(rowsInOrig.begin() + act_ind, temp_row);
 		colsInOrig.emplace(colsInOrig.begin() + act_ind, JAOrig[temp_ind]);
-		fitDistances[temp_ind] = -1;
+		if (distMode) {
+			baseIndsInOrig.emplace(baseIndsInOrig.begin() + act_ind, temp_ind);
+			fitDistances[temp_ind] = -1;
+		}
 		//TODO maybe handle case, where we have to go back one row
 	}
 }
@@ -1666,7 +1696,7 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 	}
 
 	//TODO - update indsInOrig, rowsInOrig, colsInOrig
-	if (distMode) {
+	if (bringBackMode) {
 		updateOrigs(new_si[2],new_ti[2],new_index); 
 	}
 
@@ -2931,7 +2961,7 @@ void MyViewer::generatePointsAndFit() {
 //S the nxn incoming points
 void MyViewer::fit4by4Bezier(std::vector<Vec> S) {
 	int n = sqrt(S.size());
-	Eigen::MatrixXd A(n*n,16), B(n*n,3);
+	MatrixXd A(n*n,16), B(n*n,3);
 	std::vector<Vec> P(16,Vec(0.0, 0.0, 0.0));
 	std::vector<double> Bs, tempB;
 	for (int i = 0; i < n; i++) {
@@ -3032,17 +3062,82 @@ void MyViewer::colorDistances(std::string origFileName) {
 	}
 }
 
+//Update M, refinement from origInd1 to origInd2 with value
+void MyViewer::updateM(int origInd1, int origInd2, double value) {
+	auto base = std::find(baseIndsInOrig.begin(), baseIndsInOrig.end(), origInd1);
+	if (base != baseIndsInOrig.end()) {
+		int baseInd = std::distance(baseIndsInOrig.begin(), base);
+		//Refine from base to itself
+		if (origInd1 == origInd2) {
+			M(baseInd, baseInd) *= value;
+		}
+		//Refine from base to other
+		else {
+			M(baseInd, origInd2) += M(baseInd, baseInd)*value;
+		}
+	}
+	else {
+		//Refine from not base to itself
+		if (origInd1 == origInd2) {
+			//Multiply col with value
+			M.col(origInd1) *= value;
+		}
+		//Refine from not base to other
+		else {
+			M.col(origInd2) += M.col(origInd1)*value;
+		}
+	}
+}
+
 void MyViewer::bring4by4ToOrig() {
 	//Store original knot values
 	std::string origFileName = fileName;
 	origin_sarray = si_array;
 	origin_tarray = ti_array;
-	std::vector<Vec> orig_cps = tspline_control_points;
+	orig_cps = tspline_control_points;
+	orig_weights = weights;
+
+	int max_col = JA[JA.size() - 1];
+	int max_row = IA.size() - 2;
+	//Pushing back indices of bezier in original surface
+	indsInOrig.clear();
+	indsInOrig.push_back(0);
+	indsInOrig.push_back(1);
+	indsInOrig.push_back(IA[1] - 2);
+	indsInOrig.push_back(IA[1] - 1);
+	indsInOrig.push_back(IA[1]);
+	indsInOrig.push_back(IA[1] + 1);
+	indsInOrig.push_back(IA[2] - 2);
+	indsInOrig.push_back(IA[2] - 1);
+	indsInOrig.push_back(IA[max_row - 1]);
+	indsInOrig.push_back(IA[max_row - 1] + 1);
+	indsInOrig.push_back(IA[max_row] - 2);
+	indsInOrig.push_back(IA[max_row] - 1);
+	indsInOrig.push_back(IA[max_row]);
+	indsInOrig.push_back(IA[max_row] + 1);
+	indsInOrig.push_back(IA[max_row + 1] - 2);
+	indsInOrig.push_back(IA[max_row + 1] - 1);
+	baseIndsInOrig = indsInOrig;
+	M = MatrixXd::Zero(16, orig_cps.size());
+
+	JAOrig = JA;
+	IAOrig = IA;
+	rowsInOrig.clear();
+	colsInOrig.clear();
+	for (int i = 0; i < 16; i++) {
+		M(i,indsInOrig[i]) = 1.0;
+		rowsInOrig.emplace_back(i / 4 < 2 ? i / 4 : max_row - 1 + i / 4 - 2);
+		colsInOrig.emplace_back(i % 4 < 2 ? i % 4 : max_col - 1 + i % 4 - 2);
+	}
+	//std::transform(indsInOrig.begin(), indsInOrig.end(), rowsInOrig.begin(), [this](int ind)->int { return getRowOfExisting(ind); });
+	//std::transform(indsInOrig.begin(), indsInOrig.end(), colsInOrig.begin(), [&JA=JA](int ind)->int { return JA[ind]; });
 
 	//fit4by4
 	//Convert fitted bezier into tspline
 	generatePointsAndFit();
 	bezierToTspline();
+
+	bringBackMode = true;
 
 	//insert points until same knots->
 	//calculate difference
@@ -3058,6 +3153,7 @@ void MyViewer::bring4by4ToOrig() {
 				int new_index;
 				if(ss_up.second.first == 4) new_index = (getRowOfExisting(i + 1) == act_row && si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]) ? i + 2 : i + 1;
 				else new_index = i + 1;
+				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2],new_index);
 				insertRefined(origin_sarray[i][ss_up.second.first],ti_array[i][2],new_index, ss_up.second.first == 4 ? i+1 : i, ss_up.second.first == 4 ? i+2 : i+1);
 				viol = true;
 				break;
@@ -3070,6 +3166,7 @@ void MyViewer::bring4by4ToOrig() {
 				if (ts_up.second.first == 3)
 					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[i][ts_up.second.first], false);
 				else new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
+				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index);
 				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, ts_up.second.first == 4 ? col_inds[indInCol + 1] : i, ts_up.second.first == 4 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
 				viol = true;
 				break;
@@ -3080,33 +3177,33 @@ void MyViewer::bring4by4ToOrig() {
 	saveTSpline(fileName);
 
 	distMode = true;
+	
 	fitDistances.clear();
 	for (int i = 0; i < tspline_control_points.size(); i++) {
 		fitDistances.push_back((orig_cps[i] - tspline_control_points[i]).norm());
 	}
 
 	//colorDistances(origFileName);
-
-	int max_col = JA[JA.size() - 1];
-	int max_row = IA.size() - 2;
+	max_col = JA[JA.size() - 1];
+	max_row = IA.size() - 2;
 	//Pushing back indices of bezier in original surface
 	indsInOrig.clear();
 	indsInOrig.push_back(0);
 	indsInOrig.push_back(1);
-	indsInOrig.push_back(IA[1]-2);
+	indsInOrig.push_back(IA[1] - 2);
 	indsInOrig.push_back(IA[1] - 1);
 	indsInOrig.push_back(IA[1]);
 	indsInOrig.push_back(IA[1] + 1);
 	indsInOrig.push_back(IA[2] - 2);
-	indsInOrig.push_back(IA[2] - 1);  
-	indsInOrig.push_back(IA[max_row-1]);
-	indsInOrig.push_back(IA[max_row - 1]+1);
+	indsInOrig.push_back(IA[2] - 1);
+	indsInOrig.push_back(IA[max_row - 1]);
+	indsInOrig.push_back(IA[max_row - 1] + 1);
 	indsInOrig.push_back(IA[max_row] - 2);
 	indsInOrig.push_back(IA[max_row] - 1);
 	indsInOrig.push_back(IA[max_row]);
 	indsInOrig.push_back(IA[max_row] + 1);
-	indsInOrig.push_back(IA[max_row+1] - 2);
-	indsInOrig.push_back(IA[max_row+1] - 1);
+	indsInOrig.push_back(IA[max_row + 1] - 2);
+	indsInOrig.push_back(IA[max_row + 1] - 1);
 	JAOrig = JA;
 	IAOrig = IA;
 	rowsInOrig.clear();
@@ -3115,15 +3212,94 @@ void MyViewer::bring4by4ToOrig() {
 		rowsInOrig.emplace_back(i / 4 < 2 ? i / 4 : max_row - 1 + i / 4 - 2);
 		colsInOrig.emplace_back(i % 4 < 2 ? i % 4 : max_col - 1 + i % 4 - 2);
 	}
-	//std::transform(indsInOrig.begin(), indsInOrig.end(), rowsInOrig.begin(), [this](int ind)->int { return getRowOfExisting(ind); });
-	//std::transform(indsInOrig.begin(), indsInOrig.end(), colsInOrig.begin(), [&JA=JA](int ind)->int { return JA[ind]; });
 
 	//IF coloring, need to be removed
 	for (int var : indsInOrig)
 	{
 		fitDistances[var] = -1.0;
 	}
+
 	bezierToTspline();
+	calcPointsBasedOnM();
+}
+
+//In order to update M accordingly
+void MyViewer::bringToOrig() {
+	distMode = false;
+	bringBackMode = true;
+	M = MatrixXd::Zero(baseIndsInOrig.size(),orig_cps.size());
+	for (int i = 0; i<baseIndsInOrig.size(); ++i) {
+		M(i, baseIndsInOrig[i]) = 1.0;
+	}
+
+	auto temp_tscps = tspline_control_points;
+	auto temp_refined_points = refined_points;
+	auto temp_blend_functions = blend_functions;
+	auto temp_weights = weights;
+	auto temp_refined_weights = refined_weights;
+	auto temp_orig_rows = rowsInOrig;
+	auto temp_orig_cols = colsInOrig;
+	auto temp_JA = JA;
+	auto temp_IA = IA;
+	auto temp_siarray = si_array;
+	auto temp_tiarray = ti_array;
+
+	bool viol = false;
+	do {
+		viol = false;
+		for (int i = 0; i < tspline_control_points.size(); i++) {
+			int act_row = getRowOfExisting(i);
+			int act_col = JA[i];
+			auto ss_up = checkSsUp(act_row, act_col, i, origin_sarray[i], origin_tarray[i], 2, std::vector<int>());
+			if (!ss_up.first.first) {
+				int new_index;
+				if (ss_up.second.first == 4) new_index = (getRowOfExisting(i + 1) == act_row && si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]) ? i + 2 : i + 1;
+				else new_index = i + 1;
+				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index);
+				insertRefined(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, ss_up.second.first == 4 ? i + 1 : i, ss_up.second.first == 4 ? i + 2 : i + 1);
+				viol = true;
+				break;
+			}
+			auto ts_up = checkTsUp(act_row, act_col, i, origin_sarray[i], origin_tarray[i], 2, std::vector<int>());
+			if (!ts_up.first.first) {
+				auto col_inds = indicesOfColumn(act_col);
+				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
+				int new_index;
+				if (ts_up.second.first == 3)
+					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[i][ts_up.second.first], false);
+				else new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
+				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index);
+				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, ts_up.second.first == 4 ? col_inds[indInCol + 1] : i, ts_up.second.first == 4 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
+				viol = true;
+				break;
+			}
+		}
+	} while (viol);
+
+	fitDistances.clear();
+	for (int i = 0; i < tspline_control_points.size(); i++) {
+		fitDistances.push_back((orig_cps[i] - tspline_control_points[i]).norm());
+	}
+
+	//IF coloring, need to be removed
+	for (int var : baseIndsInOrig)
+	{
+		fitDistances[var] = -1.0;
+	}
+
+	tspline_control_points = temp_tscps;
+	refined_points = temp_refined_points;
+	blend_functions = temp_blend_functions;
+	refined_weights = temp_refined_weights;
+	weights = temp_weights;
+	rowsInOrig = temp_orig_rows;
+	colsInOrig = temp_orig_cols;
+	JA = temp_JA;
+	IA = temp_IA;
+	si_array = temp_siarray;
+	ti_array = temp_tiarray;
+	indsInOrig = baseIndsInOrig;
+	updateEdgeTopology(); updateMesh();
 }
 
 bool MyViewer::expandRectangleVertically(int act_row, int right_col, int left_col, int excluded) {
@@ -3247,7 +3423,30 @@ void sortArr(std::vector<std::pair<int, int> > &vp, std::vector<int> vec)
 	std::stable_sort(vp.begin(), vp.end());
 }
 
+void MyViewer::calcPointsBasedOnM() {
+	auto mTemp = M(all, baseIndsInOrig);
+	MatrixXd origcp_m = MatrixXd(baseIndsInOrig.size(),3);
+	VectorXd origw_v = VectorXd(baseIndsInOrig.size());
+	for (int i = 0; i < baseIndsInOrig.size(); ++i) {
+		origcp_m(i,0) = orig_cps[baseIndsInOrig[i]][0];
+		origcp_m(i,1) = orig_cps[baseIndsInOrig[i]][1];
+		origcp_m(i,2) = orig_cps[baseIndsInOrig[i]][2];
+		origw_v(i) = orig_weights[baseIndsInOrig[i]];
+	}
+	mTemp.transposeInPlace();
+	MatrixXd cp_sol = mTemp.colPivHouseholderQr().solve(origcp_m);
+	VectorXd w_sol = mTemp.colPivHouseholderQr().solve(origw_v);
+	for (int i = 0; i < baseIndsInOrig.size(); ++i) {
+		tspline_control_points[i] = Vec(cp_sol(i,0), cp_sol(i, 1), cp_sol(i, 2));
+		refined_points[i] = { tspline_control_points[i] };
+		weights[i] = w_sol[i];
+		refined_weights[i] = {weights[i]};
+	}
+}
+
 void MyViewer::insertMaxDistanced() {
+	distMode = true;
+	bringBackMode = false;
 	int max_dist_ind = std::max_element(fitDistances.begin(), fitDistances.end()) - fitDistances.begin();
 	if (fitDistances[max_dist_ind] == -1.0) return;
 	double new_s = origin_sarray[max_dist_ind][2];
@@ -3345,6 +3544,7 @@ void MyViewer::insertMaxDistanced() {
 				int botLeftAct = std::distance(indsInOrig.begin(),std::find(indsInOrig.begin(), indsInOrig.end(), first_col_inds[botLeftOrig]));
 				int topLeftAct = std::distance(indsInOrig.begin(),std::find(indsInOrig.begin(), indsInOrig.end(), first_col_inds[topLeftOrig]));
 				indsInOrig.emplace(indsInOrig.begin() + new_ind1, origInd1);
+				baseIndsInOrig.emplace(baseIndsInOrig.begin() + new_ind1, origInd1);
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, ins_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col);
 				insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, botLeftAct, topLeftAct);
@@ -3366,6 +3566,7 @@ void MyViewer::insertMaxDistanced() {
 				int botRightAct = std::distance(indsInOrig.begin(), std::find(indsInOrig.begin(), indsInOrig.end(), sec_col_inds[botRightOrig]));
 				int topRightAct = std::distance(indsInOrig.begin(), std::find(indsInOrig.begin(), indsInOrig.end(), sec_col_inds[topRightOrig]));
 				indsInOrig.emplace(indsInOrig.begin() + new_ind2, origInd2);
+				baseIndsInOrig.emplace(baseIndsInOrig.begin() + new_ind2, origInd2);
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, ins_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind2, right_col);
 				insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, botRightAct, topRightAct);
@@ -3379,6 +3580,7 @@ void MyViewer::insertMaxDistanced() {
 			if (fitDistances[origInd1] != -1.0) {
 				int new_ind1 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd1) - indsInOrig.begin();
 				indsInOrig.emplace(indsInOrig.begin() + new_ind1, origInd1);
+				baseIndsInOrig.emplace(baseIndsInOrig.begin() + new_ind1, origInd1);
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, bot_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col + (horLen + 1) / 2);
 				fitDistances[origInd1] = -1;
@@ -3389,6 +3591,7 @@ void MyViewer::insertMaxDistanced() {
 			if (fitDistances[origInd2] != -1.0) {
 				int new_ind2 = std::upper_bound(indsInOrig.begin(), indsInOrig.end(), origInd2) - indsInOrig.begin();
 				indsInOrig.emplace(indsInOrig.begin() + new_ind2, origInd2);
+				baseIndsInOrig.emplace(baseIndsInOrig.begin() + new_ind2, origInd2);
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, top_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind2, left_col + (horLen + 1) / 2);
 				fitDistances[origInd2] = -1;
@@ -3396,6 +3599,9 @@ void MyViewer::insertMaxDistanced() {
 			}
 		}
 	}
+
+	bringToOrig();
+	calcPointsBasedOnM();
 }
 
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {
