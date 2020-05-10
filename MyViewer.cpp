@@ -968,12 +968,8 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					//If there is no point in the first t down but there is on the second down which causes a violation
 					if (act_vec == col_inds.begin() || getRowOfExisting(*(act_vec - 1)) != ts_down.first.second.first) {
 						//force inserting a point first place
-						double new_value;
-						if (act_vec == col_inds.begin()) {
-							//Two cases: no point and first t violated or no point but only the second t violated
-							new_value = ts_down.second.first == 1 ? ts_down.second.second : bf.second[1];
-						}
-						else new_value = bf.second[1];
+						//Two cases: no point and first t violated or no point but only the second t violated
+						double new_value = ts_down.second.first == 1 ? ts_down.second.second : bf.second[1];
 						int new_index = getIndex(ts_down.first.second.first-1,act_row,act_col,new_value, true);
 						updateJA(act_col, act_col, new_index, bf.first[2], false);
 						updateIA(ts_down.first.second.first - 1, act_row, new_value, true);
@@ -1081,12 +1077,8 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					//If there is no point in the first t down but there is on the second down which causes a violation
 					if (act_vec == col_inds.end() - 1 || getRowOfExisting(*(act_vec + 1)) != ts_up.first.second.first) {
 						//force inserting a point first place
-						double new_value;
-						if(act_vec == col_inds.end() - 1){
-							//Two cases: no point and first t violated or no point but only the second t violated
-							new_value = ts_up.second.first == 3 ? ts_up.second.second : bf.second[3];
-						}
-						else new_value = bf.second[3];
+						//Two cases: no point and first t violated or no point but only the second t violated
+						double new_value = ts_up.second.first == 3 ? ts_up.second.second : bf.second[3];
 						int new_index = getIndex(act_row, ts_up.first.second.first + 1, act_col, new_value, false);
 						updateJA(act_col, act_col, new_index, bf.first[2], false);
 						updateIA(act_row, ts_up.first.second.first + 1, new_value, false);
@@ -1192,12 +1184,8 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					//If there is no point in the first s down but there is on the second down which causes a violation
 					if (i == IA[act_row] || JA[i - 1] != ss_down.first.second.first) {
 						//force inserting a point first place
-						double new_value;
-						if (i == IA[act_row]) {
-							//Two cases: no point and first s violated or no point but only the second s violated
-							new_value = ss_down.second.first == 1 ? ss_down.second.second : bf.first[1];
-						}
-						else new_value = bf.first[1];
+						//Two cases: no point and first s violated or no point but only the second s violated
+						double new_value = ss_down.second.first == 1 ? ss_down.second.second : bf.first[1];
 						int new_index = i;
 						updateJA(ss_down.first.second.first - 1, act_col, new_index, new_value, true);
 						updateIA(act_row, act_row, bf.second[2], true);
@@ -1304,12 +1292,8 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					if (i + 1 == IA[act_row + 1] || JA[i + 1] != ss_up.first.second.first) {
 						//force inserting a point first place
 						int new_index = i+1;
-						double new_value;
-						if(i + 1 == IA[act_row + 1]){
-							//Two cases: no point and first s violated or no point but only the second s violated
-							new_value = ss_up.second.first == 3 ? ss_up.second.second : bf.first[3];
-						}
-						else new_value = bf.first[3];
+						//Two cases: no point and first s violated or no point but only the second s violated
+						double new_value = ss_up.second.first == 3 ? ss_up.second.second : bf.first[3];
 						updateJA(act_col, ss_up.first.second.first + 1, new_index, new_value, false);
 						updateIA(act_row, act_row, bf.second[2], false);
 						std::vector<double> new_si = { bf.first[1], bf.first[2], new_value, bf.first[4], bf.first[4] };
@@ -1695,8 +1679,7 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 		if (edges[e].second >= new_index) edges[e].second++;
 	}
 
-	//TODO - update indsInOrig, rowsInOrig, colsInOrig
-	if (bringBackMode) {
+	if (bringBackMode || distMode) {
 		updateOrigs(new_si[2],new_ti[2],new_index); 
 	}
 
