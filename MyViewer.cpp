@@ -3478,8 +3478,8 @@ void MyViewer::insertMaxDistanced() {
 		std::vector<std::pair<int, int>> vp;
 		sortArr(vp, colsInOrig);
 		auto lb = std::lower_bound(vp.begin(),vp.end(),std::make_pair(orig_col,0));
-		act_col = lb->second;
-		updateJA(act_col,act_col+1,new_ind,new_s,false);
+		act_col = JA[lb->second];
+		updateJA(act_col-1,act_col,new_ind,new_s,false);
 	}
 	
 	auto recEdges = getFaceRectangle(new_ind, act_row, act_col, new_s, new_t, new_row, new_col);
