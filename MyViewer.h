@@ -163,7 +163,7 @@ private:
   std::vector<Vec> distColors;
   std::vector<double> fitDistances, orig_weights;
   std::vector<int> baseIndsInOrig, indsInOrig,IAOrig, JAOrig, rowsInOrig, colsInOrig;
-  Eigen::MatrixXd M;
+  Eigen::MatrixXd M, M_old;
 
   bool keep_surface, mid_insert;
 

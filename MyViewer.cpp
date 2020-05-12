@@ -1683,6 +1683,15 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 		updateOrigs(new_si[2],new_ti[2],new_index); 
 	}
 
+	if (bringBackMode) {
+		for (int j = 0; j < M.cols(); ++j) {
+			for (int i = 0; i < M.rows(); ++i) {
+				M_old(i, j) = M(i, j) == 0.0 ? M_old(i, j) : M(i, j);
+			}
+		}
+		M = MatrixXd::Zero(M_old.rows(), M_old.cols());
+	}
+
 	std::pair<std::vector<int>, std::vector<int>> ret_pair(std::pair<std::vector<int>, std::vector<int>>(excluded, newlyAdded));
 	return ret_pair;
 }
@@ -1690,6 +1699,10 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 void MyViewer::checkViolations(std::vector<int> excluded) {
 	bool viol1 = false, viol2 = false;
 	std::vector<int> newlyAdded = {excluded};
+	if (bringBackMode) {
+		M_old = M;
+		M = MatrixXd::Zero(M_old.rows(), M_old.cols());
+	}
 	do {
 		auto viol1_pair = checkForViol1(excluded, newlyAdded);
 		viol1 = viol1_pair.first;
@@ -1701,6 +1714,7 @@ void MyViewer::checkViolations(std::vector<int> excluded) {
 		viol2 = viol2_pair.first;
 	} while (viol1 || viol2);
 
+	if (bringBackMode) M = M_old;
 	
 	int cpnum = tspline_control_points.size();
 	for (int i = 0; i < cpnum; i++) {
@@ -1757,6 +1771,7 @@ void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int
 	/*edges.erase(std::find(edges.begin(), edges.end(), std::pair<int, int>(first_ind, sec_ind+1)));
 	edges.push_back(std::pair<int,int>(first_ind, new_ind));
 	edges.push_back(std::pair<int, int>(new_ind, sec_ind+1));*/
+	
 	
 	checkViolations(excluded);
 	updateEdgeTopology();
@@ -3047,16 +3062,27 @@ void MyViewer::colorDistances(std::string origFileName) {
 
 //Update M, refinement from origInd1 to origInd2 with value
 void MyViewer::updateM(int origInd1, int origInd2, double value) {
-	auto base = std::find(baseIndsInOrig.begin(), baseIndsInOrig.end(), origInd1);
+	M.col(origInd2) += M_old.col(origInd1)*value;
+
+	//ISSUE it does matter, in which order we multiply and add
+	/*if (origInd1 == origInd2) {
+		//Multiply col with value
+		M.col(origInd1) += M_old.col(origInd1) * value;
+	}
+	//Refine from not base to other
+	else {
+		M.col(origInd2) += M_old.col(origInd1)*value;
+	}*/
+	/*auto base = std::find(baseIndsInOrig.begin(), baseIndsInOrig.end(), origInd1);
 	if (base != baseIndsInOrig.end()) {
 		int baseInd = std::distance(baseIndsInOrig.begin(), base);
 		//Refine from base to itself
 		if (origInd1 == origInd2) {
-			M(baseInd, baseInd) *= value;
+			M.col(origInd1) *= value;
 		}
 		//Refine from base to other
 		else {
-			M(baseInd, origInd2) += M(baseInd, baseInd)*value;
+			M(baseInd, origInd2) += M(baseInd, origInd1)*value;
 		}
 	}
 	else {
@@ -3069,7 +3095,7 @@ void MyViewer::updateM(int origInd1, int origInd2, double value) {
 		else {
 			M.col(origInd2) += M.col(origInd1)*value;
 		}
-	}
+	}*/
 }
 
 void MyViewer::bring4by4ToOrig() {
@@ -3203,7 +3229,7 @@ void MyViewer::bring4by4ToOrig() {
 	}
 
 	bezierToTspline();
-	calcPointsBasedOnM();
+	//calcPointsBasedOnM();
 }
 
 //In order to update M accordingly
@@ -3407,18 +3433,17 @@ void sortArr(std::vector<std::pair<int, int> > &vp, std::vector<int> vec)
 }
 
 void MyViewer::calcPointsBasedOnM() {
-	auto mTemp = M(all, baseIndsInOrig);
-	MatrixXd origcp_m = MatrixXd(baseIndsInOrig.size(),3);
-	VectorXd origw_v = VectorXd(baseIndsInOrig.size());
-	for (int i = 0; i < baseIndsInOrig.size(); ++i) {
-		origcp_m(i,0) = orig_cps[baseIndsInOrig[i]][0];
-		origcp_m(i,1) = orig_cps[baseIndsInOrig[i]][1];
-		origcp_m(i,2) = orig_cps[baseIndsInOrig[i]][2];
-		origw_v(i) = orig_weights[baseIndsInOrig[i]];
+	M.transposeInPlace();
+	MatrixXd origcp_m = MatrixXd(orig_cps.size(),3);
+	VectorXd origw_v = VectorXd(orig_cps.size());
+	for (int i = 0; i <orig_cps.size(); ++i) {
+		origcp_m(i,0) = orig_cps[i][0];
+		origcp_m(i,1) = orig_cps[i][1];
+		origcp_m(i,2) = orig_cps[i][2];
+		origw_v(i) = orig_weights[i];
 	}
-	mTemp.transposeInPlace();
-	MatrixXd cp_sol = mTemp.colPivHouseholderQr().solve(origcp_m);
-	VectorXd w_sol = mTemp.colPivHouseholderQr().solve(origw_v);
+	MatrixXd cp_sol = M.colPivHouseholderQr().solve(origcp_m);
+	VectorXd w_sol = M.colPivHouseholderQr().solve(origw_v);
 	for (int i = 0; i < baseIndsInOrig.size(); ++i) {
 		tspline_control_points[i] = Vec(cp_sol(i,0), cp_sol(i, 1), cp_sol(i, 2));
 		refined_points[i] = { tspline_control_points[i] };
@@ -3585,6 +3610,8 @@ void MyViewer::insertMaxDistanced() {
 
 	bringToOrig();
 	calcPointsBasedOnM();
+	updateEdgeTopology();
+	updateMesh();
 }
 
 void MyViewer::mouseMoveEvent(QMouseEvent *e) {
