@@ -93,7 +93,7 @@ private:
   std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals);
   int getRowOfExisting(int index, bool inOrig = false);
   std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s, bool maxFromEquals);
-  void updateIA(int first_row, int sec_col, double t, bool maxFromEquals);
+  void updateIA(int first_row, int sec_col, double t, bool maxFromEquals, int new_ind);
   void updateJA(int first_col, int sec_col, int new_ind, double s, bool maxFromEquals);
   void deleteFromIA(int del_ind);
   void deleteFromJA(int del_ind);
