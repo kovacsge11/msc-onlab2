@@ -1615,7 +1615,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 	return ret_pair;
 }
 
-void MyViewer::updateOrigs(double s, double t, int act_ind) {
+void MyViewer::updateOrigs(double s, double t, int act_ind, int orig_min_row) {
 	int first_orig = indsInOrig[act_ind - 1], sec_orig = indsInOrig[act_ind];
 
 	//If they are in same orig row
@@ -1635,8 +1635,9 @@ void MyViewer::updateOrigs(double s, double t, int act_ind) {
 	else {
 		//Finding the smallest row which has equal 
 		//TODO how can we differentiate certain cases(same t and s but one is in the same row one is in the next)
-		int temp_row = (t > origin_tarray[first_orig][2] || s < origin_sarray[first_orig][2] ||
-			(t == origin_tarray[first_orig][2] && s == origin_sarray[first_orig][2])) ? rowsInOrig[act_ind - 1] + 1 : rowsInOrig[act_ind - 1];
+		int temp_row = (orig_min_row > rowsInOrig[act_ind-1]) ? orig_min_row : rowsInOrig[act_ind - 1];
+		/*int temp_row = (t > origin_tarray[first_orig][2] || s < origin_sarray[first_orig][2] ||
+			(t == origin_tarray[first_orig][2] && s == origin_sarray[first_orig][2])) ? rowsInOrig[act_ind - 1] + 1 : rowsInOrig[act_ind - 1];*/
 		int sec_row = rowsInOrig[act_ind];
 		while (origin_tarray[IAOrig[temp_row]][2] < t && temp_row < sec_row) { temp_row++; }
 
@@ -1645,7 +1646,7 @@ void MyViewer::updateOrigs(double s, double t, int act_ind) {
 			std::find(colsInOrig.begin(), colsInOrig.end(), JAOrig[temp_ind]) == colsInOrig.end())) &&
 			temp_ind < IAOrig[temp_row + 1]-1) { temp_ind++; }
 		indsInOrig.emplace(indsInOrig.begin() + act_ind, temp_ind);
-		rowsInOrig.emplace(rowsInOrig.begin() + act_ind, temp_row);
+		rowsInOrig.emplace(rowsInOrig.begin() + act_ind, getRowOfExisting(temp_ind, true));
 		colsInOrig.emplace(colsInOrig.begin() + act_ind, JAOrig[temp_ind]);
 		if (distMode) {
 			baseIndsInOrig.emplace(baseIndsInOrig.begin() + act_ind, temp_ind);
@@ -1690,7 +1691,9 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 	}
 
 	if (bringBackMode || distMode) {
-		updateOrigs(new_si[2], new_ti[2], new_index);
+		int act_row = getRowOfExisting(new_index);
+		int orig_row = IA[act_row] == new_index ? (IA[act_row+1] == IA[act_row]+1 ? rowsInOrig[IA[act_row-1]]+1 : rowsInOrig[IA[act_row]+1]) : rowsInOrig[IA[act_row]];
+		updateOrigs(new_si[2], new_ti[2], new_index, orig_row);
 	}
 
 	std::pair<std::vector<int>, std::vector<int>> ret_pair(std::pair<std::vector<int>, std::vector<int>>(excluded, newlyAdded));
@@ -1742,7 +1745,7 @@ void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int
 	//last paramater could be both false and true(?)
 	updateIA(getRowOfExisting(first_ind), getRowOfExisting(sec_ind), t, false, new_ind);
 	//last paramater could be both false and true(?)
-	updateJA(JA[first_ind], JA[sec_ind], new_ind, s, false);
+	updateJA(JA[first_ind], JA[sec_ind], new_ind, s, bringBackMode);
 	std::vector<double> new_ti = { 0, 0, t, 0, 0 };
 	ti_array.insert(ti_array.begin() + new_ind, new_ti);
 	std::vector<double> new_si = { 0, 0, s, 0, 0 };
@@ -3132,11 +3135,11 @@ void MyViewer::bring4by4ToOrig() {
 			int act_col = JA[i];
 			auto ss_up = checkSsUp(act_row, act_col, i, origin_sarray[i], origin_tarray[i], 2, std::vector<int>());
 			if (!ss_up.first.first) {
-				int new_index;
-				if (ss_up.second.first == 4) new_index = (getRowOfExisting(i + 1) == act_row && si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]) ? i + 2 : i + 1;
-				else new_index = i + 1;
-				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index);
-				insertRefined(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, ss_up.second.first == 4 ? i + 1 : i, ss_up.second.first == 4 ? i + 2 : i + 1);
+				bool inserted_after_second = (ss_up.second.first == 4) && (getRowOfExisting(i + 1) == act_row)
+					&& (indsInOrig[i] + 1 == indsInOrig[i + 1]) && (si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]);
+				int new_index = inserted_after_second ? i + 2 : i + 1;
+				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i]);
+				insertRefined(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, inserted_after_second ? i + 1 : i, inserted_after_second ? i + 2 : i + 1);
 				viol = true;
 				break;
 			}
@@ -3144,11 +3147,16 @@ void MyViewer::bring4by4ToOrig() {
 			if (!ts_up.first.first) {
 				auto col_inds = indicesOfColumn(act_col);
 				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
-				int new_index;
-				if (ts_up.second.first == 3)
+				int new_index, orig_min_row;
+				if (ts_up.second.first == 3) {
 					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[i][ts_up.second.first], false);
-				else new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
-				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index);
+					orig_min_row = rowsInOrig[i];
+				}
+				else {
+					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
+					orig_min_row = rowsInOrig[IA[ts_up.first.second.first]];
+				}
+				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row);
 				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, ts_up.second.first == 4 ? col_inds[indInCol + 1] : i, ts_up.second.first == 4 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
 				viol = true;
 				break;
@@ -3234,11 +3242,10 @@ void MyViewer::bringToOrig() {
 			int act_col = JA[i];
 			auto ss_up = checkSsUp(act_row, act_col, i, origin_sarray[i], origin_tarray[i], 2, std::vector<int>());
 			if (!ss_up.first.first) {
-				
 				bool inserted_after_second = (ss_up.second.first == 4) && (getRowOfExisting(i + 1) == act_row)
 					&& (indsInOrig[i] + 1 == indsInOrig[i + 1]) && (si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]);
 				int new_index = inserted_after_second ? i + 2 : i + 1;
-				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index);
+				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i]);
 				insertRefined(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, inserted_after_second ? i + 1 : i, inserted_after_second ? i + 2 : i + 1);
 				viol = true;
 				break;
@@ -3247,11 +3254,16 @@ void MyViewer::bringToOrig() {
 			if (!ts_up.first.first) {
 				auto col_inds = indicesOfColumn(act_col);
 				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
-				int new_index;
-				if (ts_up.second.first == 3)
+				int new_index, orig_min_row;
+				if (ts_up.second.first == 3) {
 					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[i][ts_up.second.first], false);
-				else new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
-				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index);
+					orig_min_row = rowsInOrig[i];
+				}
+				else {
+					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
+					orig_min_row = rowsInOrig[IA[ts_up.first.second.first]];
+				}
+				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row);
 				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, ts_up.second.first == 4 ? col_inds[indInCol + 1] : i, ts_up.second.first == 4 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
 				viol = true;
 				break;
