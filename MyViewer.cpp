@@ -3147,17 +3147,21 @@ void MyViewer::bring4by4ToOrig() {
 			if (!ts_up.first.first) {
 				auto col_inds = indicesOfColumn(act_col);
 				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
+				int first_row_in_orig = rowsInOrig[IA[ts_up.first.second.first]];
+				bool wrong_at_4_still_needed_at_3 = origin_tarray[i][4] == ti_array[i][3] && rowsInOrig[i] + 1 != first_row_in_orig;
 				int new_index, orig_min_row;
-				if (ts_up.second.first == 3) {
+				if (ts_up.second.first == 3 || wrong_at_4_still_needed_at_3) {
 					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[i][ts_up.second.first], false);
-					orig_min_row = rowsInOrig[i];
+					orig_min_row = rowsInOrig[i] + 1;
 				}
 				else {
 					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
-					orig_min_row = rowsInOrig[IA[ts_up.first.second.first]];
+					orig_min_row = first_row_in_orig + 1;
 				}
 				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row);
-				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, ts_up.second.first == 4 ? col_inds[indInCol + 1] : i, ts_up.second.first == 4 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
+				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index,
+					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 1] : i,
+					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
 				viol = true;
 				break;
 			}
@@ -3254,17 +3258,21 @@ void MyViewer::bringToOrig() {
 			if (!ts_up.first.first) {
 				auto col_inds = indicesOfColumn(act_col);
 				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
+				int first_row_in_orig = rowsInOrig[IA[ts_up.first.second.first]];
+				bool wrong_at_4_still_needed_at_3 = origin_tarray[i][4] == ti_array[i][3] && rowsInOrig[i] + 1 != first_row_in_orig;
 				int new_index, orig_min_row;
-				if (ts_up.second.first == 3) {
+				if (ts_up.second.first == 3 || wrong_at_4_still_needed_at_3) {
 					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[i][ts_up.second.first], false);
-					orig_min_row = rowsInOrig[i];
+					orig_min_row = rowsInOrig[i] + 1;
 				}
 				else {
 					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
-					orig_min_row = rowsInOrig[IA[ts_up.first.second.first]];
+					orig_min_row = first_row_in_orig + 1;
 				}
 				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row);
-				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, ts_up.second.first == 4 ? col_inds[indInCol + 1] : i, ts_up.second.first == 4 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
+				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index,
+					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 1] : i,
+					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
 				viol = true;
 				break;
 			}
@@ -3593,7 +3601,7 @@ void MyViewer::insertMaxDistanced() {
 		}
 	}
 
-	bringToOrig();
+ 	bringToOrig();
 	calcPointsBasedOnM();
 	updateEdgeTopology();
 	updateMesh();
