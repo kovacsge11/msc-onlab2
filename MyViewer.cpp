@@ -1697,7 +1697,7 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 
 	if (bringBackMode || distMode) {
 		int act_row = getRowOfExisting(new_index);
-		int orig_row = IA[act_row] == new_index ? (IA[act_row+1] == IA[act_row]+1 ? rowsInOrig[IA[act_row-1]]+1 : rowsInOrig[IA[act_row]+1]) : rowsInOrig[IA[act_row]];
+		int orig_row = IA[act_row] == new_index ? rowsInOrig[IA[act_row-1]]+1 : rowsInOrig[IA[act_row]];
 		updateOrigs(new_si[2], new_ti[2], new_index, orig_row);
 	}
 
@@ -2540,7 +2540,7 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 			else if (act_row != getRowOfExisting(temp_ind - 1) || JA[index] > JA[temp_ind - 1]) {}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == s_vec[2]
-				while (getRowOfExisting(temp_ind - 1) == act_row && act_col != JA[temp_ind - 1]) {
+				while (getRowOfExisting(temp_ind - 1) == act_row && act_col < JA[temp_ind - 1]) {
 					temp_ind--;
 				}
 				//!= if first in act_row has same s, but is in a col with greater index
@@ -2640,7 +2640,7 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 			else if (act_row != getRowOfExisting(temp_ind - 1) || JA[index] > JA[temp_ind - 1]) {}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == s_vec[2]
-				while (getRowOfExisting(temp_ind - 1) == act_row && act_col != JA[temp_ind - 1]) {
+				while (getRowOfExisting(temp_ind - 1) == act_row && act_col < JA[temp_ind - 1]) {
 					temp_ind--;
 				}
 				//!= if first in act_row has same s, but is in a col with greater index
@@ -2744,7 +2744,7 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 			else if (getRowOfExisting(is_of_col[j - 1]) < act_row) {}
 			else {
 				//This case occurs when ti_array[is_of_col[j-1]][2] == t_vec[2]
-				while (j > 0 && act_row != getRowOfExisting(is_of_col[j - 1])) {
+				while (j > 0 && act_row < getRowOfExisting(is_of_col[j - 1])) {
 					j--;
 				}
 				//j == 0 if first in act_col has same t, but is in a row with greater index
@@ -2851,7 +2851,7 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 			else if (getRowOfExisting(is_of_col[j - 1]) < act_row) {}
 			else {
 				//This case occurs when ti_array[is_of_col[j-1]][2] == t_vec[2]
-				while (j > 0 && act_row != getRowOfExisting(is_of_col[j - 1])) {
+				while (j > 0 && act_row < getRowOfExisting(is_of_col[j - 1])) {
 					j--;
 				}
 				//j == 0 if first in act_col has same t, but is in a row with greater index
