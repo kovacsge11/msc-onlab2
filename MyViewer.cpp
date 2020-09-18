@@ -1579,7 +1579,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					//if inserting with 2 above the middle point
 					else {
 						//If the first hit has same s as the one to be inserted and there is at least one col between them, then insert the point before the first hit
-						if (bf.first[3] == bf.first[4] && ss_down.first.second.first - act_col > 1) {
+						if (bf.first[3] == bf.first[4] && ss_up.first.second.first - act_col > 1) {
 							new_index = i + 1;
 							updateJA(act_col, ss_up.first.second.first, new_index, bf.first[3], false);
 							updateIA(act_row, act_row, bf.second[2], false, new_index);
@@ -1587,7 +1587,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						}
 						//If there is no point in the first s up which doesn't cause violation but the second up causes a violation
 						//In this case we insert a point on the first s down
-						if (i + 1 == IA[act_row + 1] || JA[i + 1] != ss_up.first.second.first) {
+						else if (i + 1 == IA[act_row + 1] || JA[i + 1] != ss_up.first.second.first) {
 							new_index = i + 1;
 							updateJA(act_col, ss_up.first.second.second, new_index, bf.first[3], false);
 							updateIA(act_row, act_row, bf.second[2], false, new_index);
