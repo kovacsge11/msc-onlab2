@@ -1021,13 +1021,15 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.second.first);
 						bf = blend_functions[i][j];
 					}
-					//Update M matrix
-					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first);
+					
 					//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
 					int ref_ind = *(act_vec - 1);
 
-					//Update M matrix
-					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first);
+					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
+					if (bringBackMode) {
+						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first);
+						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first);
+					}
 
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ multipl*c to blend_multipliers[ref_ind][ind of same blend]
@@ -1130,14 +1132,15 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.first.first);
 						bf = blend_functions[i][j];
 					}
-					//Update M matrix
-					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first);
 
 					//Second : getIndex of(bf.first[2], ts_up.second.second) if inserting above the middle point
 					int ref_ind = *(act_vec + 1);
 
-					//Update M matrix
-					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first);
+					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
+					if (bringBackMode) {
+						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first);
+						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first);
+					}
 
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
@@ -1237,14 +1240,15 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.second.first);
 						bf = blend_functions[i][j];
 					}
-					//Update M matrix
-					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first);
 
 					//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
 					int ref_ind = i - 1;
 
-					//Update M matrix
-					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first);
+					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
+					if (bringBackMode) {
+						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first);
+						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first);
+					}
 
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ c to blend_multipliers[ref_ind][ind of same blend]
@@ -1344,14 +1348,15 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.first.first);
 						bf = blend_functions[i][j];
 					}
-					//Update M matrix
-					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first);
 
 					//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
 					int ref_ind = i + 1;
 
-					//Update M matrix
-					if (bringBackMode) updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first);
+					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
+					if (bringBackMode) {
+						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first);
+						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first);
+					}
 
 					//refine the blend function
 					//with the proper index see if any of the existing blends is the same as new one ->+ d to blend_multipliers[ref_ind][ind of same blend]
@@ -3060,7 +3065,6 @@ void MyViewer::colorDistances(std::string origFileName) {
 
 //Update M, refinement from origInd1 to origInd2 with value
 void MyViewer::updateM(int origInd1, int origInd2, double value) {
-	
 	auto base_it = std::find(baseIndsInOrig.begin(), baseIndsInOrig.end(), origInd1);
 	bool is_first_in_base = base_it != baseIndsInOrig.end();
 	if (is_first_in_base) {
@@ -3069,8 +3073,8 @@ void MyViewer::updateM(int origInd1, int origInd2, double value) {
 		else M(origInd2, base_ind) += M(origInd1, base_ind) * value;
 	}
 	else {
-		if (origInd1 == origInd2) M.row(origInd1) *= value;
-		else M.row(origInd2) += M.row(origInd1) * value;
+		if (origInd1 == origInd2) self_multiplier_for_temps[origInd1] *= value;
+		else M.row(origInd2) += self_multiplier_for_temps[origInd1] * M.row(origInd1) * value;
 	}
 }
 
@@ -3114,6 +3118,8 @@ void MyViewer::bring4by4ToOrig() {
 		rowsInOrig.emplace_back(i / 4 < 2 ? i / 4 : max_row - 1 + i / 4 - 2);
 		colsInOrig.emplace_back(i % 4 < 2 ? i % 4 : max_col - 1 + i % 4 - 2);
 	}
+	self_multiplier_for_temps = std::vector<double>(orig_cps.size(), 1.0);
+
 	//std::transform(indsInOrig.begin(), indsInOrig.end(), rowsInOrig.begin(), [this](int ind)->int { return getRowOfExisting(ind); });
 	//std::transform(indsInOrig.begin(), indsInOrig.end(), colsInOrig.begin(), [&JA=JA](int ind)->int { return JA[ind]; });
 
@@ -3225,6 +3231,7 @@ void MyViewer::bringToOrig() {
 	for (int i = 0; i < baseIndsInOrig.size(); ++i) {
 		M(baseIndsInOrig[i], i) = 1.0;
 	}
+	std::fill(self_multiplier_for_temps.begin(), self_multiplier_for_temps.end(), 1.0);
 
 	auto temp_tscps = tspline_control_points;
 	auto temp_refined_points = refined_points;

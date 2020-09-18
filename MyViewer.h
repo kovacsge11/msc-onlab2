@@ -163,7 +163,8 @@ private:
   std::vector<Vec> distColors;
   std::vector<double> fitDistances, orig_weights;
   std::vector<int> baseIndsInOrig, indsInOrig,IAOrig, JAOrig, rowsInOrig, colsInOrig;
-  Eigen::MatrixXd M, M_old;
+  Eigen::MatrixXd M;
+  std::vector<double> self_multiplier_for_temps;
 
   bool keep_surface, mid_insert;
 
