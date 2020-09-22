@@ -156,6 +156,9 @@ private:
   std::vector<std::vector<Vec>> refined_points;
   //For every blend function of every point stores the weight of actual point of origin multiplied by the factor of refinements
   std::vector<std::vector<double>> refined_weights;
+  //For every blend function of every point stores the actual index of point of origin
+  std::vector<std::vector<int>> refine_indexes;
+
 
   std::vector<std::vector<double>> origin_sarray, origin_tarray;
   std::vector<Vec> orig_cps;
