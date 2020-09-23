@@ -1750,7 +1750,8 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 
 	if (bringBackMode || distMode) {
 		int act_row = getRowOfExisting(new_index);
-		int orig_row = IA[act_row] == new_index ? rowsInOrig[IA[act_row-1]]+1 : rowsInOrig[IA[act_row]];
+		int row_of_next = getRowOfExisting(new_index+1);
+		int orig_row = IA[act_row] == new_index && (act_row != row_of_next) ? rowsInOrig[IA[act_row]]-1 : rowsInOrig[IA[act_row]];
 		updateOrigs(new_si[2], new_ti[2], new_index, orig_row);
 	}
 
