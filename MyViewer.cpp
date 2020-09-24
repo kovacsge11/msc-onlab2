@@ -427,7 +427,7 @@ bool MyViewer::openTSpline(const std::string& filename) {
 			refined_points[i] = { tspline_control_points[i] };
 			//Initializing refined_weights
 			refined_weights[i] = { weights[i] };
-			refine_indexes[i] = { i };
+			refine_indexes[i] = { { i } };
 		}
 		//Finally filling up IA vector
 		for (int i = 0; i < ia_size; i++)
@@ -1003,8 +1003,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					blend_functions[i].erase(blend_functions[i].begin() + j);
 					Vec temp_point = refined_points[i][j];
 					double temp_weight = refined_weights[i][j];
-					int ref_orig_ind = refine_indexes[i][j];
-					int orig_ind_refine_orig = (ref_orig_ind == i) ? indsInOrig[i] : indsInOrig[ref_orig_ind];
+					std::vector<int> ref_orig_inds = refine_indexes[i][j];
 					refined_points[i].erase(refined_points[i].begin() + j);
 					refined_weights[i].erase(refined_weights[i].begin() + j);
 					refine_indexes[i].erase(refine_indexes[i].begin() + j);
@@ -1017,7 +1016,11 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							refined_points[i][k] += temp_point * refined_pairs.second.first;
 							refined_weights[i][k] += temp_weight * refined_pairs.second.first;
 							// If an equal bf exists but this one has the point itself as the ref_orig_ind
-							if (ref_orig_ind == i) refine_indexes[i][k] = i;
+							if (ref_orig_inds[0] == i) refine_indexes[i][k] = { i };
+							else if (refine_indexes[i][k][0] != i){
+								refine_indexes[i][k].insert(refine_indexes[i][k].end(),
+									ref_orig_inds.begin(), ref_orig_inds.end());
+							}
 							exists = true;
 							jmax--;
 							actualAddedToOther = true;
@@ -1029,7 +1032,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						blend_functions[i].insert(blend_functions[i].begin() + j, blend_pair);
 						refined_points[i].insert(refined_points[i].begin() + j, temp_point * refined_pairs.second.first);
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.second.first);
-						refine_indexes[i].insert(refine_indexes[i].begin() + j, ref_orig_ind);
+						refine_indexes[i].insert(refine_indexes[i].begin() + j, ref_orig_inds);
 						bf = blend_functions[i][j];
 					}
 					
@@ -1038,8 +1041,11 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
 					if (bringBackMode) {
-						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first, orig_ind_refine_orig);
-						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first, orig_ind_refine_orig);
+						for each (int refine_orig in ref_orig_inds)
+						{
+							updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first, indsInOrig[refine_orig]);
+							updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first, indsInOrig[refine_orig]);
+						}
 					}
 
 					//refine the blend function
@@ -1057,7 +1063,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						blend_functions[ref_ind].push_back(blend_pair);
 						refined_points[ref_ind].push_back(temp_point * refined_pairs.first.first);
 						refined_weights[ref_ind].push_back(temp_weight * refined_pairs.first.first);
-						refine_indexes[ref_ind].push_back(ref_orig_ind);
+						refine_indexes[ref_ind].push_back(ref_orig_inds);
 					}
 					else {
 						exists = false;
@@ -1067,7 +1073,10 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
 								refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
 								refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
-								//refine_indexes doesnt need to be updated
+								if (refine_indexes[ref_ind][k][0] != i) {
+									refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
+										ref_orig_inds.begin(), ref_orig_inds.end());
+								}
 								exists = true;
 								break;
 							}
@@ -1077,7 +1086,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							blend_functions[ref_ind].push_back(blend_pair);
 							refined_points[ref_ind].push_back(temp_point * refined_pairs.first.first);
 							refined_weights[ref_ind].push_back(temp_weight * refined_pairs.first.first);
-							refine_indexes[ref_ind].push_back(ref_orig_ind);
+							refine_indexes[ref_ind].push_back(ref_orig_inds);
 						}
 					}
 				}
@@ -1124,8 +1133,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					blend_functions[i].erase(blend_functions[i].begin() + j);
 					Vec temp_point = refined_points[i][j];
 					double temp_weight = refined_weights[i][j];
-					int ref_orig_ind = refine_indexes[i][j];
-					int orig_ind_refine_orig = (ref_orig_ind == i) ? indsInOrig[i] : indsInOrig[ref_orig_ind];
+					std::vector<int> ref_orig_inds = refine_indexes[i][j];
 					refined_points[i].erase(refined_points[i].begin() + j);
 					refined_weights[i].erase(refined_weights[i].begin() + j);
 					refine_indexes[i].erase(refine_indexes[i].begin() + j);
@@ -1138,7 +1146,11 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							refined_points[i][k] += temp_point * refined_pairs.first.first;
 							refined_weights[i][k] += temp_weight * refined_pairs.first.first;
 							// If an equal bf exists but this one has the point itself as the ref_orig_ind
-							if (ref_orig_ind == i) refine_indexes[i][k] = i;
+							if (ref_orig_inds[0] == i) refine_indexes[i][k] = { i };
+							if (refine_indexes[i][k][0] != i) {
+								refine_indexes[i][k].insert(refine_indexes[i][k].end(),
+									ref_orig_inds.begin(), ref_orig_inds.end());
+							}
 							exists = true;
 							jmax--;
 							actualAddedToOther = true;
@@ -1150,7 +1162,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						blend_functions[i].insert(blend_functions[i].begin() + j, blend_pair);
 						refined_points[i].insert(refined_points[i].begin() + j, temp_point * refined_pairs.first.first);
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.first.first);
-						refine_indexes[i].insert(refine_indexes[i].begin() + j, ref_orig_ind);
+						refine_indexes[i].insert(refine_indexes[i].begin() + j, ref_orig_inds);
 						bf = blend_functions[i][j];
 					}
 
@@ -1159,8 +1171,11 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
 					if (bringBackMode) {
-						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first, orig_ind_refine_orig);
-						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first, orig_ind_refine_orig);
+						for each (int refine_orig in ref_orig_inds)
+						{
+							updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first, indsInOrig[refine_orig]);
+							updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first, indsInOrig[refine_orig]);
+						}
 					}
 
 					//refine the blend function
@@ -1178,7 +1193,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						blend_functions[ref_ind].push_back(blend_pair);
 						refined_points[ref_ind].push_back(temp_point * refined_pairs.second.first);
 						refined_weights[ref_ind].push_back(temp_weight * refined_pairs.second.first);
-						refine_indexes[ref_ind].push_back(ref_orig_ind);
+						refine_indexes[ref_ind].push_back(ref_orig_inds);
 					}
 					else {
 						bool exists = false;
@@ -1188,7 +1203,10 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
 								refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
 								refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
-								//refine_indexes doesnt need to be updated
+								if (refine_indexes[ref_ind][k][0] != i) {
+									refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
+										ref_orig_inds.begin(), ref_orig_inds.end());
+								}
 								exists = true;
 								break;
 							}
@@ -1198,7 +1216,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							blend_functions[ref_ind].push_back(blend_pair);
 							refined_points[ref_ind].push_back(temp_point * refined_pairs.second.first);
 							refined_weights[ref_ind].push_back(temp_weight * refined_pairs.second.first);
-							refine_indexes[ref_ind].push_back(ref_orig_ind);
+							refine_indexes[ref_ind].push_back(ref_orig_inds);
 						}
 					}
 				}
@@ -1242,8 +1260,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					blend_functions[i].erase(blend_functions[i].begin() + j);
 					Vec temp_point = refined_points[i][j];
 					double temp_weight = refined_weights[i][j];
-					int ref_orig_ind = refine_indexes[i][j];
-					int orig_ind_refine_orig = (ref_orig_ind == i) ? indsInOrig[i] : indsInOrig[ref_orig_ind];
+					std::vector<int> ref_orig_inds = refine_indexes[i][j];
 					refined_points[i].erase(refined_points[i].begin() + j);
 					refined_weights[i].erase(refined_weights[i].begin() + j);
 					refine_indexes[i].erase(refine_indexes[i].begin() + j);
@@ -1256,7 +1273,11 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							refined_points[i][k] += temp_point * refined_pairs.second.first;
 							refined_weights[i][k] += temp_weight * refined_pairs.second.first;
 							// If an equal bf exists but this one has the point itself as the ref_orig_ind
-							if (ref_orig_ind == i) refine_indexes[i][k] = i;
+							if (ref_orig_inds[0] == i) refine_indexes[i][k] = { i };
+							if (refine_indexes[i][k][0] != i) {
+								refine_indexes[i][k].insert(refine_indexes[i][k].end(),
+									ref_orig_inds.begin(), ref_orig_inds.end());
+							}
 							exists = true;
 							jmax--;
 							actualAddedToOther = true;
@@ -1268,7 +1289,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						blend_functions[i].insert(blend_functions[i].begin() + j, blend_pair);
 						refined_points[i].insert(refined_points[i].begin() + j, temp_point * refined_pairs.second.first);
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.second.first);
-						refine_indexes[i].insert(refine_indexes[i].begin() + j, ref_orig_ind);
+						refine_indexes[i].insert(refine_indexes[i].begin() + j, ref_orig_inds);
 						bf = blend_functions[i][j];
 					}
 
@@ -1277,8 +1298,11 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
 					if (bringBackMode) {
-						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first, orig_ind_refine_orig);
-						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first, orig_ind_refine_orig);
+						for each (int refine_orig in ref_orig_inds)
+						{
+							updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first, indsInOrig[refine_orig]);
+							updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first, indsInOrig[refine_orig]);
+						}
 					}
 
 					//refine the blend function
@@ -1296,7 +1320,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						blend_functions[ref_ind].push_back(blend_pair);
 						refined_points[ref_ind].push_back(temp_point * refined_pairs.first.first);
 						refined_weights[ref_ind].push_back(temp_weight * refined_pairs.first.first);
-						refine_indexes[ref_ind].push_back(ref_orig_ind);
+						refine_indexes[ref_ind].push_back(ref_orig_inds);
 					}
 					else {
 						bool exists = false;
@@ -1306,7 +1330,10 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
 								refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
 								refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
-								//refine_indexes doesnt need to be updated
+								if (refine_indexes[ref_ind][k][0] != i) {
+									refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
+										ref_orig_inds.begin(), ref_orig_inds.end());
+								}
 								exists = true;
 								break;
 							}
@@ -1316,7 +1343,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							blend_functions[ref_ind].push_back(blend_pair);
 							refined_points[ref_ind].push_back(temp_point * refined_pairs.first.first);
 							refined_weights[ref_ind].push_back(temp_weight * refined_pairs.first.first);
-							refine_indexes[ref_ind].push_back(ref_orig_ind);
+							refine_indexes[ref_ind].push_back(ref_orig_inds);
 						}
 					}
 				}
@@ -1360,8 +1387,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					blend_functions[i].erase(blend_functions[i].begin() + j);
 					Vec temp_point = refined_points[i][j];
 					double temp_weight = refined_weights[i][j];
-					int ref_orig_ind = refine_indexes[i][j];
-					int orig_ind_refine_orig = (ref_orig_ind == i) ? indsInOrig[i] : indsInOrig[ref_orig_ind];
+					std::vector<int> ref_orig_inds = refine_indexes[i][j];
 					refined_points[i].erase(refined_points[i].begin() + j);
 					refined_weights[i].erase(refined_weights[i].begin() + j);
 					refine_indexes[i].erase(refine_indexes[i].begin() + j);
@@ -1374,7 +1400,11 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							refined_points[i][k] += temp_point * refined_pairs.first.first;
 							refined_weights[i][k] += temp_weight * refined_pairs.first.first;
 							// If an equal bf exists but this one has the point itself as the ref_orig_ind
-							if (ref_orig_ind == i) refine_indexes[i][k] = i;
+							if (ref_orig_inds[0] == i) refine_indexes[i][k] = { i };
+							if (refine_indexes[i][k][0] != i) {
+								refine_indexes[i][k].insert(refine_indexes[i][k].end(),
+									ref_orig_inds.begin(), ref_orig_inds.end());
+							}
 							exists = true;
 							jmax--;
 							j--;
@@ -1386,7 +1416,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						blend_functions[i].insert(blend_functions[i].begin() + j, blend_pair);
 						refined_points[i].insert(refined_points[i].begin() + j, temp_point * refined_pairs.first.first);
 						refined_weights[i].insert(refined_weights[i].begin() + j, temp_weight * refined_pairs.first.first);
-						refine_indexes[i].insert(refine_indexes[i].begin() + j, ref_orig_ind);
+						refine_indexes[i].insert(refine_indexes[i].begin() + j, ref_orig_inds);
 						bf = blend_functions[i][j];
 					}
 
@@ -1395,8 +1425,11 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
 					if (bringBackMode) {
-						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first, orig_ind_refine_orig);
-						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first, orig_ind_refine_orig);
+						for each (int refine_orig in ref_orig_inds)
+						{
+							updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first, indsInOrig[refine_orig]);
+							updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first, indsInOrig[refine_orig]);
+						}
 					}
 
 					//refine the blend function
@@ -1414,7 +1447,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						blend_functions[ref_ind].push_back(blend_pair);
 						refined_points[ref_ind].push_back(temp_point * refined_pairs.second.first);
 						refined_weights[ref_ind].push_back(temp_weight * refined_pairs.second.first);
-						refine_indexes[ref_ind].push_back(ref_orig_ind);
+						refine_indexes[ref_ind].push_back(ref_orig_inds);
 					}
 					else {
 						bool exists = false;
@@ -1424,7 +1457,10 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
 								refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
 								refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
-								//refine_indexes doesnt need to be updated
+								if (refine_indexes[ref_ind][k][0] != i) {
+									refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
+										ref_orig_inds.begin(), ref_orig_inds.end());
+								}
 								exists = true;
 								break;
 							}
@@ -1434,7 +1470,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							blend_functions[ref_ind].push_back(blend_pair);
 							refined_points[ref_ind].push_back(temp_point * refined_pairs.second.first);
 							refined_weights[ref_ind].push_back(temp_weight * refined_pairs.second.first);
-							refine_indexes[ref_ind].push_back(ref_orig_ind);
+							refine_indexes[ref_ind].push_back(ref_orig_inds);
 						}
 					}
 				}
@@ -1706,6 +1742,19 @@ void MyViewer::updateOrigs(double s, double t, int act_ind, int orig_min_row) {
 	}
 }
 
+void incrementRefineIndexes(std::vector<std::vector<std::vector<int>>>& indexes, int new_ind) {
+	std::for_each(indexes.begin(), indexes.end(),
+		[new_ind](std::vector<std::vector<int>>& ref_ind_vecs) {
+		std::for_each(ref_ind_vecs.begin(), ref_ind_vecs.end(),
+			[new_ind](std::vector<int> &ref_ind_vec) {
+			for (auto it = ref_ind_vec.begin(); it != ref_ind_vec.end(); ++it)
+			{
+				if (*it >= new_ind) *it = *it + 1;
+			}
+		});
+	});
+}
+
 std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_index, std::vector<double> new_si, std::vector<double> new_ti, std::vector<int> excluded, std::vector<int> newlyAdded) {
 	ti_array.insert(ti_array.begin() + new_index, new_ti);
 	//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
@@ -1719,14 +1768,9 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 	//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
 	std::vector<double> new_weight = { 0.0 };
 	refined_weights.insert(refined_weights.begin() + new_index, new_weight);
-	std::for_each(refine_indexes.begin(), refine_indexes.end(),
-		[new_index](std::vector<int>& ref_ind_vec) {
-		for (auto it = ref_ind_vec.begin(); it != ref_ind_vec.end(); ++it)
-		{
-			if (*it >= new_index) *it = *it + 1;
-		}
-	});
-	refine_indexes.insert(refine_indexes.begin() + new_index, { new_index });
+	incrementRefineIndexes(refine_indexes, new_index);
+	std::vector<int> new_ind_vec = {new_index};
+	refine_indexes.insert(refine_indexes.begin() + new_index, { new_ind_vec });
 	tspline_control_points.insert(tspline_control_points.begin() + new_index, new_point[0]);
 	weights.insert(weights.begin() + new_index, new_weight[0]);
 
@@ -1819,14 +1863,9 @@ void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int
 	//initialize wieght with 0, so that it can be checked afterwards in order to delete it when updated with others
 	std::vector<double> new_weight = { 0.0 };
 	refined_weights.insert(refined_weights.begin() + new_ind, new_weight);
-	std::for_each(refine_indexes.begin(), refine_indexes.end(),
-		[new_ind](std::vector<int>& ref_ind_vec) {
-		for (auto it = ref_ind_vec.begin(); it != ref_ind_vec.end(); ++it)
-		{
-			if (*it >= new_ind) *it = *it + 1;
-		}
-	});
-	refine_indexes.insert(refine_indexes.begin() + new_ind, { new_ind });
+	incrementRefineIndexes(refine_indexes, new_ind);
+	std::vector<int> new_ind_vec = { new_ind };
+	refine_indexes.insert(refine_indexes.begin() + new_ind, { new_ind_vec });
 	tspline_control_points.insert(tspline_control_points.begin() + new_ind, new_point[0]);
 	weights.insert(weights.begin() + new_ind, new_weight[0]);
 	std::vector<int> excluded = { new_ind };
@@ -3195,7 +3234,7 @@ void MyViewer::bezierToTspline() {
 		JA[i] = i % 4;
 		refined_points[i] = { tspline_control_points[i] };
 		blend_functions[i] = { std::pair<std::vector<double>,std::vector<double>>(si_array[i],ti_array[i]) };
-		refine_indexes[i] = { i };
+		refine_indexes[i] = { { i } };
 	}
 
 	IA.resize(5);
@@ -3393,7 +3432,7 @@ void MyViewer::bringToOrig() {
 	M = MatrixXd::Zero(orig_cps.size(), baseIndsInOrig.size());
 	for (int i = 0; i < baseIndsInOrig.size(); ++i) {
 		M(baseIndsInOrig[i], i) = 1.0;
-		refine_indexes[i] = {i};
+		refine_indexes[i] = { {i} };
 	}
 	std::fill(self_multiplier_for_temps.begin(), self_multiplier_for_temps.end(), 1.0);
 
@@ -3600,13 +3639,7 @@ void sortArr(std::vector<std::pair<int, int> >& vp, std::vector<int> vec)
 }
 
 void MyViewer::calcPointsBasedOnM() {
-	/*M(7, 2) = 0;
-	M(16, 17) = 0.25;
-	M(17, 18) = 0.25;
-	M(16, 12) = 0;
-	M(16, 13) = 0.5;
-	M(17, 13) = 0;
-	M(16, 18) = 0.25;*/
+	M(20, 5) = 0.375;
  	MatrixXd origcp_m = MatrixXd(orig_cps.size(), 4);
 	// VectorXd origw_v = VectorXd(orig_cps.size());
 	for (int i = 0; i < orig_cps.size(); ++i) {
