@@ -796,7 +796,7 @@ int MyViewer::getRowOfExisting(int index, bool inOrig) {
 
 //Returns with true,i if row exists, false otherwise
 //maxFromEquals false if we take the first equal as return row, true if we take the last
-std::pair<bool, int> MyViewer::getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals) {
+std::pair<bool, int> MyViewer::getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals, int new_ind_to_be) {
 	//If inserting horizontally
 	if (first_row == sec_row) return std::pair<bool, int>(true, first_row);
 	//If inserting vertically
@@ -805,7 +805,8 @@ std::pair<bool, int> MyViewer::getRowOfNew(int first_row, int sec_row, double t,
 	else {
 		int i = first_row + 1;
 		for (; sec_row >= i; i++) {
-			if (!maxFromEquals && ti_array[IA[i]][2] == t) return std::pair<bool, int>(true, i == sec_row ? i - 1 : i);
+			// TODO consider case when after last one, but in i. row
+			if (!maxFromEquals && ti_array[IA[i]][2] == t && new_ind_to_be < IA[i+1]) return std::pair<bool, int>(true, i == sec_row ? i - 1 : i);
 			if (ti_array[IA[i]][2] > t) {
 				bool existing_row = ti_array[IA[i - 1]][2] == t;
 				return std::pair<bool, int>(existing_row, existing_row ? i - 1 : i);
@@ -885,7 +886,7 @@ int MyViewer::getIndex(int first_row, int sec_row, int act_col, double t, bool m
 }
 
 void MyViewer::updateIA(int first_row, int sec_row, double t, bool maxFromEquals, int new_ind) {
-	auto row = getRowOfNew(first_row, sec_row, t, maxFromEquals);
+	auto row = getRowOfNew(first_row, sec_row, t, maxFromEquals, new_ind);
 	bool new_row_in_bbmode = false;
 	if (bringBackMode) {
 		int orig_row = rowsInOrig[new_ind];
