@@ -85,7 +85,7 @@ private:
   std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
   std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded);
   std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol2(std::vector<int> excluded, std::vector<int> newlyAdded);
-  void updateOrigs(double s, double t, int act_ind, int orig_min_row);
+  void updateOrigs(double s, double t, int act_ind, int orig_min_row, int orig_min_col);
   std::pair<std::vector<int>, std::vector<int>> insertAfterViol(int new_index, std::vector<double> new_si, std::vector<double> new_ti, std::vector<int> excluded, std::vector<int> newlyAdded);
   void checkViolations(std::vector<int> excluded);
   std::vector<int> indicesOfColumn(int colindex, bool inOrig = false);

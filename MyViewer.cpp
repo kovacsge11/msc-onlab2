@@ -1019,8 +1019,12 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							// If an equal bf exists but this one has the point itself as the ref_orig_ind
 							if (ref_orig_inds[0] == i) refine_indexes[i][k] = { i };
 							else if (refine_indexes[i][k][0] != i){
-								refine_indexes[i][k].insert(refine_indexes[i][k].end(),
-									ref_orig_inds.begin(), ref_orig_inds.end());
+								std::copy_if(ref_orig_inds.begin(), ref_orig_inds.end(), std::back_inserter(refine_indexes[i][k]),
+									[&refine_indexes = refine_indexes, i, k](auto val) {
+									return std::find(refine_indexes[i][k].begin(), refine_indexes[i][k].end(), val) == refine_indexes[i][k].end();
+								});
+								/*refine_indexes[i][k].insert(refine_indexes[i][k].end(),
+									ref_orig_inds.begin(), ref_orig_inds.end());*/
 							}
 							exists = true;
 							jmax--;
@@ -1074,9 +1078,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.first.second) {
 								refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
 								refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
-								if (refine_indexes[ref_ind][k][0] != i) {
-									refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
-										ref_orig_inds.begin(), ref_orig_inds.end());
+								if (refine_indexes[ref_ind][k][0] != ref_ind) {
+									std::copy_if(ref_orig_inds.begin(), ref_orig_inds.end(), std::back_inserter(refine_indexes[ref_ind][k]),
+										[&refine_indexes = refine_indexes, ref_ind, k](auto val) {
+										return std::find(refine_indexes[ref_ind][k].begin(), refine_indexes[ref_ind][k].end(), val) ==
+											refine_indexes[ref_ind][k].end();
+									});
+									/*refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
+										ref_orig_inds.begin(), ref_orig_inds.end());*/
 								}
 								exists = true;
 								break;
@@ -1149,8 +1158,12 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							// If an equal bf exists but this one has the point itself as the ref_orig_ind
 							if (ref_orig_inds[0] == i) refine_indexes[i][k] = { i };
 							if (refine_indexes[i][k][0] != i) {
-								refine_indexes[i][k].insert(refine_indexes[i][k].end(),
-									ref_orig_inds.begin(), ref_orig_inds.end());
+								std::copy_if(ref_orig_inds.begin(), ref_orig_inds.end(), std::back_inserter(refine_indexes[i][k]),
+									[&refine_indexes = refine_indexes, i, k](auto val) {
+									return std::find(refine_indexes[i][k].begin(), refine_indexes[i][k].end(), val) == refine_indexes[i][k].end();
+								});
+								/*refine_indexes[i][k].insert(refine_indexes[i][k].end(),
+									ref_orig_inds.begin(), ref_orig_inds.end());*/
 							}
 							exists = true;
 							jmax--;
@@ -1204,9 +1217,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							if (temp_bf.first == bf.first && temp_bf.second == refined_pairs.second.second) {
 								refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
 								refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
-								if (refine_indexes[ref_ind][k][0] != i) {
-									refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
-										ref_orig_inds.begin(), ref_orig_inds.end());
+								if (refine_indexes[ref_ind][k][0] != ref_ind) {
+									std::copy_if(ref_orig_inds.begin(), ref_orig_inds.end(), std::back_inserter(refine_indexes[ref_ind][k]),
+										[&refine_indexes = refine_indexes, ref_ind, k](auto val) {
+										return std::find(refine_indexes[ref_ind][k].begin(), refine_indexes[ref_ind][k].end(), val) ==
+											refine_indexes[ref_ind][k].end();
+									});
+									/*refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
+										ref_orig_inds.begin(), ref_orig_inds.end());*/
 								}
 								exists = true;
 								break;
@@ -1276,8 +1294,12 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							// If an equal bf exists but this one has the point itself as the ref_orig_ind
 							if (ref_orig_inds[0] == i) refine_indexes[i][k] = { i };
 							if (refine_indexes[i][k][0] != i) {
-								refine_indexes[i][k].insert(refine_indexes[i][k].end(),
-									ref_orig_inds.begin(), ref_orig_inds.end());
+								std::copy_if(ref_orig_inds.begin(), ref_orig_inds.end(), std::back_inserter(refine_indexes[i][k]),
+									[&refine_indexes = refine_indexes, i, k](auto val) {
+									return std::find(refine_indexes[i][k].begin(), refine_indexes[i][k].end(), val) == refine_indexes[i][k].end();
+								});
+								/*refine_indexes[i][k].insert(refine_indexes[i][k].end(),
+									ref_orig_inds.begin(), ref_orig_inds.end());*/
 							}
 							exists = true;
 							jmax--;
@@ -1331,9 +1353,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							if (temp_bf.first == refined_pairs.first.second && temp_bf.second == bf.second) {
 								refined_points[ref_ind][k] += temp_point * refined_pairs.first.first;
 								refined_weights[ref_ind][k] += temp_weight * refined_pairs.first.first;
-								if (refine_indexes[ref_ind][k][0] != i) {
-									refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
-										ref_orig_inds.begin(), ref_orig_inds.end());
+								if (refine_indexes[ref_ind][k][0] != ref_ind) {
+									std::copy_if(ref_orig_inds.begin(), ref_orig_inds.end(), std::back_inserter(refine_indexes[ref_ind][k]),
+										[&refine_indexes = refine_indexes, ref_ind, k](auto val) {
+										return std::find(refine_indexes[ref_ind][k].begin(), refine_indexes[ref_ind][k].end(), val) ==
+											refine_indexes[ref_ind][k].end();
+									});
+									/*refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
+										ref_orig_inds.begin(), ref_orig_inds.end());*/
 								}
 								exists = true;
 								break;
@@ -1403,8 +1430,12 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							// If an equal bf exists but this one has the point itself as the ref_orig_ind
 							if (ref_orig_inds[0] == i) refine_indexes[i][k] = { i };
 							if (refine_indexes[i][k][0] != i) {
-								refine_indexes[i][k].insert(refine_indexes[i][k].end(),
-									ref_orig_inds.begin(), ref_orig_inds.end());
+								std::copy_if(ref_orig_inds.begin(), ref_orig_inds.end(), std::back_inserter(refine_indexes[i][k]),
+									[&refine_indexes = refine_indexes, i, k](auto val) {
+									return std::find(refine_indexes[i][k].begin(), refine_indexes[i][k].end(), val) == refine_indexes[i][k].end();
+								});
+								/*refine_indexes[i][k].insert(refine_indexes[i][k].end(),
+									ref_orig_inds.begin(), ref_orig_inds.end());*/
 							}
 							exists = true;
 							jmax--;
@@ -1458,9 +1489,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 							if (temp_bf.first == refined_pairs.second.second && temp_bf.second == bf.second) {
 								refined_points[ref_ind][k] += temp_point * refined_pairs.second.first;
 								refined_weights[ref_ind][k] += temp_weight * refined_pairs.second.first;
-								if (refine_indexes[ref_ind][k][0] != i) {
-									refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
-										ref_orig_inds.begin(), ref_orig_inds.end());
+								if (refine_indexes[ref_ind][k][0] != ref_ind) {
+									std::copy_if(ref_orig_inds.begin(), ref_orig_inds.end(), std::back_inserter(refine_indexes[ref_ind][k]),
+										[&refine_indexes = refine_indexes, ref_ind, k](auto val) {
+										return std::find(refine_indexes[ref_ind][k].begin(), refine_indexes[ref_ind][k].end(), val) ==
+											refine_indexes[ref_ind][k].end();
+									});
+									/*refine_indexes[ref_ind][k].insert(refine_indexes[ref_ind][k].end(),
+										ref_orig_inds.begin(), ref_orig_inds.end());*/
 								}
 								exists = true;
 								break;
@@ -1702,14 +1738,15 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 	return ret_pair;
 }
 
-void MyViewer::updateOrigs(double s, double t, int act_ind, int orig_min_row) {
+void MyViewer::updateOrigs(double s, double t, int act_ind, int orig_min_row, int orig_min_col) {
 	int first_orig = indsInOrig[act_ind - 1], sec_orig = indsInOrig[act_ind];
 
 	//If they are in same orig row
 	if (rowsInOrig[act_ind - 1] == rowsInOrig[act_ind]) {
 		int temp_ind = first_orig + 1;
-		while (origin_sarray[temp_ind][2] <= s && std::find(indsInOrig.begin(), indsInOrig.end(), temp_ind) == indsInOrig.end()) { temp_ind++; }
-		temp_ind--;
+		while (JAOrig[temp_ind] < orig_min_col || (origin_sarray[temp_ind][2] <= s &&
+			std::find(indsInOrig.begin(), indsInOrig.end(), temp_ind) == indsInOrig.end())) { temp_ind++; }
+		if(JAOrig[temp_ind] > orig_min_col) temp_ind--;
 		//TODO indsinorig duplicates
 		indsInOrig.emplace(indsInOrig.begin() + act_ind, temp_ind);
 		rowsInOrig.emplace(rowsInOrig.begin() + act_ind, rowsInOrig[act_ind - 1]);
@@ -1729,7 +1766,7 @@ void MyViewer::updateOrigs(double s, double t, int act_ind, int orig_min_row) {
 		while (origin_tarray[IAOrig[temp_row]][2] < t && temp_row < sec_row) { temp_row++; }
 
 		int temp_ind = (rowsInOrig[act_ind - 1] == temp_row) ? first_orig+1 : IAOrig[temp_row];
-		while ((origin_sarray[temp_ind][2] < s || (origin_sarray[temp_ind+1][2] == s &&
+		while (JAOrig[temp_ind] < orig_min_col || (origin_sarray[temp_ind][2] < s || (origin_sarray[temp_ind+1][2] == s &&
 			std::find(colsInOrig.begin(), colsInOrig.end(), JAOrig[temp_ind]) == colsInOrig.end())) &&
 			temp_ind < IAOrig[temp_row + 1]-1) { temp_ind++; }
 		indsInOrig.emplace(indsInOrig.begin() + act_ind, temp_ind);
@@ -1798,7 +1835,13 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 		int row_of_next = getRowOfExisting(new_index+1);
 		//rowsInOirg[new_index] is the orig row of row_of_next
 		int orig_row = IA[act_row] == new_index ? ((act_row == row_of_next) ? rowsInOrig[new_index] : rowsInOrig[new_index]-1) : rowsInOrig[IA[act_row]];
-		updateOrigs(new_si[2], new_ti[2], new_index, orig_row);
+
+		int act_col = JA[new_index];
+		auto inds_of_col = indicesOfColumn(act_col);
+		int orig_col = (inds_of_col.size() == 1) ? colsInOrig[indicesOfColumn(act_col+1)[0]] - 1 :
+			(inds_of_col[0] == new_index ? colsInOrig[inds_of_col[1]] : colsInOrig[inds_of_col[0]]);
+
+		updateOrigs(new_si[2], new_ti[2], new_index, orig_row, orig_col);
 	}
 
 	std::pair<std::vector<int>, std::vector<int>> ret_pair(std::pair<std::vector<int>, std::vector<int>>(excluded, newlyAdded));
@@ -3347,7 +3390,7 @@ void MyViewer::bring4by4ToOrig() {
 				bool inserted_after_second = (ss_up.second.first == 4) && (getRowOfExisting(i + 1) == act_row)
 					&& (indsInOrig[i] + 1 == indsInOrig[i + 1]) && (si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]);
 				int new_index = inserted_after_second ? i + 2 : i + 1;
-				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i]);
+				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i], colsInOrig[i]);
 				insertRefined(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, inserted_after_second ? i + 1 : i, inserted_after_second ? i + 2 : i + 1);
 				viol = true;
 				break;
@@ -3367,7 +3410,7 @@ void MyViewer::bring4by4ToOrig() {
 					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
 					orig_min_row = first_row_in_orig + 1;
 				}
-				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row);
+				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row, colsInOrig[i]);
 				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index,
 					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 1] : i,
 					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
@@ -3461,7 +3504,7 @@ void MyViewer::bringToOrig() {
 				bool inserted_after_second = (ss_up.second.first == 4) && (getRowOfExisting(i + 1) == act_row)
 					&& (indsInOrig[i] + 1 == indsInOrig[i + 1]) && (si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]);
 				int new_index = inserted_after_second ? i + 2 : i + 1;
-				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i]);
+				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i], colsInOrig[i]);
 				insertRefined(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, inserted_after_second ? i + 1 : i, inserted_after_second ? i + 2 : i + 1);
 				viol = true;
 				break;
@@ -3481,7 +3524,7 @@ void MyViewer::bringToOrig() {
 					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
 					orig_min_row = first_row_in_orig + 1;
 				}
-				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row);
+				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row, colsInOrig[i]);
 				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index,
 					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 1] : i,
 					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 2] : col_inds[indInCol + 1]);
