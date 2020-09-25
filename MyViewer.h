@@ -92,13 +92,13 @@ private:
   int getIndex(int first_row, int sec_row, int act_col, double t, bool maxFromEquals);
   std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals, int new_ind_to_be);
   int getRowOfExisting(int index, bool inOrig = false);
-  std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s, bool maxFromEquals);
+  std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s, bool maxFromEquals, bool use_orig_ind, int new_ind_to_be);
   void updateIA(int first_row, int sec_col, double t, bool maxFromEquals, int new_ind);
-  void updateJA(int first_col, int sec_col, int new_ind, double s, bool maxFromEquals);
+  void updateJA(int first_col, int sec_col, int new_ind, double s, bool maxFromEquals, bool use_orig_ind);
   void deleteFromIA(int del_ind);
   void deleteFromJA(int del_ind);
   bool edgeExists(int first_ind, int sec_ind);
-  void insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind);
+  void insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind, bool use_orig_inds_for_JA);
   std::pair<bool, double> checkOpposite(int act_row, int act_col, double s, double t, bool horizontal_insertion, int new_index, double epsilon);
   void fit4by4Bezier(std::vector<Vec> S);
   void generatePointsAndFit();
