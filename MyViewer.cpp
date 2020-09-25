@@ -1046,11 +1046,8 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
 					if (bringBackMode) {
-						for each (int refine_orig in ref_orig_inds)
-						{
-							updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first, indsInOrig[refine_orig]);
-							updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first, indsInOrig[refine_orig]);
-						}
+						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first, ref_orig_inds);
+						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first, ref_orig_inds);
 					}
 
 					//refine the blend function
@@ -1185,10 +1182,9 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
 					if (bringBackMode) {
-						for each (int refine_orig in ref_orig_inds)
-						{
-							updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first, indsInOrig[refine_orig]);
-							updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first, indsInOrig[refine_orig]);
+						if (bringBackMode) {
+							updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first, ref_orig_inds);
+							updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first, ref_orig_inds);
 						}
 					}
 
@@ -1321,11 +1317,8 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
 					if (bringBackMode) {
-						for each (int refine_orig in ref_orig_inds)
-						{
-							updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first, indsInOrig[refine_orig]);
-							updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first, indsInOrig[refine_orig]);
-						}
+						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.first.first, ref_orig_inds);
+						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.second.first, ref_orig_inds);
 					}
 
 					//refine the blend function
@@ -1457,11 +1450,8 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
 					if (bringBackMode) {
-						for each (int refine_orig in ref_orig_inds)
-						{
-							updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first, indsInOrig[refine_orig]);
-							updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first, indsInOrig[refine_orig]);
-						}
+						updateM(indsInOrig[i], indsInOrig[ref_ind], refined_pairs.second.first, ref_orig_inds);
+						updateM(indsInOrig[i], indsInOrig[i], refined_pairs.first.first, ref_orig_inds);
 					}
 
 					//refine the blend function
@@ -3310,17 +3300,21 @@ void MyViewer::colorDistances(std::string origFileName) {
 }
 
 //Update M, refinement from origInd1 to origInd2 with value
-void MyViewer::updateM(int origInd1, int origInd2, double value, int origIndRefineOrig) {
-	auto base_it = std::find(baseIndsInOrig.begin(), baseIndsInOrig.end(), origIndRefineOrig);
-	bool is_first_in_base = base_it != baseIndsInOrig.end();
-	if (is_first_in_base) {
-		int base_ind = std::distance(baseIndsInOrig.begin(), base_it);
-		if (origInd1 == origInd2) M(origInd1, base_ind) *= value;
-		else M(origInd2, base_ind) += M(origInd1, base_ind) * value;
-	}
-	else {
-		if (origInd1 == origInd2) self_multiplier_for_temps[origInd1] *= value;
-		else M.row(origInd2) += self_multiplier_for_temps[origInd1] * M.row(origInd1) * value;
+void MyViewer::updateM(int origInd1, int origInd2, double value, std::vector<int>& refineOrigs) {
+	for each (int refineOrig in refineOrigs)
+	{
+		int origIndRefineOrig = indsInOrig[refineOrig];
+		auto base_it = std::find(baseIndsInOrig.begin(), baseIndsInOrig.end(), origIndRefineOrig);
+		bool is_first_in_base = base_it != baseIndsInOrig.end();
+		if (is_first_in_base) {
+			int base_ind = std::distance(baseIndsInOrig.begin(), base_it);
+			if (origInd1 == origInd2) M(origInd1, base_ind) *= value;
+			else M(origInd2, base_ind) += M(origInd1, base_ind) * value;
+		}
+		else {
+			if (origInd1 == origInd2) self_multiplier_for_temps[origInd1] *= value;
+			else M.row(origInd2) += self_multiplier_for_temps[origInd1] * M.row(origInd1) * value;
+		}
 	}
 }
 

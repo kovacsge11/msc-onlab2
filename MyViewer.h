@@ -104,7 +104,7 @@ private:
   void generatePointsAndFit();
   void bezierToTspline();
   void colorDistances(std::string origFileName);
-  void updateM(int origInd1, int origInd2, double value, int origIndRefineOrig);
+  void updateM(int origInd1, int origInd2, double value, std::vector<int>& origIndRefineOrig);
   void bring4by4ToOrig();
   void bringToOrig();
   void calcPointsBasedOnM();
