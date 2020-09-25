@@ -3677,9 +3677,7 @@ void sortArr(std::vector<std::pair<int, int> >& vp, std::vector<int> vec)
 }
 
 void MyViewer::calcPointsBasedOnM() {
-	M(20, 5) = 0.375;
  	MatrixXd origcp_m = MatrixXd(orig_cps.size(), 4);
-	// VectorXd origw_v = VectorXd(orig_cps.size());
 	for (int i = 0; i < orig_cps.size(); ++i) {
 		origcp_m(i, 0) = orig_cps[i][0];
 		origcp_m(i, 1) = orig_cps[i][1];
