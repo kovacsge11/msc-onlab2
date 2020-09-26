@@ -796,7 +796,7 @@ int MyViewer::getRowOfExisting(int index, bool inOrig) {
 
 //Returns with true,i if row exists, false otherwise
 //maxFromEquals false if we take the first equal as return row, true if we take the last
-std::pair<bool, int> MyViewer::getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals, int new_ind_to_be) {
+std::pair<bool, int> MyViewer::getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals, bool use_orig_ind, int new_ind_to_be) {
 	//If inserting horizontally
 	if (first_row == sec_row) return std::pair<bool, int>(true, first_row);
 	//If inserting vertically
@@ -805,8 +805,9 @@ std::pair<bool, int> MyViewer::getRowOfNew(int first_row, int sec_row, double t,
 	else {
 		int i = first_row + 1;
 		for (; sec_row >= i; i++) {
-			// TODO consider case when after last one, but in i. row
-			if (!maxFromEquals && ti_array[IA[i]][2] == t && new_ind_to_be < IA[i+1]) return std::pair<bool, int>(true, i == sec_row ? i - 1 : i);
+			// TODO consider case when after last one, but in i. row and orig inds not used
+			if (!maxFromEquals && ti_array[IA[i]][2] == t && (use_orig_ind || new_ind_to_be < IA[i+1]) && 
+				(!use_orig_ind || rowsInOrig[new_ind_to_be] == rowsInOrig[IA[i]])) return std::pair<bool, int>(true, i == sec_row ? i - 1 : i);
 			if (ti_array[IA[i]][2] > t) {
 				bool existing_row = ti_array[IA[i - 1]][2] == t;
 				return std::pair<bool, int>(existing_row, existing_row ? i - 1 : i);
@@ -885,8 +886,8 @@ int MyViewer::getIndex(int first_row, int sec_row, int act_col, double t, bool m
 	}
 }
 
-void MyViewer::updateIA(int first_row, int sec_row, double t, bool maxFromEquals, int new_ind) {
-	auto row = getRowOfNew(first_row, sec_row, t, maxFromEquals, new_ind);
+void MyViewer::updateIA(int first_row, int sec_row, double t, bool maxFromEquals, int new_ind, bool use_orig_ind) {
+	auto row = getRowOfNew(first_row, sec_row, t, maxFromEquals, use_orig_ind, new_ind);
 	bool new_row_in_bbmode = false;
 	if (bringBackMode) {
 		int orig_row = rowsInOrig[new_ind];
@@ -985,7 +986,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						double new_value = ts_down.second.first == 1 ? ts_down.second.second : bf.second[1];
 						int new_index = getIndex(ts_down.first.second.first - 1, act_row, act_col, new_value, true);
 						updateJA(act_col, act_col, new_index, bf.first[2], false, false);
-						updateIA(ts_down.first.second.first - 1, act_row, new_value, true, new_index);
+						updateIA(ts_down.first.second.first - 1, act_row, new_value, true, new_index, false);
 						std::vector<double> new_ti = { bf.second[0], bf.second[0], new_value, bf.second[2], bf.second[3] };
 
 						auto ret_pair = insertAfterViol(new_index, bf.first, new_ti, excluded, newlyAdded);
@@ -1121,7 +1122,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						double new_value = ts_up.second.first == 3 ? ts_up.second.second : bf.second[3];
 						int new_index = getIndex(act_row, ts_up.first.second.first + 1, act_col, new_value, false);
 						updateJA(act_col, act_col, new_index, bf.first[2], false, false);
-						updateIA(act_row, ts_up.first.second.first + 1, new_value, false, new_index);
+						updateIA(act_row, ts_up.first.second.first + 1, new_value, false, new_index, false);
 						std::vector<double> new_ti = { bf.second[1], bf.second[2], new_value, bf.second[4], bf.second[4] };
 
 						auto ret_pair = insertAfterViol(new_index, bf.first, new_ti, excluded, newlyAdded);
@@ -1256,7 +1257,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						double new_value = ss_down.second.first == 1 ? ss_down.second.second : bf.first[1];
 						int new_index = i;
 						updateJA(ss_down.first.second.first - 1, act_col, new_index, new_value, true, false);
-						updateIA(act_row, act_row, bf.second[2], true, new_index);
+						updateIA(act_row, act_row, bf.second[2], true, new_index, false);
 						std::vector<double> new_si = { bf.first[0], bf.first[0], new_value, bf.first[2], bf.first[3] };
 
 						auto ret_pair = insertAfterViol(new_index, new_si, bf.second, excluded, newlyAdded);
@@ -1389,7 +1390,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						//Two cases: no point and first s violated or no point but only the second s violated
 						double new_value = ss_up.second.first == 3 ? ss_up.second.second : bf.first[3];
 						updateJA(act_col, ss_up.first.second.first + 1, new_index, new_value, false, false);
-						updateIA(act_row, act_row, bf.second[2], false, new_index);
+						updateIA(act_row, act_row, bf.second[2], false, new_index, false);
 						std::vector<double> new_si = { bf.first[1], bf.first[2], new_value, bf.first[4], bf.first[4] };
 
 						auto ret_pair = insertAfterViol(new_index, new_si, bf.second, excluded, newlyAdded);
@@ -1531,7 +1532,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					if (ts_down.second.first == 1) {
 						new_index = getIndex(ts_down.first.second.first, act_row, act_col, bf.second[ts_down.second.first], !bringBackMode);
 						updateJA(act_col, act_col, new_index, bf.first[2], !bringBackMode, false);
-						updateIA(ts_down.first.second.first, act_row, bf.second[ts_down.second.first], !bringBackMode, new_index);
+						updateIA(ts_down.first.second.first, act_row, bf.second[ts_down.second.first], !bringBackMode, new_index, false);
 						new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[2], bf.second[3] };
 					}
 					//if inserting with 2 below the middle point
@@ -1542,7 +1543,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						if (bf.second[0] == bf.second[1] && act_row - ts_down.first.second.first > 1) {
 							new_index = getIndex(ts_down.first.second.first, act_row, act_col, bf.second[1], !bringBackMode);
 							updateJA(act_col, act_col, new_index, bf.first[2], !bringBackMode, false);
-							updateIA(ts_down.first.second.first, act_row, bf.second[1], !bringBackMode, new_index);
+							updateIA(ts_down.first.second.first, act_row, bf.second[1], !bringBackMode, new_index, false);
 							new_ti = { ts_down.second.second, ts_down.second.second, bf.second[1], bf.second[2], bf.second[3] };
 						}
 						//If there is no point in the first t down which doesn't cause violation but the second down causes a violation
@@ -1550,13 +1551,13 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						else if (act_vec == col_inds.begin() || getRowOfExisting(*(act_vec - 1)) != ts_down.first.second.first) {
 							new_index = getIndex(ts_down.first.second.second, act_row, act_col, bf.second[1], !bringBackMode);
 							updateJA(act_col, act_col, new_index, bf.first[2], !bringBackMode, false);
-							updateIA(ts_down.first.second.second, act_row, bf.second[1], !bringBackMode, new_index);
+							updateIA(ts_down.first.second.second, act_row, bf.second[1], !bringBackMode, new_index, false);
 							new_ti = { ts_down.second.second, ts_down.second.second, bf.second[1], bf.second[2], bf.second[3] };
 						}
 						else {
 							new_index = getIndex(ts_down.first.second.second, ts_down.first.second.first, act_col, bf.second[ts_down.second.first], !bringBackMode);
 							updateJA(act_col, act_col, new_index, bf.first[2], !bringBackMode, false);
-							updateIA(ts_down.first.second.second, ts_down.first.second.first, bf.second[ts_down.second.first], !bringBackMode, new_index);
+							updateIA(ts_down.first.second.second, ts_down.first.second.first, bf.second[ts_down.second.first], !bringBackMode, new_index, false);
 							new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[1], bf.second[2] };
 						}
 					}
@@ -1582,7 +1583,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					if (ts_up.second.first == 3) {
 						new_index = getIndex(act_row, ts_up.first.second.first, act_col, bf.second[ts_up.second.first], false);
 						updateJA(act_col, act_col, new_index, bf.first[2], false, false);
-						updateIA(act_row, ts_up.first.second.first, bf.second[ts_up.second.first], false, new_index);
+						updateIA(act_row, ts_up.first.second.first, bf.second[ts_up.second.first], false, new_index, false);
 						new_ti = { bf.second[1], bf.second[2], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
 					}
 					//if inserting with 2 above the middle point
@@ -1593,7 +1594,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						if (bf.second[3] == bf.second[4] && ts_up.first.second.first - act_row > 1) {
 							new_index = getIndex(act_row, ts_up.first.second.first, act_col, bf.second[3], false);
 							updateJA(act_col, act_col, new_index, bf.first[2], false, false);
-							updateIA(act_row, ts_up.first.second.first, bf.second[3], false, new_index);
+							updateIA(act_row, ts_up.first.second.first, bf.second[3], false, new_index, false);
 							new_ti = { bf.second[1], bf.second[2], bf.second[3], ts_up.second.second, ts_up.second.second };
 						}
 						//If there is no point in the first t up which doesn't cause violation but the second up causes a violation
@@ -1601,13 +1602,13 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						else if (act_vec == col_inds.end() - 1 || getRowOfExisting(*(act_vec + 1)) != ts_up.first.second.first) {
 							new_index = getIndex(act_row, ts_up.first.second.second, act_col, bf.second[3], false);
 							updateJA(act_col, act_col, new_index, bf.first[2], false, false);
-							updateIA(act_row, ts_up.first.second.second, bf.second[3], false, new_index);
+							updateIA(act_row, ts_up.first.second.second, bf.second[3], false, new_index, false);
 							new_ti = { bf.second[1], bf.second[2], bf.second[3], ts_up.second.second, ts_up.second.second };
 						}
 						else {
 							new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, bf.second[ts_up.second.first], false);
 							updateJA(act_col, act_col, new_index, bf.first[2], false, false);
-							updateIA(ts_up.first.second.first, ts_up.first.second.second, bf.second[ts_up.second.first], false, new_index);
+							updateIA(ts_up.first.second.first, ts_up.first.second.second, bf.second[ts_up.second.first], false, new_index, false);
 							new_ti = { bf.second[2], bf.second[3], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
 						}
 					}
@@ -1632,7 +1633,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					if (ss_down.second.first == 1) {
 						new_index = i;
 						updateJA(ss_down.first.second.first, act_col, new_index, bf.first[ss_down.second.first], !bringBackMode, false);
-						updateIA(act_row, act_row, bf.second[2], !bringBackMode, new_index);
+						updateIA(act_row, act_row, bf.second[2], !bringBackMode, new_index, false);
 						new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[2], bf.first[3] };
 					}
 					//if inserting with 2 below the middle point
@@ -1641,7 +1642,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						if (bf.first[0] == bf.first[1] && act_col - ss_down.first.second.first > 1) {
 							new_index = i;
 							updateJA(ss_down.first.second.first, act_col, new_index, bf.first[1], !bringBackMode, false);
-							updateIA(act_row, act_row, bf.second[2], !bringBackMode, new_index);
+							updateIA(act_row, act_row, bf.second[2], !bringBackMode, new_index, false);
 							new_si = { ss_down.second.second, ss_down.second.second, bf.first[1], bf.first[2], bf.first[3] };
 						}
 						//If there is no point in the first s down which doesn't cause violation but the second down causes a violation
@@ -1649,14 +1650,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						else if (i == IA[act_row] || JA[i - 1] != ss_down.first.second.first) {
 							new_index = i;
 							updateJA(ss_down.first.second.second, act_col, new_index, bf.first[1], !bringBackMode, false);
-							updateIA(act_row, act_row, bf.second[2], !bringBackMode, new_index);
+							updateIA(act_row, act_row, bf.second[2], !bringBackMode, new_index, false);
 							new_si = { ss_down.second.second, ss_down.second.second, bf.first[1], bf.first[2], bf.first[3] };
 						}
 						else {
 							//If no point on the first s down, then i else i-1
 							new_index = (getRowOfExisting(i - 1) == act_row && si_array[i - 1][2] >= bf.first[ss_down.second.first]) ? i - 1 : i;
 							updateJA(ss_down.first.second.second, ss_down.first.second.first, new_index, bf.first[ss_down.second.first], !bringBackMode, false);
-							updateIA(act_row, act_row, bf.second[2], !bringBackMode, new_index);
+							updateIA(act_row, act_row, bf.second[2], !bringBackMode, new_index, false);
 							new_si = { ss_down.second.second, ss_down.second.second, bf.first[ss_down.second.first], bf.first[1], bf.first[2] };
 						}
 					}
@@ -1681,7 +1682,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					if (ss_up.second.first == 3) {
 						new_index = i + 1;
 						updateJA(act_col, ss_up.first.second.first, new_index, bf.first[ss_up.second.first], false, false);
-						updateIA(act_row, act_row, bf.second[2], false, new_index);
+						updateIA(act_row, act_row, bf.second[2], false, new_index, false);
 						new_si = { bf.first[1], bf.first[2], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
 					}
 					//if inserting with 2 above the middle point
@@ -1690,7 +1691,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						if (bf.first[3] == bf.first[4] && ss_up.first.second.first - act_col > 1) {
 							new_index = i + 1;
 							updateJA(act_col, ss_up.first.second.first, new_index, bf.first[3], false, false);
-							updateIA(act_row, act_row, bf.second[2], false, new_index);
+							updateIA(act_row, act_row, bf.second[2], false, new_index, false);
 							new_si = { bf.first[1], bf.first[2], bf.first[3], ss_up.second.second, ss_up.second.second };
 						}
 						//If there is no point in the first s up which doesn't cause violation but the second up causes a violation
@@ -1698,14 +1699,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						else if (i + 1 == IA[act_row + 1] || JA[i + 1] != ss_up.first.second.first) {
 							new_index = i + 1;
 							updateJA(act_col, ss_up.first.second.second, new_index, bf.first[3], false, false);
-							updateIA(act_row, act_row, bf.second[2], false, new_index);
+							updateIA(act_row, act_row, bf.second[2], false, new_index, false);
 							new_si = { bf.first[1], bf.first[2], bf.first[3], ss_up.second.second, ss_up.second.second };
 						}
 						else {
 							//If no point on the first s up, then i+1 else i+2
 							new_index = (getRowOfExisting(i + 1) == act_row && si_array[i + 1][2] <= bf.first[ss_up.second.first]) ? i + 2 : i + 1;
 							updateJA(ss_up.first.second.first, ss_up.first.second.second, new_index, bf.first[ss_up.second.first], false, false);
-							updateIA(act_row, act_row, bf.second[2], false, new_index);
+							updateIA(act_row, act_row, bf.second[2], false, new_index, false);
 							new_si = { bf.first[2], bf.first[3], bf.first[ss_up.second.first], ss_up.second.second, ss_up.second.second };
 						}
 					}
@@ -1734,11 +1735,9 @@ void MyViewer::updateOrigs(double s, double t, int act_ind, int orig_min_row, in
 	//If they are in same orig row
 	if (rowsInOrig[act_ind - 1] == rowsInOrig[act_ind]) {
 		int temp_ind = first_orig + 1;
-		// getRowOfExisting(temp_ind, true) == rowsInOrig[act_ind] && 
-		while ((JAOrig[temp_ind] < orig_min_col) || (origin_sarray[temp_ind][2] <= s &&
+		while (getRowOfExisting(temp_ind, true) == rowsInOrig[act_ind] && (JAOrig[temp_ind] < orig_min_col) || (origin_sarray[temp_ind][2] <= s &&
 			std::find(indsInOrig.begin(), indsInOrig.end(), temp_ind) == indsInOrig.end())) { temp_ind++; }
-		// || getRowOfExisting(temp_ind, true) != rowsInOrig[act_ind]
-		if(JAOrig[temp_ind] > orig_min_col) temp_ind--;
+		if(JAOrig[temp_ind] > orig_min_col || getRowOfExisting(temp_ind, true) != rowsInOrig[act_ind]) temp_ind--;
 		//TODO indsinorig duplicates
 		indsInOrig.emplace(indsInOrig.begin() + act_ind, temp_ind);
 		rowsInOrig.emplace(rowsInOrig.begin() + act_ind, rowsInOrig[act_ind - 1]);
@@ -1883,7 +1882,7 @@ std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<
 
 void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind, bool use_orig_inds_for_JA) {
 	//last paramater could be both false and true(?)
-	updateIA(getRowOfExisting(first_ind), getRowOfExisting(sec_ind), t, false, new_ind);
+	updateIA(getRowOfExisting(first_ind), getRowOfExisting(sec_ind), t, false, new_ind, use_orig_inds_for_JA);
 	//last paramater could be both false and true(?)
 	updateJA(JA[first_ind], JA[sec_ind], new_ind, s, bringBackMode, use_orig_inds_for_JA);
 	std::vector<double> new_ti = { 0, 0, t, 0, 0 };
@@ -2156,7 +2155,7 @@ void MyViewer::postSelection(const QPoint& p) {
 			if (!mid_insert) {
 				//Update JA and IA temporarily
 				updateJA(JA[index_pair.first], JA[index_pair.second], new_index, new_s, false, false);  //last parameter could be both(?)
-				updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t, false, new_index); //last parameter could be both(?)
+				updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t, false, new_index, false); //last parameter could be both(?)
 				updateEdgesTemporarily(false, new_index);
 
 				act_row = getRowOfExisting(new_index);
@@ -2316,7 +2315,7 @@ void MyViewer::postSelection(const QPoint& p) {
 			if (!mid_insert) {
 				//Update JA and IA temporarily
 				updateJA(JA[index_pair.first], JA[index_pair.second], new_index, new_s, false, false); //last parameter could be both(?)
-				updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t, false, new_index); //last parameter could be both(?)
+				updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t, false, new_index, false); //last parameter could be both(?)
 				updateEdgesTemporarily(false, new_index);
 
 				int act_row = getRowOfExisting(new_index);
@@ -2435,7 +2434,7 @@ void MyViewer::postSelection(const QPoint& p) {
 			//Update JA
 			JA.insert(JA.begin() + new_index, act_col);
 			//Update IA too
-			updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t, false, new_index); //last parameter could be both(?)
+			updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t, false, new_index, false); //last parameter could be both(?)
 
 			//Update neighbouring ti-s
 			ti_array[index_pair.first][3] = new_t;
@@ -3712,17 +3711,17 @@ void MyViewer::insertMaxDistanced() {
 	//If new in same orig_row as second one
 	if (rowsInOrig[new_ind] == orig_row) {
 		act_row = getRowOfExisting(new_ind);
-		updateIA(act_row, act_row, new_t, false, new_ind);
+		updateIA(act_row, act_row, new_t, false, new_ind, false);
 	}
 	//If new in same orig_row as first one
 	else if (rowsInOrig[new_ind - 1] == orig_row) {
 		act_row = getRowOfExisting(new_ind - 1);
-		updateIA(act_row, act_row, new_t, false, new_ind);
+		updateIA(act_row, act_row, new_t, false, new_ind, false);
 	}
 	//If between two rows
 	else {
 		act_row = getRowOfExisting(new_ind);
-		updateIA(getRowOfExisting(new_ind - 1), act_row, new_t, false, new_ind);
+		updateIA(getRowOfExisting(new_ind - 1), act_row, new_t, false, new_ind, false);
 		new_row = true;
 	}
 

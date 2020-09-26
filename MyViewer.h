@@ -90,10 +90,10 @@ private:
   void checkViolations(std::vector<int> excluded);
   std::vector<int> indicesOfColumn(int colindex, bool inOrig = false);
   int getIndex(int first_row, int sec_row, int act_col, double t, bool maxFromEquals);
-  std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals, int new_ind_to_be);
+  std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals, bool use_orig_ind, int new_ind_to_be);
   int getRowOfExisting(int index, bool inOrig = false);
   std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s, bool maxFromEquals, bool use_orig_ind, int new_ind_to_be);
-  void updateIA(int first_row, int sec_col, double t, bool maxFromEquals, int new_ind);
+  void updateIA(int first_row, int sec_col, double t, bool maxFromEquals, int new_ind, bool use_orig_ind);
   void updateJA(int first_col, int sec_col, int new_ind, double s, bool maxFromEquals, bool use_orig_ind);
   void deleteFromIA(int del_ind);
   void deleteFromJA(int del_ind);
