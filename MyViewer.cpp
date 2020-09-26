@@ -3586,7 +3586,8 @@ bool MyViewer::expandRectangleHorizontally(int act_col, int top_row, int bot_row
 		ind++;
 	}
 	ind--;
-
+	// When excluded on bottom row
+	if(col_inds[ind] == excluded) return true;
 	//Traverse through edges
 	do
 	{
@@ -3640,7 +3641,7 @@ std::pair<int, std::vector<int>> MyViewer::getFaceRectangle(int index, int act_r
 		if (left_col > act_col) --left_col;
 	}
 	else if (act_col < right_col && act_col > left_col) {
-		//Check whether on horizontal slicing edge of face
+		// Check whether on vertical slicing edge of face
 		if (!expandRectangleHorizontally(act_col, top_row, bot_row, index)) {
 			sliceCol = true;
 		}
