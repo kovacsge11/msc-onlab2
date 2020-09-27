@@ -1729,16 +1729,16 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 	return ret_pair;
 }
 
-void MyViewer::updateOrigs(double s, double t, int act_ind, int orig_min_row, int orig_min_col) {
+void MyViewer::updateOrigs(double s, double t, int act_ind, int orig_min_row, int orig_min_col, bool use_min_col_as_exact) {
 	int first_orig = indsInOrig[act_ind - 1], sec_orig = indsInOrig[act_ind];
 
 	//If they are in same orig row
 	if (rowsInOrig[act_ind - 1] == rowsInOrig[act_ind]) {
 		int temp_ind = first_orig + 1;
-		while (getRowOfExisting(temp_ind, true) == rowsInOrig[act_ind] && (JAOrig[temp_ind] < orig_min_col) || (origin_sarray[temp_ind][2] <= s &&
-			std::find(indsInOrig.begin(), indsInOrig.end(), temp_ind) == indsInOrig.end())) { temp_ind++; }
+		while (getRowOfExisting(temp_ind, true) == rowsInOrig[act_ind] && (!use_min_col_as_exact || JAOrig[temp_ind] < orig_min_col) &&
+			((JAOrig[temp_ind] < orig_min_col) || (origin_sarray[temp_ind][2] <= s &&
+			std::find(indsInOrig.begin(), indsInOrig.end(), temp_ind) == indsInOrig.end()))) { temp_ind++; }
 		if(JAOrig[temp_ind] > orig_min_col || getRowOfExisting(temp_ind, true) != rowsInOrig[act_ind]) temp_ind--;
-		//TODO indsinorig duplicates
 		indsInOrig.emplace(indsInOrig.begin() + act_ind, temp_ind);
 		rowsInOrig.emplace(rowsInOrig.begin() + act_ind, rowsInOrig[act_ind - 1]);
 		colsInOrig.emplace(colsInOrig.begin() + act_ind, JAOrig[temp_ind]);
@@ -1832,7 +1832,7 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 		int orig_col = (inds_of_col.size() == 1) ? colsInOrig[indicesOfColumn(act_col+1)[0]] - 1 :
 			(inds_of_col[0] == new_index ? colsInOrig[inds_of_col[1]] : colsInOrig[inds_of_col[0]]);
 
-		updateOrigs(new_si[2], new_ti[2], new_index, orig_row, orig_col);
+		updateOrigs(new_si[2], new_ti[2], new_index, orig_row, orig_col, true);
 	}
 
 	std::pair<std::vector<int>, std::vector<int>> ret_pair(std::pair<std::vector<int>, std::vector<int>>(excluded, newlyAdded));
@@ -3319,6 +3319,88 @@ void MyViewer::updateM(int origInd1, int origInd2, double value, std::vector<int
 	}
 }
 
+//In order to update M accordingly
+void MyViewer::bringBackIterations() {
+	//insert points until same knots->
+	//calculate difference
+	//color them accordingly
+	bool viol = false;
+	do {
+		viol = false;
+		for (int i = 0; i < tspline_control_points.size(); i++) {
+			int act_row = getRowOfExisting(i);
+			int act_col = JA[i];
+			int orig_ind = indsInOrig[i];
+			auto ss_up = checkSsUp(act_row, act_col, i, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
+			if (!ss_up.first.first) {
+				bool inserted_after_second = (ss_up.second.first == 4) && (getRowOfExisting(i + 1) == act_row)
+					&& ((indsInOrig[i] + 1 == indsInOrig[i + 1]) || si_array[i + 1][2] < origin_sarray[orig_ind][ss_up.second.first]);
+				int new_index = inserted_after_second ? i + 2 : i + 1;
+				updateOrigs(origin_sarray[orig_ind][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i], colsInOrig[i], false);
+				insertRefined(origin_sarray[orig_ind][ss_up.second.first], ti_array[i][2], new_index, inserted_after_second ? i + 1 : i, inserted_after_second ? i + 2 : i + 1, true);
+				viol = true;
+				break;
+			}
+			auto ts_up = checkTsUp(act_row, act_col, i, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
+			if (!ts_up.first.first) {
+				auto col_inds = indicesOfColumn(act_col);
+				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
+				int first_row_in_orig = rowsInOrig[IA[ts_up.first.second.first]];
+				bool wrong_at_4_still_needed_at_3 = origin_tarray[orig_ind][4] == ti_array[i][3] && rowsInOrig[i] + 1 != first_row_in_orig;
+				int new_index, orig_min_row;
+				if (ts_up.second.first == 3 || wrong_at_4_still_needed_at_3) {
+					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[orig_ind][ts_up.second.first], false);
+					orig_min_row = rowsInOrig[i] + 1;
+				}
+				else {
+					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[orig_ind][ts_up.second.first], false);
+					orig_min_row = first_row_in_orig + 1;
+				}
+				updateOrigs(si_array[i][2], origin_tarray[orig_ind][ts_up.second.first], new_index, orig_min_row, colsInOrig[i], false);
+				insertRefined(si_array[i][2], origin_tarray[orig_ind][ts_up.second.first], new_index,
+					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 1] : i,
+					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 2] : col_inds[indInCol + 1], true);
+				viol = true;
+				break;
+			}
+			auto ss_down = checkSsDown(act_row, act_col, i, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
+			if (!ss_down.first.first) {
+				bool inserted_after_second = (ss_down.second.first == 0) && (getRowOfExisting(i - 1) == act_row)
+					&& ((indsInOrig[i] - 1 == indsInOrig[i - 1]) || (si_array[i - 1][2] > origin_sarray[orig_ind][ss_down.second.first]));
+				int new_index = inserted_after_second ? i - 1 : i;
+				updateOrigs(origin_sarray[orig_ind][ss_down.second.first], ti_array[i][2], new_index,
+					rowsInOrig[i], colsInOrig[inserted_after_second ? i - 2 : i - 1], false);
+				insertRefined(origin_sarray[orig_ind][ss_down.second.first], ti_array[i][2], new_index, inserted_after_second ? i - 2 : i - 1, inserted_after_second ? i - 1 : i, true);
+				viol = true;
+				break;
+			}
+			auto ts_down = checkTsDown(act_row, act_col, i, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
+			if (!ts_down.first.first) {
+				auto col_inds = indicesOfColumn(act_col);
+				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
+				int first_row_in_orig = rowsInOrig[IA[ts_down.first.second.first]];
+				bool wrong_at_0_still_needed_at_1 = origin_tarray[orig_ind][0] == ti_array[i][1] && rowsInOrig[i] - 1 != first_row_in_orig;
+				int new_index, orig_min_row;
+				if (ts_down.second.first == 1 || wrong_at_0_still_needed_at_1) {
+					new_index = getIndex(act_row, ts_down.first.second.first, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
+					orig_min_row = rowsInOrig[i] - 1;
+				}
+				else {
+					new_index = getIndex(ts_down.first.second.first, ts_down.first.second.second, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
+					orig_min_row = first_row_in_orig - 1;
+				}
+				updateOrigs(si_array[i][2], origin_tarray[orig_ind][ts_down.second.first], new_index, orig_min_row, colsInOrig[i], false);
+				insertRefined(si_array[i][2], origin_tarray[orig_ind][ts_down.second.first], new_index,
+					ts_down.second.first == 0 && !wrong_at_0_still_needed_at_1 ? col_inds[indInCol - 2] : col_inds[indInCol - 1],
+					ts_down.second.first == 0 && !wrong_at_0_still_needed_at_1 ? col_inds[indInCol - 1] : i, true);
+				viol = true;
+				break;
+			}
+		}
+	} while (viol);
+}
+
+//In order to update M accordingly in case of fitting 4by4
 void MyViewer::bring4by4ToOrig() {
 	//Store original knot values
 	std::string origFileName = fileName;
@@ -3371,49 +3453,7 @@ void MyViewer::bring4by4ToOrig() {
 
 	bringBackMode = true;
 
-	//insert points until same knots->
-	//calculate difference
-	//color them accordingly
-	bool viol = false;
-	do {
-		viol = false;
-		for (int i = 0; i < tspline_control_points.size(); i++) {
-			int act_row = getRowOfExisting(i);
-			int act_col = JA[i];
-			auto ss_up = checkSsUp(act_row, act_col, i, origin_sarray[i], origin_tarray[i], 2, std::vector<int>());
-			if (!ss_up.first.first) {
-				bool inserted_after_second = (ss_up.second.first == 4) && (getRowOfExisting(i + 1) == act_row)
-					&& (indsInOrig[i] + 1 == indsInOrig[i + 1]) && (si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]);
-				int new_index = inserted_after_second ? i + 2 : i + 1;
-				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i], colsInOrig[i]);
-				insertRefined(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, inserted_after_second ? i + 1 : i, inserted_after_second ? i + 2 : i + 1, true);
-				viol = true;
-				break;
-			}
-			auto ts_up = checkTsUp(act_row, act_col, i, origin_sarray[i], origin_tarray[i], 2, std::vector<int>());
-			if (!ts_up.first.first) {
-				auto col_inds = indicesOfColumn(act_col);
-				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
-				int first_row_in_orig = rowsInOrig[IA[ts_up.first.second.first]];
-				bool wrong_at_4_still_needed_at_3 = origin_tarray[i][4] == ti_array[i][3] && rowsInOrig[i] + 1 != first_row_in_orig;
-				int new_index, orig_min_row;
-				if (ts_up.second.first == 3 || wrong_at_4_still_needed_at_3) {
-					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[i][ts_up.second.first], false);
-					orig_min_row = rowsInOrig[i] + 1;
-				}
-				else {
-					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
-					orig_min_row = first_row_in_orig + 1;
-				}
-				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row, colsInOrig[i]);
-				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index,
-					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 1] : i,
-					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 2] : col_inds[indInCol + 1], true);
-				viol = true;
-				break;
-			}
-		}
-	} while (viol);
+	bringBackIterations();
 
 	saveTSpline(fileName);
 
@@ -3464,7 +3504,7 @@ void MyViewer::bring4by4ToOrig() {
 	//calcPointsBasedOnM();
 }
 
-//In order to update M accordingly
+//In order to update M accordingly in case of max distance insertion
 void MyViewer::bringToOrig() {
 	distMode = false;
 	bringBackMode = true;
@@ -3488,46 +3528,7 @@ void MyViewer::bringToOrig() {
 	auto temp_siarray = si_array;
 	auto temp_tiarray = ti_array;
 
-	bool viol = false;
-	do {
-		viol = false;
-		for (int i = 0; i < tspline_control_points.size(); i++) {
-			int act_row = getRowOfExisting(i);
-			int act_col = JA[i];
-			auto ss_up = checkSsUp(act_row, act_col, i, origin_sarray[i], origin_tarray[i], 2, std::vector<int>());
-			if (!ss_up.first.first) {
-				bool inserted_after_second = (ss_up.second.first == 4) && (getRowOfExisting(i + 1) == act_row)
-					&& (indsInOrig[i] + 1 == indsInOrig[i + 1]) && (si_array[i + 1][2] <= origin_sarray[i][ss_up.second.first]);
-				int new_index = inserted_after_second ? i + 2 : i + 1;
-				updateOrigs(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i], colsInOrig[i]);
-				insertRefined(origin_sarray[i][ss_up.second.first], ti_array[i][2], new_index, inserted_after_second ? i + 1 : i, inserted_after_second ? i + 2 : i + 1, true);
-				viol = true;
-				break;
-			}
-			auto ts_up = checkTsUp(act_row, act_col, i, origin_sarray[i], origin_tarray[i], 2, std::vector<int>());
-			if (!ts_up.first.first) {
-				auto col_inds = indicesOfColumn(act_col);
-				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
-				int first_row_in_orig = rowsInOrig[IA[ts_up.first.second.first]];
-				bool wrong_at_4_still_needed_at_3 = origin_tarray[i][4] == ti_array[i][3] && rowsInOrig[i] + 1 != first_row_in_orig;
-				int new_index, orig_min_row;
-				if (ts_up.second.first == 3 || wrong_at_4_still_needed_at_3) {
-					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[i][ts_up.second.first], false);
-					orig_min_row = rowsInOrig[i] + 1;
-				}
-				else {
-					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[i][ts_up.second.first], false);
-					orig_min_row = first_row_in_orig + 1;
-				}
-				updateOrigs(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index, orig_min_row, colsInOrig[i]);
-				insertRefined(si_array[i][2], origin_tarray[i][ts_up.second.first], new_index,
-					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 1] : i,
-					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 2] : col_inds[indInCol + 1], true);
-				viol = true;
-				break;
-			}
-		}
-	} while (viol);
+	bringBackIterations();
 
 	fitDistances.clear();
 	for (int i = 0; i < tspline_control_points.size(); i++) {
