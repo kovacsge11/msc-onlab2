@@ -98,7 +98,8 @@ private:
   void deleteFromIA(int del_ind);
   void deleteFromJA(int del_ind);
   bool edgeExists(int first_ind, int sec_ind);
-  void insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind, bool use_orig_inds_for_JA);
+  void insertRefined(double s, double t, int new_ind, int first_row, int sec_row, int first_col,
+	  int sec_col, bool use_orig_inds_for_JA);
   std::pair<bool, double> checkOpposite(int act_row, int act_col, double s, double t, bool horizontal_insertion, int new_index, double epsilon);
   void fit4by4Bezier(std::vector<Vec> S);
   void generatePointsAndFit();

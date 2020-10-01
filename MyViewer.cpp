@@ -835,7 +835,6 @@ std::pair<bool, int> MyViewer::getColOfNew(int first_col, int sec_col, double s,
 		int col_start_ind_for_orig_cols = 0;
 		for (; sec_col >= i; i++) {
 			auto col_ind = indicesOfColumn(i);
-			// std::for_each(col_ind.begin(), col_ind.end(), [new_ind_to_be](int &n) { if(n >= new_ind_to_be) ++n; });
 			col_start_ind_for_orig_cols = col_ind[0] >= new_ind_to_be ? col_ind[0]+1 : col_ind[0];
 			
 			if((si_array[col_ind[0]][2] == s && use_orig_ind && colsInOrig[new_ind_to_be] == colsInOrig[col_start_ind_for_orig_cols]) ||
@@ -1829,13 +1828,16 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 	if (bringBackMode || distMode) {
 		int act_row = getRowOfExisting(new_index);
 		int row_of_next = getRowOfExisting(new_index+1);
-		//rowsInOirg[new_index] is the orig row of row_of_next
-		int orig_row = IA[act_row] == new_index ? ((act_row == row_of_next) ? rowsInOrig[new_index] : rowsInOrig[new_index]-1) : rowsInOrig[IA[act_row]];
+		// rowsInOirg[new_index] is the orig row of row_of_next; in the last case IA[act_row] is always smaller than new_index,
+		// hence there is no need to decrement it
+		int orig_row = IA[act_row] == new_index ? ((act_row == row_of_next) ? rowsInOrig[new_index] : rowsInOrig[new_index]-1) :
+			rowsInOrig[IA[act_row]];
 
 		int act_col = JA[new_index];
 		auto inds_of_col = indicesOfColumn(act_col);
-		int orig_col = (inds_of_col.size() == 1) ? colsInOrig[indicesOfColumn(act_col+1)[0]] - 1 :
-			(inds_of_col[0] == new_index ? colsInOrig[inds_of_col[1]] : colsInOrig[inds_of_col[0]]);
+		int orig_col = (inds_of_col.size() == 1) ? colsInOrig[indicesOfColumn(act_col+1)[0] > new_index ?
+			indicesOfColumn(act_col + 1)[0]-1 : indicesOfColumn(act_col + 1)[0]] - 1 :
+			(inds_of_col[0] == new_index ? colsInOrig[inds_of_col[1]-1] : colsInOrig[inds_of_col[0]]);
 
 		updateOrigs(new_si[2], new_ti[2], new_index, orig_row, orig_col, true);
 	}
@@ -1885,11 +1887,14 @@ std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<
 	return std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>>(first_pair, second_pair);
 }
 
-void MyViewer::insertRefined(double s, double t, int new_ind, int first_ind, int sec_ind, bool use_orig_inds_for_JA) {
-	//last paramater could be both false and true(?)
-	updateIA(getRowOfExisting(first_ind), getRowOfExisting(sec_ind), t, false, new_ind, use_orig_inds_for_JA);
-	//last paramater could be both false and true(?)
-	updateJA(JA[first_ind], JA[sec_ind], new_ind, s, bringBackMode, use_orig_inds_for_JA);
+void MyViewer::insertRefined(double s, double t, int new_ind, int first_row, int sec_row, int first_col,
+	int sec_col, bool use_orig_inds_for_JA) {
+	// last paramater could be both false and true(?)
+	// updateIA(getRowOfExisting(first_ind), getRowOfExisting(sec_ind), t, false, new_ind, use_orig_inds_for_JA);
+	updateIA(first_row, sec_row, t, false, new_ind, use_orig_inds_for_JA);
+	// last paramater could be both false and true(?)
+	// updateJA(JA[first_ind], JA[sec_ind], new_ind, s, bringBackMode, use_orig_inds_for_JA);
+	updateJA(first_col, sec_col, new_ind, s, bringBackMode, use_orig_inds_for_JA);
 	std::vector<double> new_ti = { 0, 0, t, 0, 0 };
 	ti_array.insert(ti_array.begin() + new_ind, new_ti);
 	std::vector<double> new_si = { 0, 0, s, 0, 0 };
@@ -2177,7 +2182,8 @@ void MyViewer::postSelection(const QPoint& p) {
 
 			//TODO visual feedback for changing keep_surface
 			if (keep_surface) {
-				insertRefined(new_s, new_t, new_index, index_pair.first, index_pair.second, false);
+				insertRefined(new_s, new_t, new_index, getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second),
+					JA[index_pair.first], JA[index_pair.second], false);
 				return;
 			}
 
@@ -2338,7 +2344,8 @@ void MyViewer::postSelection(const QPoint& p) {
 			}
 
 			if (keep_surface) {
-				insertRefined(new_s, new_t, new_index, index_pair.first, index_pair.second, false);
+				insertRefined(new_s, new_t, new_index, getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second),
+					JA[index_pair.first], JA[index_pair.second], false);
 				return;
 			}
 
@@ -3346,7 +3353,9 @@ void MyViewer::bringBackIterations() {
 					&& ((indsInOrig[i] + 1 == indsInOrig[i + 1]) || si_array[i + 1][2] < origin_sarray[orig_ind][ss_up.second.first]);
 				int new_index = inserted_after_second ? i + 2 : i + 1;
 				updateOrigs(origin_sarray[orig_ind][ss_up.second.first], ti_array[i][2], new_index, rowsInOrig[i], colsInOrig[i], false);
-				insertRefined(origin_sarray[orig_ind][ss_up.second.first], ti_array[i][2], new_index, inserted_after_second ? i + 1 : i, inserted_after_second ? i + 2 : i + 1, true);
+				insertRefined(origin_sarray[orig_ind][ss_up.second.first], ti_array[i][2], new_index, act_row, act_row,
+					inserted_after_second ? ss_up.first.second.first : act_col,
+					inserted_after_second ? ss_up.first.second.second : ss_up.first.second.first, true);
 				viol = true;
 				break;
 			}
@@ -3365,10 +3374,10 @@ void MyViewer::bringBackIterations() {
 					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[orig_ind][ts_up.second.first], false);
 					orig_min_row = first_row_in_orig + 1;
 				}
-				updateOrigs(si_array[i][2], origin_tarray[orig_ind][ts_up.second.first], new_index, orig_min_row, colsInOrig[i], false);
+				updateOrigs(si_array[i][2], origin_tarray[orig_ind][ts_up.second.first], new_index, orig_min_row, colsInOrig[i], true);
 				insertRefined(si_array[i][2], origin_tarray[orig_ind][ts_up.second.first], new_index,
-					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 1] : i,
-					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? col_inds[indInCol + 2] : col_inds[indInCol + 1], true);
+					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? ts_up.first.second.first : act_row,
+					ts_up.second.first == 4 && !wrong_at_4_still_needed_at_3 ? ts_up.first.second.second : ts_up.first.second.first, act_col, act_col, true);
 				viol = true;
 				break;
 			}
@@ -3379,7 +3388,9 @@ void MyViewer::bringBackIterations() {
 				int new_index = inserted_after_second ? i - 1 : i;
 				updateOrigs(origin_sarray[orig_ind][ss_down.second.first], ti_array[i][2], new_index,
 					rowsInOrig[i], colsInOrig[inserted_after_second ? i - 2 : i - 1], false);
-				insertRefined(origin_sarray[orig_ind][ss_down.second.first], ti_array[i][2], new_index, inserted_after_second ? i - 2 : i - 1, inserted_after_second ? i - 1 : i, true);
+				insertRefined(origin_sarray[orig_ind][ss_down.second.first], ti_array[i][2], new_index, act_row, act_row,
+					inserted_after_second ? ss_down.first.second.second : ss_down.first.second.first,
+					inserted_after_second ? ss_down.first.second.first : act_col, true);
 				viol = true;
 				break;
 			}
@@ -3398,10 +3409,10 @@ void MyViewer::bringBackIterations() {
 					new_index = getIndex(ts_down.first.second.first, ts_down.first.second.second, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
 					orig_min_row = first_row_in_orig - 1;
 				}
-				updateOrigs(si_array[i][2], origin_tarray[orig_ind][ts_down.second.first], new_index, orig_min_row, colsInOrig[i], false);
+				updateOrigs(si_array[i][2], origin_tarray[orig_ind][ts_down.second.first], new_index, orig_min_row, colsInOrig[i], true);
 				insertRefined(si_array[i][2], origin_tarray[orig_ind][ts_down.second.first], new_index,
-					ts_down.second.first == 0 && !wrong_at_0_still_needed_at_1 ? col_inds[indInCol - 2] : col_inds[indInCol - 1],
-					ts_down.second.first == 0 && !wrong_at_0_still_needed_at_1 ? col_inds[indInCol - 1] : i, true);
+					ts_down.second.first == 0 && !wrong_at_0_still_needed_at_1 ? ts_down.first.second.second : ts_down.first.second.first,
+					ts_down.second.first == 0 && !wrong_at_0_still_needed_at_1 ? ts_down.first.second.first : act_row, act_col, act_col, true);
 				viol = true;
 				break;
 			}
@@ -3808,7 +3819,8 @@ void MyViewer::insertMaxDistanced() {
 				baseIndsInOrig.emplace(baseIndsInOrig.begin() + new_ind1, origInd1);
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, ins_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col);
-				insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, botLeftAct, topLeftAct, true);
+				insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1,
+					getRowOfExisting(botLeftAct), getRowOfExisting(topLeftAct), JA[botLeftAct], JA[topLeftAct], true);
 			}
 
 			int origInd2 = IAOrig[ins_row] + right_col;
@@ -3830,7 +3842,8 @@ void MyViewer::insertMaxDistanced() {
 				baseIndsInOrig.emplace(baseIndsInOrig.begin() + new_ind2, origInd2);
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, ins_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind2, right_col);
-				insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, botRightAct, topRightAct, true);
+				insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2,
+					getRowOfExisting(botRightAct), getRowOfExisting(topRightAct), JA[botRightAct], JA[topRightAct], true);
 			}
 
 		}
@@ -3845,7 +3858,8 @@ void MyViewer::insertMaxDistanced() {
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind1, bot_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind1, left_col + (horLen + 1) / 2);
 				fitDistances[origInd1] = -1;
-				insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1, new_ind1 - 1, new_ind1, true);
+				insertRefined(origin_sarray[origInd1][2], origin_tarray[origInd1][2], new_ind1,
+					getRowOfExisting(new_ind1 - 1), getRowOfExisting(new_ind1), JA[new_ind1 - 1], JA[new_ind1], true);
 			}
 			//Inserting on middle of top face row
 			int origInd2 = topRight - (horLen) / 2;
@@ -3856,7 +3870,8 @@ void MyViewer::insertMaxDistanced() {
 				rowsInOrig.emplace(rowsInOrig.begin() + new_ind2, top_row);
 				colsInOrig.emplace(colsInOrig.begin() + new_ind2, left_col + (horLen + 1) / 2);
 				fitDistances[origInd2] = -1;
-				insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2, new_ind2 - 1, new_ind2, true);
+				insertRefined(origin_sarray[origInd2][2], origin_tarray[origInd2][2], new_ind2,
+					getRowOfExisting(new_ind2 - 1), getRowOfExisting(new_ind2), JA[new_ind2 - 1], JA[new_ind2], true);
 			}
 		}
 	}
