@@ -832,11 +832,16 @@ std::pair<bool, int> MyViewer::getColOfNew(int first_col, int sec_col, double s,
 	else {
 		int i = first_col + 1;
 		double last_s = 0.0;
+		int col_start_ind_for_orig_cols = 0;
 		for (; sec_col >= i; i++) {
 			auto col_ind = indicesOfColumn(i);
-			if (!maxFromEquals && si_array[col_ind[0]][2] == s && (!use_orig_ind || colsInOrig[new_ind_to_be] == colsInOrig[col_ind[0]])) return std::pair<bool, int>(true, i == sec_col ? i - 1 : i);
+			// std::for_each(col_ind.begin(), col_ind.end(), [new_ind_to_be](int &n) { if(n >= new_ind_to_be) ++n; });
+			col_start_ind_for_orig_cols = col_ind[0] >= new_ind_to_be ? col_ind[0]+1 : col_ind[0];
+			
+			if((si_array[col_ind[0]][2] == s && use_orig_ind && colsInOrig[new_ind_to_be] == colsInOrig[col_start_ind_for_orig_cols]) ||
+				(!maxFromEquals && si_array[col_ind[0]][2] == s && !use_orig_ind)) return std::pair<bool, int>(true, i == sec_col ? i - 1 : i);
 			if (si_array[col_ind[0]][2] > s) {
-				bool existing_col = last_s == s;
+				bool existing_col = last_s == s && (!use_orig_ind || colsInOrig[new_ind_to_be] == colsInOrig[col_start_ind_for_orig_cols]);
 				return std::pair<bool, int>(existing_col, existing_col ? i - 1 : i);
 			}
 			//If s is same as s of sec_col
@@ -2636,7 +2641,8 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 		else {
 			for (; si_array[temp_ind][2] <= s_vec[2] && getRowOfExisting(temp_ind) == act_row; temp_ind++) {
 			}
-			if (si_array[temp_ind - 1][2] < s_vec[2]) {
+			if (si_array[temp_ind - 1][2] < s_vec[2] ||
+				(act_row == getRowOfExisting(temp_ind-1) && JA[index] > JA[temp_ind - 1] && act_row == getRowOfExisting(temp_ind))) {
 				//Check if not the case of last in row having smaller s than the point with index "index"
 				if (si_array[temp_ind][2] > s_vec[2]) {
 					//check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -2760,7 +2766,8 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 		else {
 			for (; si_array[temp_ind][2] <= s_vec[2] && getRowOfExisting(temp_ind) == act_row; temp_ind++) {
 			}
-			if (si_array[temp_ind - 1][2] < s_vec[2]) {
+			if (si_array[temp_ind - 1][2] < s_vec[2] ||
+				(act_row == getRowOfExisting(temp_ind - 1) && JA[index] > JA[temp_ind - 1] && act_row == getRowOfExisting(temp_ind))) {
 				//Check if not the case of last in row having smaller s than our point
 				if (si_array[temp_ind][2] > s_vec[2]) {
 					//Check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -2887,7 +2894,8 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 			}
 			//If first in act_col has bigger t than our point
 			if (j == 0) {}
-			else if (ti_array[is_of_col[j - 1]][2] < t_vec[2]) {
+			else if (ti_array[is_of_col[j - 1]][2] < t_vec[2] ||
+				(getRowOfExisting(is_of_col[j - 1]) < act_row && is_of_col.size() > j)) {
 				//Check if not the case of last in col having smaller t than our point
 				if (ti_array[is_of_col[is_of_col.size() - 1]][2] > t_vec[2]) {
 					//Check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -3019,7 +3027,8 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 			}
 			//If first in act_col has bigger t than our point
 			if (j == 0) {}
-			else if (ti_array[is_of_col[j - 1]][2] < t_vec[2]) {
+			else if (ti_array[is_of_col[j - 1]][2] < t_vec[2] ||
+				(getRowOfExisting(is_of_col[j - 1]) < act_row && is_of_col.size() > j)) {
 				//Check if not the case of last in col having smaller t than our point
 				if (ti_array[is_of_col[is_of_col.size() - 1]][2] > t_vec[2]) {
 					//Check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -3057,7 +3066,7 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 					}
 				}
 			}
-			//the biggest of rows with same t in act_col is earlier than ours
+			//the biggest of rows with same t in act_col is earlier than ours and no point after that
 			else if (getRowOfExisting(is_of_col[j - 1]) < act_row) {}
 			else {
 				//This case occurs when ti_array[is_of_col[j-1]][2] == t_vec[2]
