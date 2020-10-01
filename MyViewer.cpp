@@ -3402,11 +3402,11 @@ void MyViewer::bringBackIterations() {
 				bool wrong_at_0_still_needed_at_1 = origin_tarray[orig_ind][0] == ti_array[i][1] && rowsInOrig[i] - 1 != first_row_in_orig;
 				int new_index, orig_min_row;
 				if (ts_down.second.first == 1 || wrong_at_0_still_needed_at_1) {
-					new_index = getIndex(act_row, ts_down.first.second.first, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
+					new_index = getIndex(ts_down.first.second.first, act_row, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
 					orig_min_row = rowsInOrig[i] - 1;
 				}
 				else {
-					new_index = getIndex(ts_down.first.second.first, ts_down.first.second.second, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
+					new_index = getIndex(ts_down.first.second.second, ts_down.first.second.first, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
 					orig_min_row = first_row_in_orig - 1;
 				}
 				updateOrigs(si_array[i][2], origin_tarray[orig_ind][ts_down.second.first], new_index, orig_min_row, colsInOrig[i], true);
