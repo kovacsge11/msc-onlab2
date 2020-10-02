@@ -806,7 +806,7 @@ std::pair<bool, int> MyViewer::getRowOfNew(int first_row, int sec_row, double t,
 		int i = first_row + 1;
 		for (; sec_row >= i; i++) {
 			// TODO consider case when after last one, but in i. row and orig inds not used
-			if (!maxFromEquals && ti_array[IA[i]][2] == t && (use_orig_ind || new_ind_to_be < IA[i+1]) && 
+			if (!maxFromEquals && ti_array[IA[i]][2] == t && (use_orig_ind || new_ind_to_be <= IA[i+1]) && 
 				(!use_orig_ind || rowsInOrig[new_ind_to_be] == rowsInOrig[IA[i]])) return std::pair<bool, int>(true, i == sec_row ? i - 1 : i);
 			if (ti_array[IA[i]][2] > t) {
 				bool existing_row = ti_array[IA[i - 1]][2] == t;
