@@ -961,7 +961,7 @@ bool MyViewer::edgeExists(int first_ind, int sec_ind) {
 }
 
 //returns true if violated and the newlyAdded vec refreshed
-std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded) {
+std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkForViol1(std::vector<int>& excluded, std::vector<int>& newlyAdded) {
 	bool violated = false;
 	int origExcSize = excluded.size();
 	int cpnum = tspline_control_points.size();
@@ -1514,7 +1514,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 	return std::pair<bool, std::pair<std::vector<int>, std::vector<int>>>(violated, std::pair<std::vector<int>, std::vector<int>>(excluded, newlyAdded));
 }
 
-std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkForViol2(std::vector<int> excluded, std::vector<int> newlyAdded) {
+std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkForViol2(std::vector<int>& excluded, std::vector<int>& newlyAdded) {
 	bool violated = false;
 	int cpnum = tspline_control_points.size();
 	for (int i = 0; i < cpnum; i++) {
@@ -1788,7 +1788,7 @@ void incrementRefineIndexes(std::vector<std::vector<std::vector<int>>>& indexes,
 	});
 }
 
-std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_index, std::vector<double> new_si, std::vector<double> new_ti, std::vector<int> excluded, std::vector<int> newlyAdded) {
+std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_index, std::vector<double>& new_si, std::vector<double>& new_ti, std::vector<int>& excluded, std::vector<int>& newlyAdded) {
 	ti_array.insert(ti_array.begin() + new_index, new_ti);
 	//Insert with new index into si_array - needs to be corrected anyway probably, so si of point i
 	si_array.insert(si_array.begin() + new_index, new_si);
@@ -1846,7 +1846,7 @@ std::pair<std::vector<int>, std::vector<int>> MyViewer::insertAfterViol(int new_
 	return ret_pair;
 }
 
-void MyViewer::checkViolations(std::vector<int> excluded) {
+void MyViewer::checkViolations(std::vector<int>& excluded) {
 	bool viol1 = false, viol2 = false;
 	std::vector<int> newlyAdded = { excluded };
 	do {
@@ -1875,7 +1875,7 @@ void MyViewer::checkViolations(std::vector<int> excluded) {
 }
 
 //Returns the two refined blend functions with the appropriate multipliers, first the one with c multiplier
-std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> MyViewer::refineBlend(std::vector<double> knot_vector, int ins_ind, double new_value) {
+std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> MyViewer::refineBlend(std::vector<double>& knot_vector, int ins_ind, double new_value) {
 	double c = ins_ind == 4 ? 1.0 : (new_value - knot_vector[0]) / (knot_vector[3] - knot_vector[0]);
 	double d = ins_ind == 1 ? 1.0 : (knot_vector[4] - new_value) / (knot_vector[4] - knot_vector[1]);
 	std::vector<double> first_vec(knot_vector.begin(), knot_vector.begin() + 4); //check:does this give back a 4 long vec??
@@ -2510,7 +2510,7 @@ void MyViewer::bernsteinAll(size_t n, double u, std::vector<double>& coeff) {
 	}
 }
 
-double MyViewer::cubicBSplineBasis(double param, std::vector<double> knots) {
+double MyViewer::cubicBSplineBasis(double param, std::vector<double>& knots) {
 	double u = param;
 	int p = 3, i;
 	int end = knots.size() - 2;
@@ -2624,7 +2624,7 @@ first.second.second: index of second found row
 second.first: index of insertion in t_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsDown(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	std::pair<int, int> ret_rows = { -1, -1 };
@@ -2748,7 +2748,7 @@ first.second.second: index of second found row
 second.first: index of insertion in t_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsUp(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
 	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
@@ -2873,7 +2873,7 @@ first.second.second: index of second found col
 second.first: index of insertion in s_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsDown(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
 	int i = act_col == 0 ? act_col : act_col - 1;
 	int num_found = 0;
 	std::pair<int, int> ret_cols = { -1, -1 };
@@ -3003,7 +3003,7 @@ first.second.second: index of second found col
 second.first: index of insertion in s_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsUp(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
 	int num_found = 0;
@@ -3186,10 +3186,9 @@ void removeEigenMColumn(MatrixXd& matrix, unsigned int colToRemove)
 }
 
 //Suppose we are looking at s,t in [0,1]
-void MyViewer::generatePointsAndFit() {
-	std::vector<Vec> points;
-	int n = 10;
+void MyViewer::generatePoints(std::vector<Vec>& points, int n) {
 	int cpnum = weights.size();
+	points.clear();
 
 	for (size_t i = 0; i < n; ++i) {
 		double t = (double)i / (double)(n - 1);
@@ -3206,65 +3205,133 @@ void MyViewer::generatePointsAndFit() {
 			points.push_back(p);
 		}
 	}
-
-	fit4by4Bezier(points);
 }
 
 //S the nxn incoming points
-void MyViewer::fit4by4Bezier(std::vector<Vec> S) {
-	int n = sqrt(S.size());
-	MatrixXd A(n * n, 16), B(n * n, 3);
-	std::vector<Vec> P(16, Vec(0.0, 0.0, 0.0));
-	std::vector<double> Bs, tempB;
-	for (int i = 0; i < n; i++) {
-		bernsteinAll(3, (float)i / float(n - 1), tempB);
-		Bs.insert(std::end(Bs), std::begin(tempB), std::end(tempB));
-	}
-
-	P[0] = S[0];
-	P[3] = S[n - 1];
-	P[12] = S[(n - 1) * n];
-	P[15] = S[n * n - 1];
-	for (int t = 0; t < n; t++) {
-		for (int s = 0; s < n; s++) {
-			B.row(n * t + s) << S[n * t + s][0], S[n * t + s][1], S[n * t + s][2];
-			for (int k = 0; k < 16; k++) {
-				A(n * t + s, k) = (Bs[s * 4 + (k % 4)] * Bs[t * 4 + (k / 4)]);
-			}
-		}
-	}
-
-	for (int t = 0; t < n; t++) {
-		for (int s = 0; s < n; s++) {
-			Vec temp = A(n * t + s, 0) * P[0] + A(n * t + s, 3) * P[3] + A(n * t + s, 12) * P[12] + A(n * t + s, 15) * P[15];
-			B(n * t + s, 0) -= temp[0];
-			B(n * t + s, 1) -= temp[1];
-			B(n * t + s, 2) -= temp[2];
-		}
-	}
-
-	removeEigenMColumn(A, 15);
-	removeEigenMColumn(A, 12);
-	removeEigenMColumn(A, 3);
-	removeEigenMColumn(A, 0);
-
-	MatrixXd X = A.colPivHouseholderQr().solve(B);
-	for (int i = 0; i < 12; i++) {
-		int pInd = i + 1;
-		if (i >= 2) pInd++;
-		if (i >= 10) pInd++;
-		P[pInd] = Vec(X(i, 0), X(i, 1), X(i, 2));
-	}
-
+void MyViewer::fit4by4Bezier(std::vector<Vec>& S) {
+	std::vector<Vec> new_cps(16, Vec(0.0, 0.0, 0.0));
+	std::vector<std::vector<double>> siarr_4by4 = { {0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
+		{0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
+		{0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
+		{0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1}
+	};
+	std::vector<std::vector<double>> tiarr_4by4 = { {0,0,0,0,1}, {0,0,0,0,1}, {0,0,0,0,1}, {0,0,0,0,1},
+		{0,0,0,1,1}, {0,0,0,1,1}, {0,0,0,1,1}, {0,0,0,1,1},
+		{0,0,1,1,1}, {0,0,1,1,1}, {0,0,1,1,1}, {0,0,1,1,1},
+		{0,1,1,1,1}, {0,1,1,1,1}, {0,1,1,1,1}, {0,1,1,1,1}
+	};
+	std::vector<int> corner_pts = {0, 3, 12, 15};
+	fitSpline(S, siarr_4by4, tiarr_4by4, corner_pts, new_cps);
+	
 	bezier_control_points.resize(16);
 	for (int i = 0; i < 16; i++) {
-		bezier_control_points[i] = P[(i % 4) * 4 + i / 4];
+		bezier_control_points[i] = new_cps[(i % 4) * 4 + i / 4];
 	}
 	degree[0] = 3;
 	degree[1] = 3;
 	model_type = ModelType::BEZIER_SURFACE;
 	/*saveBezier("fittedBezier.bzr");
 	openBezier("fittedBezier.bzr");*/
+}
+
+// Fits points with weight one, all other variables e.g. IA, JA etc. must be set beforehand
+void MyViewer::fitTSpline(std::vector<Vec>& S, std::vector<std::vector<double>>& param_si_array,
+	std::vector<std::vector<double>>& param_ti_array, std::vector<int>& corner_inds) {
+	int new_cp_num = param_si_array.size();
+	tspline_control_points.resize(new_cp_num, Vec(0.0, 0.0, 0.0));
+	fitSpline(S, param_si_array, param_ti_array, corner_inds, tspline_control_points);
+
+	weights.resize(new_cp_num, 1.0);
+	refined_weights.resize(new_cp_num, { 1.0 });
+	refined_points.resize(new_cp_num);
+	refine_indexes.resize(new_cp_num);
+	for (int i=0; i < new_cp_num; ++i) {
+		refined_points[i] = { tspline_control_points[i] };
+		refine_indexes[i] = { {i} };
+	}
+
+	model_type = ModelType::TSPLINE_SURFACE;
+	distMode = false;
+	distColorMode = false;
+	bringBackMode = false;
+}
+
+void MyViewer::fitSpline(std::vector<Vec>& S, std::vector<std::vector<double>>& param_si_array,
+	std::vector<std::vector<double>>& param_ti_array, std::vector<int>& corner_inds,
+	std::vector<Vec>& return_pts) {
+	int n = sqrt(S.size());
+	int param_cp_num = param_si_array.size();
+	MatrixXd A(n * n, param_cp_num), B(n * n, 3);
+
+	return_pts[corner_inds[0]] = S[0];
+	return_pts[corner_inds[1]] = S[n - 1];
+	return_pts[corner_inds[2]] = S[(n - 1) * n];
+	return_pts[corner_inds[3]] = S[n * n - 1];
+	for (int t = 0; t < n; t++) {
+		for (int s = 0; s < n; s++) {
+			B.row(n * t + s) << S[n * t + s][0], S[n * t + s][1], S[n * t + s][2];
+			for (int k = 0; k < param_cp_num; k++) {
+				A(n * t + s, k) = cubicBSplineBasis(static_cast<double>(s)/(static_cast<double>(n) - 1.0),
+					param_si_array[k]) * cubicBSplineBasis(static_cast<double>(t) / (static_cast<double>(n) - 1.0), param_ti_array[k]);
+			}
+		}
+	}
+
+	for (int t = 0; t < n; t++) {
+		for (int s = 0; s < n; s++) {
+			Vec temp = A(n * t + s, corner_inds[0]) * return_pts[corner_inds[0]] + A(n * t + s, corner_inds[1]) * return_pts[corner_inds[1]] +
+				A(n * t + s, corner_inds[2]) * return_pts[corner_inds[2]] + A(n * t + s, corner_inds[3]) * return_pts[corner_inds[3]];
+			B(n * t + s, 0) -= temp[0];
+			B(n * t + s, 1) -= temp[1];
+			B(n * t + s, 2) -= temp[2];
+		}
+	}
+
+	removeEigenMColumn(A, corner_inds[3]);
+	removeEigenMColumn(A, corner_inds[2]);
+	removeEigenMColumn(A, corner_inds[1]);
+	removeEigenMColumn(A, corner_inds[0]);
+
+	MatrixXd X = A.colPivHouseholderQr().solve(B);
+	for (int i = 0; i < param_cp_num-4; i++) {
+		int pInd = i + 1;
+		if (i >= corner_inds[1]-1) pInd++;
+		if (i >= corner_inds[2]-2) pInd++;
+		return_pts[pInd] = Vec(X(i, 0), X(i, 1), X(i, 2));
+	}
+}
+
+void MyViewer::exampleFitTSpline() {
+	std::vector<Vec> new_points;
+	generatePoints(new_points,10);
+
+	IA = {0, 4, 9, 12, 17, 22};
+	JA = {0, 1, 3, 4,
+		  0, 1, 2, 3, 4,
+		  2, 3, 4,
+		  0, 1, 2, 3, 4,
+		  0, 1, 2, 3, 4};
+	si_array = { {0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
+				 {0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
+				 {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
+				 {0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1}, 
+				 {0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1} };
+	ti_array = { {0,0,0,0,1}, {0,0,0,0,1}, {0,0,0,0,0.5}, {0,0,0,0,0.5},
+				 {0,0,0,1,1}, {0,0,0,1,1}, {0,0,0,0.5,1}, {0,0,0,0.5,1}, {0,0,0,0.5,1},
+				 {0,0,0.5,1,1}, {0,0,0.5,1,1}, {0,0,0.5,1,1},
+				 {0,0,1,1,1}, {0,0,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1},
+				 {0,1,1,1,1}, {0,1,1,1,1}, {0.5,1,1,1,1}, {0.5,1,1,1,1}, {0.5,1,1,1,1} };
+
+	blend_functions.resize(22);
+	for (int i = 0; i < 22; i++) {
+		std::pair<std::vector<double>, std::vector<double>> blend_pair(si_array[i], ti_array[i]);
+		blend_functions[i] = { blend_pair };
+	}
+
+	std::vector<int> corner_inds = {0,3,17,21};
+	fitTSpline(new_points, si_array, ti_array, corner_inds);
+	updateEdgeTopology();
+	updateMesh();
 }
 
 void MyViewer::bezierToTspline() {
@@ -3428,7 +3495,7 @@ void MyViewer::bring4by4ToOrig() {
 	origin_tarray = ti_array;
 	orig_cps = tspline_control_points;
 	orig_weights = weights;
-
+	
 	int max_col = JA[JA.size() - 1];
 	int max_row = IA.size() - 2;
 	//Pushing back indices of bezier in original surface
@@ -3468,7 +3535,10 @@ void MyViewer::bring4by4ToOrig() {
 
 	//fit4by4
 	//Convert fitted bezier into tspline
-	generatePointsAndFit();
+	
+	std::vector<Vec> sample_points;
+	generatePoints(sample_points, 10);
+	fit4by4Bezier(sample_points);
 	bezierToTspline();
 
 	bringBackMode = true;
@@ -3632,10 +3702,18 @@ std::pair<int, std::vector<int>> MyViewer::getFaceRectangle(int index, int act_r
 	ti_array.emplace(ti_array.begin() + index, std::vector<double>{-1, -1, t, -1, -1});
 	si_array.emplace(si_array.begin() + index, std::vector<double>{-1, -1, s, -1, -1});
 	//Find bottom row
-	auto ts_down = checkTsDown(act_row, act_col, index, { 0,0,s,1,1 }, { -1,-1,t,1,1 }, 1, {});
-	auto ts_up = checkTsUp(act_row, act_col, index, { 0,0,s,1,1 }, { 0,0,t,2,2 }, 1, {});
-	auto ss_down = checkSsDown(act_row, act_col, index, { -1,-1,s,1,1 }, { 0,0,t,1,1 }, 1, {});
-	auto ss_up = checkSsUp(act_row, act_col, index, { 0,0,s,2,2 }, { 0,0,t,1,1 }, 1, {});
+	std::vector<double> td_svec = { 0,0,s,1,1 };
+	std::vector<double> td_tvec = { -1,-1,t,1,1 };
+	auto ts_down = checkTsDown(act_row, act_col, index, td_svec, td_tvec, 1, {});
+	std::vector<double> tu_svec = { 0,0,s,1,1 };
+	std::vector<double> tu_tvec = { 0,0,t,2,2 };
+	auto ts_up = checkTsUp(act_row, act_col, index, tu_svec, tu_tvec, 1, {});
+	std::vector<double> sd_svec = { -1,-1,s,1,1 };
+	std::vector<double> sd_tvec = { 0,0,t,1,1 };
+	auto ss_down = checkSsDown(act_row, act_col, index, sd_svec, sd_tvec, 1, {});
+	std::vector<double> su_svec = { 0,0,s,2,2 };
+	std::vector<double> su_tvec = { 0,0,t,1,1 };
+	auto ss_up = checkSsUp(act_row, act_col, index, su_svec, su_tvec, 1, {});
 	int bot_row = ts_down.first.second.first;
 	int top_row = ts_up.first.second.first;
 	int left_col = ss_down.first.second.first;
@@ -3958,6 +4036,10 @@ void MyViewer::keyPressEvent(QKeyEvent* e) {
 			//TODO do this more user-friendly
 		case Qt::Key_E:
 			mid_insert = !mid_insert;
+			update();
+			break;
+		case Qt::Key_3:
+			exampleFitTSpline();
 			update();
 			break;
 		case Qt::Key_4:

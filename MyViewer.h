@@ -71,23 +71,23 @@ private:
   void generateBezierMesh();
 
   //TSpline
-  double cubicBSplineBasis(double param, std::vector<double> knots);
+  double cubicBSplineBasis(double param, std::vector<double>& knots);
   void generateTSplineMesh();
   void updateEdgeTopology();
   void updateEdgesTemporarily(bool remove, int temp_index);
   bool checkTSplineCorrectness();
   bool checkTSplineTopology();
-  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded);
-  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded);
-  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsDown(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded);
-  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsUp(int act_row, int act_col, int index, std::vector<double> s_vec, std::vector<double> t_vec, int viol_num, std::vector<int> excluded);
+  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsDown(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
+  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsUp(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
+  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsDown(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
+  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsUp(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
   std::pair<std::vector<int>, std::vector<double>> refineRowCol(double new_value, int row_col_ind, bool is_row);
-  std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double> knot_vec, int ins_ind, double new_value);
-  std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol1(std::vector<int> excluded, std::vector<int> newlyAdded);
-  std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol2(std::vector<int> excluded, std::vector<int> newlyAdded);
+  std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double>& knot_vec, int ins_ind, double new_value);
+  std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol1(std::vector<int>& excluded, std::vector<int>& newlyAdded);
+  std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol2(std::vector<int>& excluded, std::vector<int>& newlyAdded);
   void updateOrigs(double s, double t, int act_ind, int orig_min_row, int orig_min_col, bool use_min_col_as_exact);
-  std::pair<std::vector<int>, std::vector<int>> insertAfterViol(int new_index, std::vector<double> new_si, std::vector<double> new_ti, std::vector<int> excluded, std::vector<int> newlyAdded);
-  void checkViolations(std::vector<int> excluded);
+  std::pair<std::vector<int>, std::vector<int>> insertAfterViol(int new_index, std::vector<double>& new_si, std::vector<double>& new_ti, std::vector<int>& excluded, std::vector<int>& newlyAdded);
+  void checkViolations(std::vector<int>& excluded);
   std::vector<int> indicesOfColumn(int colindex, bool inOrig = false);
   int getIndex(int first_row, int sec_row, int act_col, double t, bool maxFromEquals);
   std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals, bool use_orig_ind, int new_ind_to_be);
@@ -101,8 +101,14 @@ private:
   void insertRefined(double s, double t, int new_ind, int first_row, int sec_row, int first_col,
 	  int sec_col, bool use_orig_inds_for_JA);
   std::pair<bool, double> checkOpposite(int act_row, int act_col, double s, double t, bool horizontal_insertion, int new_index, double epsilon);
-  void fit4by4Bezier(std::vector<Vec> S);
-  void generatePointsAndFit();
+  void fit4by4Bezier(std::vector<Vec>& S);
+  void fitTSpline(std::vector<Vec>& S, std::vector<std::vector<double>>& param_si_array,
+	  std::vector<std::vector<double>>& param_ti_array, std::vector<int>& corner_inds);
+  void fitSpline(std::vector<Vec>& S, std::vector<std::vector<double>>& param_si_array,
+	  std::vector<std::vector<double>>& param_ti_array, std::vector<int>& corner_inds,
+	  std::vector<Vec>& return_pts);
+  void exampleFitTSpline();
+  void generatePoints(std::vector<Vec>& points, int n);
   void bezierToTspline();
   void colorDistances(std::string origFileName);
   void updateM(int origInd1, int origInd2, double value, std::vector<int>& origIndRefineOrig);
