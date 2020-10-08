@@ -3385,7 +3385,7 @@ void MyViewer::colorDistances(std::string origFileName) {
 
 //Update M, refinement from origInd1 to origInd2 with value
 void MyViewer::updateM(int origInd1, int origInd2, double value, std::vector<int>& refineOrigs) {
-	for each (int refineOrig in refineOrigs)
+	for (int refineOrig : refineOrigs)
 	{
 		int origIndRefineOrig = indsInOrig[refineOrig];
 		auto base_it = std::find(baseIndsInOrig.begin(), baseIndsInOrig.end(), origIndRefineOrig);
