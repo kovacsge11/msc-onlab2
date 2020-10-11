@@ -974,7 +974,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 			for (int j = 0; j < jmax; j++) {
 				auto bf = blend_functions[i][j];
 				bool actualAddedToOther = false;
-				auto ts_down = checkTsDown(act_row, act_col, i, bf.first, bf.second, 1, newlyAdded);
+				auto ts_down = checkTsDown(act_row, act_col, bf.first, bf.second, 1, newlyAdded);
 				if (!ts_down.first.first) {
 					//Refine blend func of point i by inserting at ts_down.second.first + 1 value ts_down.second.second
 					violated = true;
@@ -1110,7 +1110,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 				else {
 					bf = blend_functions[i][j];
 				}
-				auto ts_up = checkTsUp(act_row, act_col, i, bf.first, bf.second, 1, newlyAdded);
+				auto ts_up = checkTsUp(act_row, act_col, bf.first, bf.second, 1, newlyAdded);
 				if (!ts_up.first.first) {
 					//Refine blend func of point i by inserting at ts_up.second.first value ts_up.second.second
 					violated = true;
@@ -1248,7 +1248,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 				else {
 					bf = blend_functions[i][j];
 				}
-				auto ss_down = checkSsDown(act_row, act_col, i, bf.first, bf.second, 1, newlyAdded);
+				auto ss_down = checkSsDown(act_row, act_col, bf.first, bf.second, 1, newlyAdded);
 				if (!ss_down.first.first) {
 					//Refine blend func of point i by inserting at ss_down.second.first + 1 value ss_down.second.second
 					violated = true;
@@ -1381,7 +1381,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 				else {
 					bf = blend_functions[i][j];
 				}
-				auto ss_up = checkSsUp(act_row, act_col, i, bf.first, bf.second, 1, newlyAdded);
+				auto ss_up = checkSsUp(act_row, act_col, bf.first, bf.second, 1, newlyAdded);
 				if (!ss_up.first.first) {
 					//Refine blend func of point i by inserting at ss_up.second.first value ss_up.second.second
 					violated = true;
@@ -1525,7 +1525,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 			for (int j = 0; j < blend_functions[i].size(); j++) {
 				auto bf = blend_functions[i][j];
 				bool needsOneMoreIter = false;
-				auto ts_down = checkTsDown(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
+				auto ts_down = checkTsDown(act_row, act_col, bf.first, bf.second, 2, newlyAdded);
 				if (!ts_down.first.first) {
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
 					violated = true;
@@ -1576,7 +1576,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 				}
 
-				auto ts_up = checkTsUp(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
+				auto ts_up = checkTsUp(act_row, act_col, bf.first, bf.second, 2, newlyAdded);
 				if (!ts_up.first.first) {
 					//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
 					violated = true;
@@ -1626,7 +1626,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					if (new_index <= i) i++;
 				}
 
-				auto ss_down = checkSsDown(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
+				auto ss_down = checkSsDown(act_row, act_col, bf.first, bf.second, 2, newlyAdded);
 				if (!ss_down.first.first) {
 					//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
 					violated = true;
@@ -1675,7 +1675,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 					if (new_index <= i) i++;
 				}
 
-				auto ss_up = checkSsUp(act_row, act_col, i, bf.first, bf.second, 2, newlyAdded);
+				auto ss_up = checkSsUp(act_row, act_col, bf.first, bf.second, 2, newlyAdded);
 				if (!ss_up.first.first) {
 					//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
 					violated = true;
@@ -1936,7 +1936,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 	std::vector<int> newlyAdded = { new_index };
 	if (horizontal_insertion) {
 		//Finding first t down according to Rule 1
-		auto t_down = checkTsDown(act_row, act_col, new_index, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
+		auto t_down = checkTsDown(act_row, act_col, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
 		int down_row = t_down.first.second.first;
 		//Check all points in row for close point
@@ -1952,7 +1952,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		}
 
 		//Do the same upwards, only update close value if its closer than the closest downwards
-		auto t_up = checkTsUp(act_row, act_col, new_index, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
+		auto t_up = checkTsUp(act_row, act_col, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
 		int up_row = t_up.first.second.first; //first should give true, should be existing row
 		//Check all points in row for close point
@@ -1968,7 +1968,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 	}
 	else {
 		//Finding first s down according to Rule 1
-		auto s_down = checkSsDown(act_row, act_col, new_index, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
+		auto s_down = checkSsDown(act_row, act_col, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same t exists
 		int down_col = s_down.first.second.first; //first should give true, should be existing col
 		//Check all points in col for close point
@@ -1985,7 +1985,7 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		}
 
 		//Do the same upwards, only update close value if its closer than the closest downwards
-		auto s_up = checkSsUp(act_row, act_col, new_index, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
+		auto s_up = checkSsUp(act_row, act_col, new_si, new_ti, 0, newlyAdded); //second.first should be 1/first check should give error/, first should be false
 		//Check if point with nearly same s exists
 		int up_col = s_up.first.second.first; //first should give true, should be existing col
 		col_indices = indicesOfColumn(up_col);
@@ -2510,9 +2510,9 @@ void MyViewer::bernsteinAll(size_t n, double u, std::vector<double>& coeff) {
 	}
 }
 
-double MyViewer::cubicBSplineBasis(double param, std::vector<double>& knots) {
+double MyViewer::bSplineBasis(double param, std::vector<double>& knots, int degree) {
 	double u = param;
-	int p = 3, i;
+	int i;
 	int end = knots.size() - 2;
 	for (int j = knots.size() - 2; j >= 0; j--) {
 		if (knots[j] >= knots[end + 1]) {
@@ -2527,10 +2527,10 @@ double MyViewer::cubicBSplineBasis(double param, std::vector<double>& knots) {
 		i = end;
 	else i = (std::upper_bound(knots.begin(), knots.end(), u) - knots.begin()) - 1;
 	std::vector<double> coeff;
-	coeff.resize(p + 1, 0.0);
+	coeff.resize(degree + 1, 0.0);
 	coeff[i] = 1.0;
 
-	for (int j = 1; j <= p; ++j)
+	for (int j = 1; j <= degree; ++j)
 		for (int k = 0; k < (knots.size() - 1) - j; ++k)
 			coeff[k] =
 			(coeff[k] && (knots[k + j] - knots[k]) != 0.0 ? coeff[k] * (u - knots[k]) / (knots[k + j] - knots[k]) : 0.0) +
@@ -2584,14 +2584,8 @@ void MyViewer::generateTSplineMesh() {
 		double s = (double)i / (double)(resolution - 1);
 		for (size_t j = 0; j < resolution; ++j) {
 			double t = (double)j / (double)(resolution - 1);
-			Vec p(0.0, 0.0, 0.0);
-			double nominator = 0.0;
-			for (size_t k = 0; k < cpnum; ++k) {
-				double B_k = cubicBSplineBasis(s, si_array[k]) * cubicBSplineBasis(t, ti_array[k]);
-				p += tspline_control_points[k] * B_k;
-				nominator += weights[k] * B_k;
-			}
-			if (abs(nominator) > 0.0) p /= nominator;
+			Vec p;
+			evaluateTSpline(s,t,p);
 			handles.push_back(mesh.add_vertex(Vector(static_cast<double*>(p))));
 		}
 	}
@@ -2624,7 +2618,7 @@ first.second.second: index of second found row
 second.first: index of insertion in t_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsDown(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsDown(int act_row, int act_col, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
 	int temp_ind = act_row == 0 ? 0 : IA[--act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	std::pair<int, int> ret_rows = { -1, -1 };
@@ -2649,7 +2643,7 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 			for (; si_array[temp_ind][2] <= s_vec[2] && getRowOfExisting(temp_ind) == act_row; temp_ind++) {
 			}
 			if (si_array[temp_ind - 1][2] < s_vec[2] ||
-				(act_row == getRowOfExisting(temp_ind-1) && JA[index] > JA[temp_ind - 1] && act_row == getRowOfExisting(temp_ind))) {
+				(act_row == getRowOfExisting(temp_ind-1) && act_col > JA[temp_ind - 1] && act_row == getRowOfExisting(temp_ind))) {
 				//Check if not the case of last in row having smaller s than the point with index "index"
 				if (si_array[temp_ind][2] > s_vec[2]) {
 					//check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -2688,7 +2682,7 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 					}
 				}
 			} //First of actual row has greater s than our point or the biggest of cols with same s in act_row is earlier than ours
-			else if (act_row != getRowOfExisting(temp_ind - 1) || JA[index] > JA[temp_ind - 1]) {}
+			else if (act_row != getRowOfExisting(temp_ind - 1) || act_col > JA[temp_ind - 1]) {}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == s_vec[2]
 				while (getRowOfExisting(temp_ind - 1) == act_row && act_col < JA[temp_ind - 1]) {
@@ -2748,7 +2742,7 @@ first.second.second: index of second found row
 second.first: index of insertion in t_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsUp(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkTsUp(int act_row, int act_col, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
 	int temp_ind = act_row == IA.size() - 2 ? IA[IA.size() - 2] : IA[++act_row]; //start index of row(of index)+1
 	int num_found = 0;
 	int cpnum = tspline_control_points.size();
@@ -2774,7 +2768,7 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 			for (; si_array[temp_ind][2] <= s_vec[2] && getRowOfExisting(temp_ind) == act_row; temp_ind++) {
 			}
 			if (si_array[temp_ind - 1][2] < s_vec[2] ||
-				(act_row == getRowOfExisting(temp_ind - 1) && JA[index] > JA[temp_ind - 1] && act_row == getRowOfExisting(temp_ind))) {
+				(act_row == getRowOfExisting(temp_ind - 1) && act_col > JA[temp_ind - 1] && act_row == getRowOfExisting(temp_ind))) {
 				//Check if not the case of last in row having smaller s than our point
 				if (si_array[temp_ind][2] > s_vec[2]) {
 					//Check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -2812,7 +2806,7 @@ std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer
 					}
 				}
 			} //First of actual row has greater s than our point or the biggest of cols with same s in act_row is earlier than ours
-			else if (act_row != getRowOfExisting(temp_ind - 1) || JA[index] > JA[temp_ind - 1]) {}
+			else if (act_row != getRowOfExisting(temp_ind - 1) || act_col > JA[temp_ind - 1]) {}
 			else {
 				//This case occurs when si_array[temp_ind - 1][2] == s_vec[2]
 				while (getRowOfExisting(temp_ind - 1) == act_row && act_col < JA[temp_ind - 1]) {
@@ -2873,7 +2867,7 @@ first.second.second: index of second found col
 second.first: index of insertion in s_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsDown(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsDown(int act_row, int act_col, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
 	int i = act_col == 0 ? act_col : act_col - 1;
 	int num_found = 0;
 	std::pair<int, int> ret_cols = { -1, -1 };
@@ -3003,7 +2997,7 @@ first.second.second: index of second found col
 second.first: index of insertion in s_vec
 second.second: new value to be inserted
 */
-std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsUp(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
+std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> MyViewer::checkSsUp(int act_row, int act_col, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded) {
 	int col_num = *std::max_element(JA.begin(), JA.end()) + 1;
 	int i = act_col == col_num - 1 ? col_num - 1 : act_col + 1;
 	int num_found = 0;
@@ -3166,10 +3160,10 @@ bool MyViewer::checkTSplineTopology() {
 	for (int i = 0; i < cpnum; i++) {
 		int act_row = getRowOfExisting(i);
 		int act_col = JA[i];
-		if (!checkTsDown(act_row, act_col, i, si_array[i], ti_array[i], 0, empty).first.first) return false;
-		if (!checkTsUp(act_row, act_col, i, si_array[i], ti_array[i], 0, empty).first.first) return false;
-		if (!checkSsDown(act_row, act_col, i, si_array[i], ti_array[i], 0, empty).first.first) return false;
-		if (!checkSsUp(act_row, act_col, i, si_array[i], ti_array[i], 0, empty).first.first) return false;
+		if (!checkTsDown(act_row, act_col, si_array[i], ti_array[i], 0, empty).first.first) return false;
+		if (!checkTsUp(act_row, act_col, si_array[i], ti_array[i], 0, empty).first.first) return false;
+		if (!checkSsDown(act_row, act_col, si_array[i], ti_array[i], 0, empty).first.first) return false;
+		if (!checkSsUp(act_row, act_col, si_array[i], ti_array[i], 0, empty).first.first) return false;
 	}
 	return true;
 }
@@ -3197,7 +3191,7 @@ void MyViewer::generatePoints(std::vector<Vec>& points, int n) {
 			Vec p(0.0, 0.0, 0.0);
 			double nominator = 0.0;
 			for (size_t k = 0; k < cpnum; ++k) {
-				double B_k = cubicBSplineBasis(s, si_array[k]) * cubicBSplineBasis(t, ti_array[k]);
+				double B_k = bSplineBasis(s, si_array[k], 3) * bSplineBasis(t, ti_array[k], 3);
 				p += tspline_control_points[k] * B_k;
 				nominator += weights[k] * B_k;
 			}
@@ -3271,8 +3265,8 @@ void MyViewer::fitSpline(std::vector<Vec>& S, std::vector<std::vector<double>>& 
 		for (int s = 0; s < n; s++) {
 			B.row(n * t + s) << S[n * t + s][0], S[n * t + s][1], S[n * t + s][2];
 			for (int k = 0; k < param_cp_num; k++) {
-				A(n * t + s, k) = cubicBSplineBasis(static_cast<double>(s)/(static_cast<double>(n) - 1.0),
-					param_si_array[k]) * cubicBSplineBasis(static_cast<double>(t) / (static_cast<double>(n) - 1.0), param_ti_array[k]);
+				A(n * t + s, k) = bSplineBasis(static_cast<double>(s)/(static_cast<double>(n) - 1.0),
+					param_si_array[k], 3) * bSplineBasis(static_cast<double>(t) / (static_cast<double>(n) - 1.0), param_ti_array[k], 3);
 			}
 		}
 	}
@@ -3331,7 +3325,22 @@ void MyViewer::exampleFitTSpline() {
 	std::vector<int> corner_inds = {0,3,17,21};
 	fitTSpline(new_points, si_array, ti_array, corner_inds);
 	updateEdgeTopology();
+
+	std::vector<double> us;
+	std::vector<double> vs;
+	for (int i = 0; i < tspline_control_points.size(); i++)
+	{
+		us.emplace_back(si_array[i][2]);
+		vs.emplace_back(ti_array[i][2]);
+		newtonRaphsonProjection(us[i], vs[i], tspline_control_points[i], 10, 0.00001, 0.00001);
+	}
+	refreshWithNewParams(us, vs);
+	
 	updateMesh();
+}
+
+double dot(const Vec& vec_1, const Vec& vec_2) {
+	return vec_1.x * vec_2.x + vec_1.y * vec_2.y + vec_1.z * vec_2.z;
 }
 
 void MyViewer::bezierToTspline() {
@@ -3369,6 +3378,238 @@ void MyViewer::bezierToTspline() {
 	/*saveTSpline(newFileName);
 	openTSpline(newFileName);*/
 	fileName = newFileName;
+}
+
+void MyViewer::refreshWithNewParams(const std::vector<double>& us, const std::vector<double>& vs) {
+	std::cout << "Test";
+}
+
+// Must have u,v-s of points to be projected stored, new u,v-s calculated on surface
+void MyViewer::newtonRaphsonProjection(double& u, double& v, const Vec& p, int max_iter,
+	double dist_tol, double cos_tol) {
+	for (int i = 0; i < max_iter; ++i) {
+		Vec surf_p;
+		evaluateTSpline(u,v,surf_p);
+		Vec dist_vec = surf_p - p;
+		double dist = dist_vec.norm();
+		if (dist < dist_tol) return;
+		Vec s_u;
+		calculateDer(u, v, 1, 0, s_u);
+		Vec s_v;
+		calculateDer(u, v, 0, 1, s_v);
+		double dist_dot_su = dot(dist_vec, s_u);
+		double dist_dot_sv = dot(dist_vec, s_v);
+		if (dist_dot_su / (dist * s_u.norm()) < cos_tol) return;
+		if (dist_dot_sv / (dist * s_v.norm()) < cos_tol) return;
+		Vec s_u_u;
+		calculateDer(u, v, 2, 0, s_u_u);
+		Vec s_u_v;
+		calculateDer(u, v, 1, 1, s_u_v);
+		Vec s_v_v;
+		calculateDer(u, v, 0, 2, s_v_v);
+		Matrix2d J;
+		J << dot(s_u, s_u) + dot(dist_vec, s_u_u), dot(s_u, s_v) + dot(dist_vec, s_u_v),
+			 dot(s_u,s_v) + dot(dist_vec, s_u_v), dot(s_v,s_v) + dot(dist_vec, s_v_v);
+		Vector2d kappa = Vector2d(-dist_dot_su, -dist_dot_sv);
+		Vector2d u_v = Vector2d(u, v);
+		Vector2d delta = J.colPivHouseholderQr().solve(kappa);
+		Vector2d next = ((u_v + delta).cwiseMax(0)).cwiseMin(1);
+		delta = next - u_v;
+		u = next[0];
+		v = next[1];
+		if ((s_u * delta[0] - s_v * delta[1]).norm() < dist_tol) return;
+	}
+}
+
+void MyViewer::evaluateTSpline(double u, double v, Vec& return_p) {
+	int cp_num = tspline_control_points.size();
+	return_p.setValue(0.0, 0.0, 0.0);
+	double nominator = 0.0;
+	for (size_t k = 0; k < cp_num; ++k) {
+		double B_k = bSplineBasis(u, si_array[k], 3) * bSplineBasis(v, ti_array[k], 3);
+		return_p += tspline_control_points[k] * B_k;
+		nominator += weights[k] * B_k;
+	}
+	if (abs(nominator) > 0.0) return_p /= nominator;
+}
+
+void MyViewer::calculateDer(double u, double v, int grade_u, int grade_v, Vec& result) {
+	result.setValue(0,0,0);
+	int cp_num = tspline_control_points.size();
+	for (int i = 0; i < cp_num; i++)
+	{
+		double n_u_der = 0.0;
+		if (grade_u == 0) {
+			n_u_der = bSplineBasis(u, si_array[i], 3);
+		}
+		else {
+			std::vector<double> u_knot;
+			knotVectorInRow(getRowOfExisting(i), u_knot);
+			auto offset_it = std::search(u_knot.begin(), u_knot.end(), si_array[i].begin(), si_array[i].end());
+			double s_i5 = *(offset_it + 5);
+			double s_i6 = *(offset_it + 6);
+			std::vector<double> shift_1 = { si_array[i][1], si_array[i][2] , si_array[i][3] , si_array[i][4] , s_i5 };
+			n_u_der = 3.0 * ((bSplineBasis(u, si_array[i], 2) / (s_i5 - si_array[i][2]))
+				- ((bSplineBasis(u, shift_1, 2) / (s_i6 - si_array[i][3]))));
+
+			std::vector<double> shift_2 = { si_array[i][2], si_array[i][3] , si_array[i][4] , s_i5, s_i6 };
+			if (grade_u == 2) {
+				n_u_der = 3.0 * 2.0 * ((1.0 / (s_i5 - si_array[i][2])) * (bSplineBasis(u, si_array[i], 1) / (si_array[i][4] - si_array[i][2]) -
+					bSplineBasis(u, shift_1, 1) / (s_i5 - si_array[i][3])) - 
+					(1.0 / (s_i6 - si_array[i][3])) * (bSplineBasis(u, shift_1, 1) / (s_i5 - si_array[i][3]) -
+						bSplineBasis(u, shift_2, 1) / (s_i6 - si_array[i][4])));
+			}
+		}
+
+		double n_v_der = 0.0;
+		if (grade_v == 0) {
+			n_v_der = bSplineBasis(v, ti_array[i], 3);
+		}
+		else {
+			std::vector<double> v_knot;
+			knotVectorInCol(JA[i], v_knot);
+			auto offset_it = std::search(v_knot.begin(), v_knot.end(), ti_array[i].begin(), ti_array[i].end());
+			double t_i5 = *(offset_it + 5);
+			double t_i6 = *(offset_it + 6);
+			std::vector<double> shift_1 = { ti_array[i][1], ti_array[i][2] , ti_array[i][3] , ti_array[i][4] , t_i5 };
+			n_v_der = 3.0 * ((bSplineBasis(v, ti_array[i], 2) / (t_i5 - ti_array[i][2]))
+				- ((bSplineBasis(v, shift_1, 2) / (t_i6 - ti_array[i][3]))));
+
+			std::vector<double> shift_2 = { ti_array[i][2], ti_array[i][3] , ti_array[i][4] , t_i5, t_i6 };
+			if (grade_v == 2) {
+				n_v_der = 3.0 * 2.0 * ((1.0 / (t_i5 - ti_array[i][2])) * (bSplineBasis(v, ti_array[i], 1) / (ti_array[i][4] - ti_array[i][2]) -
+					bSplineBasis(v, shift_1, 1) / (t_i5 - ti_array[i][3])) -
+					(1.0 / (t_i6 - ti_array[i][3])) * (bSplineBasis(v, shift_1, 1) / (t_i5 - ti_array[i][3]) -
+						bSplineBasis(v, shift_2, 1) / (t_i6 - ti_array[i][4])));
+			}
+		}
+		result += (tspline_control_points[i] / weights[i]) * n_u_der * n_v_der;
+	}
+}
+
+void MyViewer::checkColsBetween(int first_col, int last_col, int row, std::vector<double>& result,
+	double s, double t) {
+	std::vector<double> s_vec = { 0,0,s,2,2 };
+	std::vector<double> t_vec = { 0,0,t,1,1 };
+	auto ss_up = checkSsUp(row, first_col, s_vec, t_vec, 1, {});
+	while (ss_up.first.second.first < last_col) {
+		result.emplace_back(ss_up.second.second);
+		first_col = ss_up.first.second.first;
+		s_vec = {0,0,ss_up.second.second,2,2};
+		ss_up = checkSsUp(row, first_col, s_vec, t_vec, 1, {});
+	}
+}
+
+void MyViewer::knotVectorInRow(int row, std::vector<double>& result) {
+	result.clear();
+	// Multiplicity at the front
+	result.emplace_back(0.0);
+	result.emplace_back(0.0);
+	result.emplace_back(0.0);
+	result.emplace_back(0.0);
+	int first_in_row = IA[row];
+	// If first in row not in first col, we have to check knot values downwards
+	if (JA[first_in_row] != 0) {
+		checkColsBetween(0, JA[first_in_row], row, result,
+			0, ti_array[first_in_row][2]);
+	}
+	result.emplace_back(si_array[first_in_row][2]);
+	int actual_ind = first_in_row;
+	int last_col = *std::max_element(JA.begin(), JA.end());
+	while (JA[actual_ind] != last_col && IA[row+1] > actual_ind+1) {
+		if (si_array[actual_ind][3] != si_array[actual_ind + 1][2]) {
+			result.emplace_back(si_array[actual_ind][3]);
+			if (si_array[actual_ind][4] != si_array[actual_ind + 1][2]) {
+				result.emplace_back(si_array[actual_ind][4]);
+				std::vector<double> si_check_4 = {si_array[actual_ind][0], si_array[actual_ind][1],
+				si_array[actual_ind][2], si_array[actual_ind][3], 2 };
+				auto ss_up_check_4 = checkSsUp(row, JA[actual_ind], si_check_4, ti_array[actual_ind], 1, {});
+				checkColsBetween(ss_up_check_4.first.second.second, JA[actual_ind+1], row, result,
+					ss_up_check_4.second.second, ti_array[actual_ind][2]);
+			}
+		}  // when no point, but edge between with same knot value as act_ind and act_ind+1 - WARNING case of 4 equal possible (no C0 cont)?
+		else if (si_array[actual_ind][3] == si_array[actual_ind][4]  
+			&& si_array[actual_ind+1][1] == si_array[actual_ind + 1][0]) {
+			result.emplace_back(si_array[actual_ind][3]);
+		}
+		++actual_ind;
+		result.emplace_back(si_array[actual_ind][2]);
+	}
+	// Last one in row not in last col, we have to check knot values upwards
+	if (JA[actual_ind] != last_col) {
+		checkColsBetween(JA[actual_ind], last_col, row, result, si_array[actual_ind][2], ti_array[actual_ind][2]);
+		result.emplace_back(1.0);
+	}
+	// Multiplicity at the end
+	result.emplace_back(1.0);
+	result.emplace_back(1.0);
+	result.emplace_back(1.0);
+	result.emplace_back(1.0);
+}
+
+void MyViewer::checkRowsBetween(int first_row, int last_row, int col, std::vector<double>& result,
+	double s, double t) {
+	std::vector<double> s_vec = { 0,0,s,1,1 };
+	std::vector<double> t_vec = { 0,0,t,2,2 };
+	auto ts_up = checkTsUp(first_row, col, s_vec, t_vec, 1, {});
+	while (ts_up.first.second.first < last_row) {
+		result.emplace_back(ts_up.second.second);
+		first_row = ts_up.first.second.first;
+		t_vec = { 0,0,ts_up.second.second,2,2 };
+		ts_up = checkTsUp(first_row, col, s_vec, t_vec, 1, {});
+	}
+}
+
+void MyViewer::knotVectorInCol(int col, std::vector<double>& result) {
+	result.clear();
+	// Multiplicity at the front
+	result.emplace_back(0.0);
+	result.emplace_back(0.0);
+	result.emplace_back(0.0);
+	result.emplace_back(0.0);
+	auto col_inds = indicesOfColumn(col);
+	int first_in_col = col_inds[0];
+	// If first in row not in first col, we have to check knot values downwards
+	int row_of_first = getRowOfExisting(first_in_col);
+	if (row_of_first != 0) {
+		checkRowsBetween(0, row_of_first, col, result,
+			si_array[first_in_col][2], 0);
+	}
+	result.emplace_back(ti_array[first_in_col][2]);
+	int act_col_ind = 0;
+	int last_row = IA.size()-2;
+	while (getRowOfExisting(col_inds[act_col_ind]) != last_row && act_col_ind+1 < col_inds.size()) {
+		int actual_ind = col_inds[act_col_ind];
+		int next_ind = col_inds[act_col_ind+1];
+		if (ti_array[actual_ind][3] != ti_array[next_ind][2]) {
+			result.emplace_back(ti_array[actual_ind][3]);
+			if (ti_array[actual_ind][4] != ti_array[next_ind][2]) {
+				result.emplace_back(ti_array[actual_ind][4]);
+				std::vector<double> ti_check_4 = { ti_array[actual_ind][0], ti_array[actual_ind][1],
+				ti_array[actual_ind][2], ti_array[actual_ind][3], 2 };
+				auto ts_up_check_4 = checkTsUp(getRowOfExisting(actual_ind), col, si_array[actual_ind], ti_check_4, 1, {});
+				checkRowsBetween(getRowOfExisting(next_ind), ts_up_check_4.first.second.second, col, result,
+					si_array[actual_ind][2], ts_up_check_4.second.second);
+			}
+		}  // when no point, but edge between with same knot value as act_ind and act_ind+1 - WARNING case of 4 equal possible (no C0 cont)?
+		else if (ti_array[actual_ind][3] == ti_array[actual_ind][4]
+			&& ti_array[actual_ind + 1][1] == ti_array[actual_ind + 1][0]) {
+			result.emplace_back(ti_array[actual_ind][3]);
+		}
+		++act_col_ind;
+		result.emplace_back(ti_array[next_ind][2]);
+	}
+	// Last one in row not in last col, we have to check knot values upwards
+	auto last_checked_row = getRowOfExisting(col_inds[act_col_ind]);
+	if (last_checked_row != last_row) {
+		checkRowsBetween(last_checked_row, last_row, col, result, si_array[col_inds[act_col_ind]][2], ti_array[col_inds[act_col_ind]][2]);
+		result.emplace_back(1.0);
+	}
+	// Multiplicity at the end
+	result.emplace_back(1.0);
+	result.emplace_back(1.0);
+	result.emplace_back(1.0);
+	result.emplace_back(1.0);
 }
 
 void MyViewer::colorDistances(std::string origFileName) {
@@ -3414,7 +3655,7 @@ void MyViewer::bringBackIterations() {
 			int act_row = getRowOfExisting(i);
 			int act_col = JA[i];
 			int orig_ind = indsInOrig[i];
-			auto ss_up = checkSsUp(act_row, act_col, i, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
+			auto ss_up = checkSsUp(act_row, act_col, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
 			if (!ss_up.first.first) {
 				bool inserted_after_second = (ss_up.second.first == 4) && (getRowOfExisting(i + 1) == act_row)
 					&& ((indsInOrig[i] + 1 == indsInOrig[i + 1]) || si_array[i + 1][2] < origin_sarray[orig_ind][ss_up.second.first]);
@@ -3426,7 +3667,7 @@ void MyViewer::bringBackIterations() {
 				viol = true;
 				break;
 			}
-			auto ts_up = checkTsUp(act_row, act_col, i, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
+			auto ts_up = checkTsUp(act_row, act_col, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
 			if (!ts_up.first.first) {
 				auto col_inds = indicesOfColumn(act_col);
 				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
@@ -3448,7 +3689,7 @@ void MyViewer::bringBackIterations() {
 				viol = true;
 				break;
 			}
-			auto ss_down = checkSsDown(act_row, act_col, i, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
+			auto ss_down = checkSsDown(act_row, act_col, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
 			if (!ss_down.first.first) {
 				bool inserted_after_second = (ss_down.second.first == 0) && (getRowOfExisting(i - 1) == act_row)
 					&& ((indsInOrig[i] - 1 == indsInOrig[i - 1]) || (si_array[i - 1][2] > origin_sarray[orig_ind][ss_down.second.first]));
@@ -3461,7 +3702,7 @@ void MyViewer::bringBackIterations() {
 				viol = true;
 				break;
 			}
-			auto ts_down = checkTsDown(act_row, act_col, i, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
+			auto ts_down = checkTsDown(act_row, act_col, origin_sarray[orig_ind], origin_tarray[orig_ind], 2, std::vector<int>());
 			if (!ts_down.first.first) {
 				auto col_inds = indicesOfColumn(act_col);
 				int indInCol = std::find(col_inds.begin(), col_inds.end(), i) - col_inds.begin();
@@ -3704,16 +3945,16 @@ std::pair<int, std::vector<int>> MyViewer::getFaceRectangle(int index, int act_r
 	//Find bottom row
 	std::vector<double> td_svec = { 0,0,s,1,1 };
 	std::vector<double> td_tvec = { -1,-1,t,1,1 };
-	auto ts_down = checkTsDown(act_row, act_col, index, td_svec, td_tvec, 1, {});
+	auto ts_down = checkTsDown(act_row, act_col, td_svec, td_tvec, 1, {});
 	std::vector<double> tu_svec = { 0,0,s,1,1 };
 	std::vector<double> tu_tvec = { 0,0,t,2,2 };
-	auto ts_up = checkTsUp(act_row, act_col, index, tu_svec, tu_tvec, 1, {});
+	auto ts_up = checkTsUp(act_row, act_col, tu_svec, tu_tvec, 1, {});
 	std::vector<double> sd_svec = { -1,-1,s,1,1 };
 	std::vector<double> sd_tvec = { 0,0,t,1,1 };
-	auto ss_down = checkSsDown(act_row, act_col, index, sd_svec, sd_tvec, 1, {});
+	auto ss_down = checkSsDown(act_row, act_col, sd_svec, sd_tvec, 1, {});
 	std::vector<double> su_svec = { 0,0,s,2,2 };
 	std::vector<double> su_tvec = { 0,0,t,1,1 };
-	auto ss_up = checkSsUp(act_row, act_col, index, su_svec, su_tvec, 1, {});
+	auto ss_up = checkSsUp(act_row, act_col, su_svec, su_tvec, 1, {});
 	int bot_row = ts_down.first.second.first;
 	int top_row = ts_up.first.second.first;
 	int left_col = ss_down.first.second.first;

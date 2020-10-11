@@ -71,16 +71,16 @@ private:
   void generateBezierMesh();
 
   //TSpline
-  double cubicBSplineBasis(double param, std::vector<double>& knots);
+  double bSplineBasis(double param, std::vector<double>& knots, int degree);
   void generateTSplineMesh();
   void updateEdgeTopology();
   void updateEdgesTemporarily(bool remove, int temp_index);
   bool checkTSplineCorrectness();
   bool checkTSplineTopology();
-  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsDown(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
-  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsUp(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
-  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsDown(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
-  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsUp(int act_row, int act_col, int index, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
+  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsDown(int act_row, int act_col, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
+  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkTsUp(int act_row, int act_col, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
+  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsDown(int act_row, int act_col, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
+  std::pair<std::pair<bool, std::pair<int, int>>, std::pair<int, double>> checkSsUp(int act_row, int act_col, std::vector<double>& s_vec, std::vector<double>& t_vec, int viol_num, const std::vector<int>& excluded);
   std::pair<std::vector<int>, std::vector<double>> refineRowCol(double new_value, int row_col_ind, bool is_row);
   std::pair<std::pair<double, std::vector<double>>, std::pair<double, std::vector<double>>> refineBlend(std::vector<double>& knot_vec, int ins_ind, double new_value);
   std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> checkForViol1(std::vector<int>& excluded, std::vector<int>& newlyAdded);
@@ -110,6 +110,17 @@ private:
   void exampleFitTSpline();
   void generatePoints(std::vector<Vec>& points, int n);
   void bezierToTspline();
+  void refreshWithNewParams(const std::vector<double>& us, const std::vector<double>& vs);
+  void newtonRaphsonProjection(double& u, double& v, const Vec& p, int max_iter,
+	  double dist_tol, double cos_tol);
+  void evaluateTSpline(double u, double v, Vec& return_p);
+  void calculateDer(double u, double v, int grade_u, int grade_v, Vec& result);
+  void checkColsBetween(int first_col, int last_col, int row, std::vector<double>& result,
+	  double s, double t);
+  void knotVectorInRow(int row, std::vector<double>& result);
+  void checkRowsBetween(int first_row, int last_row, int col, std::vector<double>& result,
+	  double s, double t);
+  void knotVectorInCol(int col, std::vector<double>& result);
   void colorDistances(std::string origFileName);
   void updateM(int origInd1, int origInd2, double value, std::vector<int>& origIndRefineOrig);
   void bringBackIterations();
