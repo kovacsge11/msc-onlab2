@@ -71,7 +71,8 @@ private:
   void generateBezierMesh();
 
   //TSpline
-  double bSplineBasis(double param, std::vector<double>& knots, int degree);
+  void bSplineBasis(double u, std::vector<double>& knots, int degree,
+	  std::vector<double>& coeff);
   void generateTSplineMesh();
   void updateEdgeTopology();
   void updateEdgesTemporarily(bool remove, int temp_index);
