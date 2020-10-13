@@ -2528,7 +2528,7 @@ void MyViewer::bSplineBasis(double u, std::vector<double>& knots, int degree,
 	if (u == knots.back())
 		i = end;
 	else i = (std::upper_bound(knots.begin(), knots.end(), u) - knots.begin()) - 1;
-	coeff.resize(degree + 1, 0.0);
+	coeff.resize(knots.size()-1, 0.0);
 	coeff[i] = 1.0;
 
 	for (int j = 1; j <= degree; ++j)
@@ -3458,18 +3458,24 @@ void MyViewer::calculateDer(double u, double v, int grade_u, int grade_v, Vec& r
 			n_u_der = coeffs[0];
 		}
 		else {
+			// TODO do zero nominator checks better
 			std::vector<double> coeffs_deg2;
 			bSplineBasis(u, si_array[i], 2, coeffs_deg2);
-			n_u_der = 3.0 * ((coeffs_deg2[0] / (si_array[i][3] - si_array[i][0]))
-				- (coeffs_deg2[1] / (si_array[i][4] - si_array[i][1])));
+			n_u_der = 3.0 * ((coeffs_deg2[0] == 0 ? 0.0 : (coeffs_deg2[0] / (si_array[i][3] - si_array[i][0])))
+				- (coeffs_deg2[1] == 0 ? 0.0 : coeffs_deg2[1] / (si_array[i][4] - si_array[i][1])));
 
 			if (grade_u == 2) {
 				std::vector<double> coeffs_deg1;
 				bSplineBasis(u, si_array[i], 1, coeffs_deg1);
-				n_u_der = 3.0 * 2.0 * ((1.0 / (si_array[i][3] - si_array[i][0])) * (coeffs_deg1[0] / (si_array[i][2] - si_array[i][0]) -
-					coeffs_deg1[1] / (si_array[i][3] - si_array[i][1])) -
-					(1.0 / (si_array[i][4] - si_array[i][1])) * (coeffs_deg1[1] / (si_array[i][3] - si_array[i][1]) -
-					coeffs_deg1[2] / (si_array[i][4] - si_array[i][2])));
+				double first_part = (coeffs_deg1[0] == 0 && coeffs_deg1[1] == 0) ? 0.0 :
+					(1.0 / (si_array[i][3] - si_array[i][0])) * ((coeffs_deg1[0] == 0 ? 0.0 :
+						coeffs_deg1[0] / (si_array[i][2] - si_array[i][0])) -
+						(coeffs_deg1[1] == 0 ? 0.0 : coeffs_deg1[1] / (si_array[i][3] - si_array[i][1])));
+				double sec_part = (coeffs_deg1[1] == 0 && coeffs_deg1[2] == 0) ? 0.0 :
+					(1.0 / (si_array[i][4] - si_array[i][1])) * ((coeffs_deg1[1] == 0 ? 0.0 :
+						coeffs_deg1[1] / (si_array[i][3] - si_array[i][1])) -
+					(coeffs_deg1[2] == 0 ? 0.0 : coeffs_deg1[2] / (si_array[i][4] - si_array[i][2])));
+				n_u_der = 3.0 * 2.0 * (first_part - sec_part);
 			}
 		}
 
@@ -3482,16 +3488,21 @@ void MyViewer::calculateDer(double u, double v, int grade_u, int grade_v, Vec& r
 		else {
 			std::vector<double> coeffs_deg2;
 			bSplineBasis(v, ti_array[i], 2, coeffs_deg2);
-			n_u_der = 3.0 * ((coeffs_deg2[0] / (ti_array[i][3] - ti_array[i][0]))
-				- (coeffs_deg2[1] / (ti_array[i][4] - ti_array[i][1])));
+			n_v_der = 3.0 * ((coeffs_deg2[0] == 0 ? 0.0 : (coeffs_deg2[0] / (ti_array[i][3] - ti_array[i][0])))
+				- (coeffs_deg2[1] == 0 ? 0.0 : coeffs_deg2[1] / (ti_array[i][4] - ti_array[i][1])));
 
 			if (grade_v == 2) {
 				std::vector<double> coeffs_deg1;
 				bSplineBasis(v, ti_array[i], 1, coeffs_deg1);
-				n_u_der = 3.0 * 2.0 * ((1.0 / (ti_array[i][3] - ti_array[i][0])) * (coeffs_deg1[0] / (ti_array[i][2] - ti_array[i][0]) -
-					coeffs_deg1[1] / (ti_array[i][3] - ti_array[i][1])) -
-					(1.0 / (ti_array[i][4] - ti_array[i][1])) * (coeffs_deg1[1] / (ti_array[i][3] - ti_array[i][1]) -
-						coeffs_deg1[2] / (ti_array[i][4] - ti_array[i][2])));
+				double first_part = (coeffs_deg1[0] == 0 && coeffs_deg1[1] == 0) ? 0.0 :
+					(1.0 / (ti_array[i][3] - ti_array[i][0])) * ((coeffs_deg1[0] == 0 ? 0.0 :
+						coeffs_deg1[0] / (ti_array[i][2] - ti_array[i][0])) -
+						(coeffs_deg1[1] == 0 ? 0.0 : coeffs_deg1[1] / (ti_array[i][3] - ti_array[i][1])));
+				double sec_part = (coeffs_deg1[1] == 0 && coeffs_deg1[2] == 0) ? 0.0 :
+					(1.0 / (ti_array[i][4] - ti_array[i][1])) * ((coeffs_deg1[1] == 0 ? 0.0 :
+						coeffs_deg1[1] / (ti_array[i][3] - ti_array[i][1])) -
+						(coeffs_deg1[2] == 0 ? 0.0 : coeffs_deg1[2] / (ti_array[i][4] - ti_array[i][2])));
+				n_v_der = 3.0 * 2.0 * (first_part - sec_part);
 			}
 		}
 		result += (tspline_control_points[i] / weights[i]) * n_u_der * n_v_der;
