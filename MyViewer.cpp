@@ -2510,7 +2510,7 @@ void MyViewer::bernsteinAll(size_t n, double u, std::vector<double>& coeff) {
 	}
 }
 
-void MyViewer::bSplineBasis(double u, std::vector<double>& knots, int degree,
+void MyViewer::bSplineBasis(double u, const std::vector<double>& knots, int degree,
 	std::vector<double>& coeff) {
 	int i, degree_max = 3;
 	int end = knots.size() - 2;
@@ -3180,9 +3180,14 @@ void removeEigenMColumn(MatrixXd& matrix, unsigned int colToRemove)
 }
 
 //Suppose we are looking at s,t in [0,1]
-void MyViewer::generatePoints(std::vector<Vec>& points, int n) {
+void MyViewer::generatePoints(std::vector<Vec>& points, int n,
+	std::vector<double>& return_us, std::vector<double>& return_vs,
+	std::vector<int>& return_corner_inds) {
 	int cpnum = weights.size();
 	points.clear();
+	return_us.clear();
+	return_vs.clear();
+	return_corner_inds.clear();
 
 	for (size_t i = 0; i < n; ++i) {
 		double t = (double)i / (double)(n - 1);
@@ -3200,13 +3205,21 @@ void MyViewer::generatePoints(std::vector<Vec>& points, int n) {
 				nominator += weights[k] * B_k;
 			}
 			if (abs(nominator) > 0.0) p /= nominator;
-			points.push_back(p);
+			points.emplace_back(p);
+			return_us.emplace_back(s);
+			return_vs.emplace_back(t);
 		}
 	}
+
+	return_corner_inds.emplace_back(0);
+	return_corner_inds.emplace_back(n - 1);
+	return_corner_inds.emplace_back((n - 1) * n);
+	return_corner_inds.emplace_back(n * n - 1);
 }
 
 //S the nxn incoming points
-void MyViewer::fit4by4Bezier(std::vector<Vec>& S) {
+void MyViewer::fit4by4Bezier(const std::vector<Vec>& S, const std::vector<double>& us,
+	const std::vector<double>& vs, const std::vector<int>& corner_inds) {
 	std::vector<Vec> new_cps(16, Vec(0.0, 0.0, 0.0));
 	std::vector<std::vector<double>> siarr_4by4 = { {0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
 		{0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
@@ -3218,8 +3231,8 @@ void MyViewer::fit4by4Bezier(std::vector<Vec>& S) {
 		{0,0,1,1,1}, {0,0,1,1,1}, {0,0,1,1,1}, {0,0,1,1,1},
 		{0,1,1,1,1}, {0,1,1,1,1}, {0,1,1,1,1}, {0,1,1,1,1}
 	};
-	std::vector<int> corner_pts = {0, 3, 12, 15};
-	fitSpline(S, siarr_4by4, tiarr_4by4, corner_pts, new_cps);
+	std::vector<int> fit_corner_inds = {0, 3, 12, 15};
+	fitSpline(S, us, vs, corner_inds, siarr_4by4, tiarr_4by4, fit_corner_inds, new_cps);
 	
 	bezier_control_points.resize(16);
 	for (int i = 0; i < 16; i++) {
@@ -3228,16 +3241,17 @@ void MyViewer::fit4by4Bezier(std::vector<Vec>& S) {
 	degree[0] = 3;
 	degree[1] = 3;
 	model_type = ModelType::BEZIER_SURFACE;
-	/*saveBezier("fittedBezier.bzr");
-	openBezier("fittedBezier.bzr");*/
 }
 
 // Fits points with weight one, all other variables e.g. IA, JA etc. must be set beforehand
-void MyViewer::fitTSpline(std::vector<Vec>& S, std::vector<std::vector<double>>& param_si_array,
-	std::vector<std::vector<double>>& param_ti_array, std::vector<int>& corner_inds) {
+void MyViewer::fitTSpline(const std::vector<Vec>& S, const std::vector<double>& sample_points_us,
+	const std::vector<double>& sample_points_vs, const std::vector<int>& sample_corner_inds,
+	const std::vector<std::vector<double>>& param_si_array,
+	const std::vector<std::vector<double>>& param_ti_array, const std::vector<int>& fit_corner_inds) {
 	int new_cp_num = param_si_array.size();
 	tspline_control_points.resize(new_cp_num, Vec(0.0, 0.0, 0.0));
-	fitSpline(S, param_si_array, param_ti_array, corner_inds, tspline_control_points);
+	fitSpline(S, sample_points_us, sample_points_vs, sample_corner_inds,
+		param_si_array, param_ti_array, fit_corner_inds, tspline_control_points);
 
 	weights.resize(new_cp_num, 1.0);
 	refined_weights.resize(new_cp_num, { 1.0 });
@@ -3254,59 +3268,61 @@ void MyViewer::fitTSpline(std::vector<Vec>& S, std::vector<std::vector<double>>&
 	bringBackMode = false;
 }
 
-void MyViewer::fitSpline(std::vector<Vec>& S, std::vector<std::vector<double>>& param_si_array,
-	std::vector<std::vector<double>>& param_ti_array, std::vector<int>& corner_inds,
+void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& sample_points_us,
+	const std::vector<double>& sample_points_vs, const std::vector<int>& sample_corner_inds,
+	const std::vector<std::vector<double>>& param_si_array,
+	const std::vector<std::vector<double>>& param_ti_array, const std::vector<int>& fit_corner_inds,
 	std::vector<Vec>& return_pts) {
-	int n = sqrt(S.size());
+	int num_sample_pts = S.size();
 	int param_cp_num = param_si_array.size();
-	MatrixXd A(n * n, param_cp_num), B(n * n, 3);
+	MatrixXd A(num_sample_pts, param_cp_num), B(num_sample_pts, 3);
 
-	return_pts[corner_inds[0]] = S[0];
-	return_pts[corner_inds[1]] = S[n - 1];
-	return_pts[corner_inds[2]] = S[(n - 1) * n];
-	return_pts[corner_inds[3]] = S[n * n - 1];
-	for (int t = 0; t < n; t++) {
-		for (int s = 0; s < n; s++) {
-			B.row(n * t + s) << S[n * t + s][0], S[n * t + s][1], S[n * t + s][2];
-			for (int k = 0; k < param_cp_num; k++) {
-				std::vector<double> s_coeffs;
-				bSplineBasis(static_cast<double>(s) / (static_cast<double>(n) - 1.0),
-					param_si_array[k], 3, s_coeffs);
-				std::vector<double> t_coeffs;
-				bSplineBasis(static_cast<double>(t) / (static_cast<double>(n) - 1.0),
-					param_ti_array[k], 3, t_coeffs);
-				A(n * t + s, k) = s_coeffs[0] * t_coeffs[0];
-			}
+	return_pts[fit_corner_inds[0]] = S[sample_corner_inds[0]];
+	return_pts[fit_corner_inds[1]] = S[sample_corner_inds[1]];
+	return_pts[fit_corner_inds[2]] = S[sample_corner_inds[2]];
+	return_pts[fit_corner_inds[3]] = S[sample_corner_inds[3]];
+
+	for (int i = 0; i < num_sample_pts; ++i) {
+		B.row(i) << S[i][0], S[i][1], S[i][2];
+		for (int k = 0; k < param_cp_num; k++) {
+			std::vector<double> s_coeffs;
+			bSplineBasis(sample_points_us[i],
+				param_si_array[k], 3, s_coeffs);
+			std::vector<double> t_coeffs;
+			bSplineBasis(sample_points_vs[i],
+				param_ti_array[k], 3, t_coeffs);
+			A(i, k) = s_coeffs[0] * t_coeffs[0];
 		}
 	}
 
-	for (int t = 0; t < n; t++) {
-		for (int s = 0; s < n; s++) {
-			Vec temp = A(n * t + s, corner_inds[0]) * return_pts[corner_inds[0]] + A(n * t + s, corner_inds[1]) * return_pts[corner_inds[1]] +
-				A(n * t + s, corner_inds[2]) * return_pts[corner_inds[2]] + A(n * t + s, corner_inds[3]) * return_pts[corner_inds[3]];
-			B(n * t + s, 0) -= temp[0];
-			B(n * t + s, 1) -= temp[1];
-			B(n * t + s, 2) -= temp[2];
-		}
+	for (int i = 0; i < num_sample_pts; ++i) {
+			Vec temp = A(i, fit_corner_inds[0]) * return_pts[fit_corner_inds[0]] + A(i, fit_corner_inds[1]) * return_pts[fit_corner_inds[1]] +
+				A(i, fit_corner_inds[2]) * return_pts[fit_corner_inds[2]] + A(i, fit_corner_inds[3]) * return_pts[fit_corner_inds[3]];
+			B(i, 0) -= temp[0];
+			B(i, 1) -= temp[1];
+			B(i, 2) -= temp[2];
 	}
 
-	removeEigenMColumn(A, corner_inds[3]);
-	removeEigenMColumn(A, corner_inds[2]);
-	removeEigenMColumn(A, corner_inds[1]);
-	removeEigenMColumn(A, corner_inds[0]);
+	removeEigenMColumn(A, fit_corner_inds[3]);
+	removeEigenMColumn(A, fit_corner_inds[2]);
+	removeEigenMColumn(A, fit_corner_inds[1]);
+	removeEigenMColumn(A, fit_corner_inds[0]);
 
 	MatrixXd X = A.colPivHouseholderQr().solve(B);
 	for (int i = 0; i < param_cp_num-4; i++) {
 		int pInd = i + 1;
-		if (i >= corner_inds[1]-1) pInd++;
-		if (i >= corner_inds[2]-2) pInd++;
+		if (i >= fit_corner_inds[1]-1) pInd++;
+		if (i >= fit_corner_inds[2]-2) pInd++;
 		return_pts[pInd] = Vec(X(i, 0), X(i, 1), X(i, 2));
 	}
 }
 
 void MyViewer::exampleFitTSpline() {
-	std::vector<Vec> new_points;
-	generatePoints(new_points,10);
+	std::vector<Vec> sample_points;
+	int sample_num_1d = 10;
+	std::vector<double> us, vs;
+	std::vector<int> sample_corner_inds;
+	generatePoints(sample_points, 10, us, vs, sample_corner_inds);
 
 	IA = {0, 4, 9, 12, 17, 22};
 	JA = {0, 1, 3, 4,
@@ -3325,27 +3341,99 @@ void MyViewer::exampleFitTSpline() {
 				 {0,0,1,1,1}, {0,0,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1},
 				 {0,1,1,1,1}, {0,1,1,1,1}, {0.5,1,1,1,1}, {0.5,1,1,1,1}, {0.5,1,1,1,1} };
 
-	blend_functions.resize(22);
-	for (int i = 0; i < 22; i++) {
+	int example_size = 22;
+	blend_functions.resize(example_size);
+	for (int i = 0; i < example_size; i++) {
 		std::pair<std::vector<double>, std::vector<double>> blend_pair(si_array[i], ti_array[i]);
 		blend_functions[i] = { blend_pair };
 	}
 
-	std::vector<int> corner_inds = {0,3,17,21};
-	fitTSpline(new_points, si_array, ti_array, corner_inds);
-	updateEdgeTopology();
-
-	std::vector<double> us;
-	std::vector<double> vs;
-	for (int i = 0; i < tspline_control_points.size(); i++)
+	std::vector<int> fit_corner_inds = {0,3,17,21};
+	std::vector<double> distances;
+	// Calculate initial distances
+	for (int i = 0; i < sample_points.size(); i++)
 	{
-		us.emplace_back(si_array[i][2]);
-		vs.emplace_back(ti_array[i][2]);
-		newtonRaphsonProjection(us[i], vs[i], tspline_control_points[i], 10, 0.00001, 0.00001);
+		Vec point_with_new_params;
+		evaluateTSpline(us[i], vs[i], point_with_new_params);
+		distances.emplace_back((sample_points[i] - point_with_new_params).norm());
 	}
-	refreshWithNewParams(us, vs);
+	
+
+	auto max_dist_it = std::max_element(distances.begin(), distances.end());
+	double last_max_dist = *max_dist_it;
+	double max_dist_change = 0.0;
+	do {
+		fitTSpline(sample_points, us, vs, sample_corner_inds, si_array, ti_array, fit_corner_inds);
+		updateEdgeTopology();
+		for (int i = 0; i < sample_points.size(); i++)
+		{
+			newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);
+			Vec point_with_new_params;
+			evaluateTSpline(us[i], vs[i], point_with_new_params);
+			distances[i] = (sample_points[i] - point_with_new_params).norm();
+		}
+		max_dist_it = std::max_element(distances.begin(), distances.end());
+		max_dist_change = last_max_dist - *max_dist_it;
+	} while (max_dist_change > 0.0001);
 	
 	updateMesh();
+}
+
+void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<double>& us,
+	std::vector<double>& vs, const std::vector<int>& sample_corner_inds) {
+	fit4by4Bezier(sample_points, us, vs, sample_corner_inds);
+	bezierToTspline();
+
+	std::vector<double> distances;
+	// Calculate initial distances
+	for (int i = 0; i < sample_points.size(); i++)
+	{
+		Vec point_with_new_params;
+		evaluateTSpline(us[i], vs[i], point_with_new_params);
+		distances.emplace_back((sample_points[i] - point_with_new_params).norm());
+	}
+
+	auto max_dist_it = std::max_element(distances.begin(), distances.end());
+	double last_max_dist = *max_dist_it;
+	double max_dist_change = 0.0;
+	do {
+		fit4by4Bezier(sample_points, us, vs, sample_corner_inds);
+		bezierToTspline();
+		updateEdgeTopology();
+		for (int i = 0; i < sample_points.size(); i++)
+		{
+			newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);
+			Vec point_with_new_params;
+			evaluateTSpline(us[i], vs[i], point_with_new_params);
+			distances[i] = (sample_points[i] - point_with_new_params).norm();
+		}
+		max_dist_it = std::max_element(distances.begin(), distances.end());
+		max_dist_change = last_max_dist - *max_dist_it;
+	} while (max_dist_change > 0.0001);
+
+	std::vector<int> fit_corner_inds = { 0, 3, 12, 15 };
+	// Insert new point and update corner inds
+	insertNewPoint(fit_corner_inds);
+	
+	do {
+		fitTSpline(sample_points, us, vs, sample_corner_inds, si_array,
+			ti_array, fit_corner_inds);
+		updateEdgeTopology();
+		for (int i = 0; i < sample_points.size(); i++)
+		{
+			newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);
+			Vec point_with_new_params;
+			evaluateTSpline(us[i], vs[i], point_with_new_params);
+			distances[i] = (sample_points[i] - point_with_new_params).norm();
+		}
+		max_dist_it = std::max_element(distances.begin(), distances.end());
+		max_dist_change = last_max_dist - *max_dist_it;
+
+		if (max_dist_change < 0.0001) {
+			// Insert new point and update corner inds
+			insertNewPoint(fit_corner_inds);
+		}
+	} while (*max_dist_it > 0.0001);
 }
 
 double dot(const Vec& vec_1, const Vec& vec_2) {
@@ -3387,10 +3475,6 @@ void MyViewer::bezierToTspline() {
 	/*saveTSpline(newFileName);
 	openTSpline(newFileName);*/
 	fileName = newFileName;
-}
-
-void MyViewer::refreshWithNewParams(const std::vector<double>& us, const std::vector<double>& vs) {
-	std::cout << "Test";
 }
 
 // Must have u,v-s of points to be projected stored, new u,v-s calculated on surface
@@ -3675,8 +3759,10 @@ void MyViewer::bring4by4ToOrig() {
 	//Convert fitted bezier into tspline
 	
 	std::vector<Vec> sample_points;
-	generatePoints(sample_points, 10);
-	fit4by4Bezier(sample_points);
+	std::vector<double> us, vs;
+	std::vector<int> corner_inds;
+	generatePoints(sample_points, 10, us, vs, corner_inds);
+	fit4by4Bezier(sample_points, us, vs, corner_inds);
 	bezierToTspline();
 
 	bringBackMode = true;

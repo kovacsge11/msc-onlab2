@@ -71,7 +71,7 @@ private:
   void generateBezierMesh();
 
   //TSpline
-  void bSplineBasis(double u, std::vector<double>& knots, int degree,
+  void bSplineBasis(double u, const std::vector<double>& knots, int degree,
 	  std::vector<double>& coeff);
   void generateTSplineMesh();
   void updateEdgeTopology();
@@ -102,16 +102,24 @@ private:
   void insertRefined(double s, double t, int new_ind, int first_row, int sec_row, int first_col,
 	  int sec_col, bool use_orig_inds_for_JA);
   std::pair<bool, double> checkOpposite(int act_row, int act_col, double s, double t, bool horizontal_insertion, int new_index, double epsilon);
-  void fit4by4Bezier(std::vector<Vec>& S);
-  void fitTSpline(std::vector<Vec>& S, std::vector<std::vector<double>>& param_si_array,
-	  std::vector<std::vector<double>>& param_ti_array, std::vector<int>& corner_inds);
-  void fitSpline(std::vector<Vec>& S, std::vector<std::vector<double>>& param_si_array,
-	  std::vector<std::vector<double>>& param_ti_array, std::vector<int>& corner_inds,
+  void fit4by4Bezier(const std::vector<Vec>& S, const std::vector<double>& us,
+	  const std::vector<double>& vs, const std::vector<int>& corner_inds);
+  void fitTSpline(const std::vector<Vec>& S, const std::vector<double>& sample_points_us,
+	  const std::vector<double>& sample_points_vs, const std::vector<int>& sample_corner_inds,
+	  const std::vector<std::vector<double>>& param_si_array,
+	  const std::vector<std::vector<double>>& param_ti_array, const std::vector<int>& fit_corner_inds);
+  void fitSpline(const std::vector<Vec>& S, const std::vector<double>& sample_points_us,
+	  const std::vector<double>& sample_points_vs, const std::vector<int>& sample_corner_inds,
+	  const std::vector<std::vector<double>>& param_si_array,
+	  const std::vector<std::vector<double>>& param_ti_array, const std::vector<int>& fit_corner_inds,
 	  std::vector<Vec>& return_pts);
   void exampleFitTSpline();
-  void generatePoints(std::vector<Vec>& points, int n);
+  void fitPointCloud(const std::vector<Vec>& sample_points, std::vector<double>& us,
+	  std::vector<double>& vs, const std::vector<int>& sample_corner_inds);
+  void generatePoints(std::vector<Vec>& points, int n,
+	  std::vector<double>& return_us, std::vector<double>& return_vs,
+	  std::vector<int>& return_corner_inds);
   void bezierToTspline();
-  void refreshWithNewParams(const std::vector<double>& us, const std::vector<double>& vs);
   void newtonRaphsonProjection(double& u, double& v, const Vec& p, int max_iter,
 	  double dist_tol, double cos_tol);
   void evaluateTSpline(double u, double v, Vec& return_p);
