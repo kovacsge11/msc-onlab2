@@ -856,7 +856,7 @@ std::pair<bool, int> MyViewer::getColOfNew(int first_col, int sec_col, double s,
 
 //Gives back index of new point based on the edge of the vertical insertion
 //New insertion can only happen on edges with positive knot value
-int MyViewer::getIndex(int first_row, int sec_row, int act_col, double t, bool maxFromEquals) {
+int MyViewer::getIndexWhenColInsert(int first_row, int sec_row, int act_col, double t, bool maxFromEquals) {
 	//Insertion on vertical edge? --i dont think it's necessary it's much easier to calculate on point
 
 	//If inserting between two rows
@@ -888,6 +888,13 @@ int MyViewer::getIndex(int first_row, int sec_row, int act_col, double t, bool m
 			return j;
 		}
 	}
+}
+
+int MyViewer::getIndexWhenRowInsert(int row, int act_col, bool new_col) {
+	int i = IA[row];
+	for (; i < IA[row + 1] && JA[i] < act_col; ++i) {
+	}
+	return new_col ? i+1 : i;
 }
 
 void MyViewer::updateIA(int first_row, int sec_row, double t, bool maxFromEquals, int new_ind, bool use_orig_ind) {
@@ -988,7 +995,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						//force inserting a point first place
 						//Two cases: no point and first t violated or no point but only the second t violated
 						double new_value = ts_down.second.first == 1 ? ts_down.second.second : bf.second[1];
-						int new_index = getIndex(ts_down.first.second.first - 1, act_row, act_col, new_value, true);
+						int new_index = getIndexWhenColInsert(ts_down.first.second.first - 1, act_row, act_col, new_value, true);
 						updateJA(act_col, act_col, new_index, bf.first[2], false, false);
 						updateIA(ts_down.first.second.first - 1, act_row, new_value, true, new_index, false);
 						std::vector<double> new_ti = { bf.second[0], bf.second[0], new_value, bf.second[2], bf.second[3] };
@@ -1046,7 +1053,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						bf = blend_functions[i][j];
 					}
 					
-					//Second : getIndex of(bf.first[2], ts_down.second.second) if inserting below the middle point
+					//Second : getIndexWhenColInsert of(bf.first[2], ts_down.second.second) if inserting below the middle point
 					int ref_ind = *(act_vec - 1);
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
@@ -1124,7 +1131,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						//force inserting a point first place
 						//Two cases: no point and first t violated or no point but only the second t violated
 						double new_value = ts_up.second.first == 3 ? ts_up.second.second : bf.second[3];
-						int new_index = getIndex(act_row, ts_up.first.second.first + 1, act_col, new_value, false);
+						int new_index = getIndexWhenColInsert(act_row, ts_up.first.second.first + 1, act_col, new_value, false);
 						updateJA(act_col, act_col, new_index, bf.first[2], false, false);
 						updateIA(act_row, ts_up.first.second.first + 1, new_value, false, new_index, false);
 						std::vector<double> new_ti = { bf.second[1], bf.second[2], new_value, bf.second[4], bf.second[4] };
@@ -1182,7 +1189,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						bf = blend_functions[i][j];
 					}
 
-					//Second : getIndex of(bf.first[2], ts_up.second.second) if inserting above the middle point
+					//Second : getIndexWhenColInsert of(bf.first[2], ts_up.second.second) if inserting above the middle point
 					int ref_ind = *(act_vec + 1);
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
@@ -1317,7 +1324,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						bf = blend_functions[i][j];
 					}
 
-					//Second : getIndex of(ss_down.second.second,bf.second[2]) if inserting below the middle point
+					//Second : getIndexWhenColInsert of(ss_down.second.second,bf.second[2]) if inserting below the middle point
 					int ref_ind = i - 1;
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
@@ -1450,7 +1457,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						bf = blend_functions[i][j];
 					}
 
-					//Second : getIndex of(ss_up.second.second,bf.second[2]) if inserting above the middle point
+					//Second : getIndexWhenColInsert of(ss_up.second.second,bf.second[2]) if inserting above the middle point
 					int ref_ind = i + 1;
 
 					//Update M matrix -- first for the refinement which is not done to the point itself - this way the old, correct one will count for the other one
@@ -1527,14 +1534,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 				bool needsOneMoreIter = false;
 				auto ts_down = checkTsDown(act_row, act_col, bf.first, bf.second, 2, newlyAdded);
 				if (!ts_down.first.first) {
-					//Insert new point at getIndex(bf.first[2],bf.second[ts_down.second.first])
+					//Insert new point at getIndexWhenColInsert(bf.first[2],bf.second[ts_down.second.first])
 					violated = true;
 					needsOneMoreIter = true;
 					int new_index;
 					std::vector<double> new_ti;
 					//if inserting with 1 below the middle point
 					if (ts_down.second.first == 1) {
-						new_index = getIndex(ts_down.first.second.first, act_row, act_col, bf.second[ts_down.second.first], !bringBackMode);
+						new_index = getIndexWhenColInsert(ts_down.first.second.first, act_row, act_col, bf.second[ts_down.second.first], !bringBackMode);
 						updateJA(act_col, act_col, new_index, bf.first[2], !bringBackMode, false);
 						updateIA(ts_down.first.second.first, act_row, bf.second[ts_down.second.first], !bringBackMode, new_index, false);
 						new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[2], bf.second[3] };
@@ -1545,7 +1552,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
 						//If the first hit has same t as the one to be inserted and there is at least one row between them, then insert the point before the first hit
 						if (bf.second[0] == bf.second[1] && act_row - ts_down.first.second.first > 1) {
-							new_index = getIndex(ts_down.first.second.first, act_row, act_col, bf.second[1], !bringBackMode);
+							new_index = getIndexWhenColInsert(ts_down.first.second.first, act_row, act_col, bf.second[1], !bringBackMode);
 							updateJA(act_col, act_col, new_index, bf.first[2], !bringBackMode, false);
 							updateIA(ts_down.first.second.first, act_row, bf.second[1], !bringBackMode, new_index, false);
 							new_ti = { ts_down.second.second, ts_down.second.second, bf.second[1], bf.second[2], bf.second[3] };
@@ -1553,13 +1560,13 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						//If there is no point in the first t down which doesn't cause violation but the second down causes a violation
 						//In this case we insert a point on the first t down
 						else if (act_vec == col_inds.begin() || getRowOfExisting(*(act_vec - 1)) != ts_down.first.second.first) {
-							new_index = getIndex(ts_down.first.second.second, act_row, act_col, bf.second[1], !bringBackMode);
+							new_index = getIndexWhenColInsert(ts_down.first.second.second, act_row, act_col, bf.second[1], !bringBackMode);
 							updateJA(act_col, act_col, new_index, bf.first[2], !bringBackMode, false);
 							updateIA(ts_down.first.second.second, act_row, bf.second[1], !bringBackMode, new_index, false);
 							new_ti = { ts_down.second.second, ts_down.second.second, bf.second[1], bf.second[2], bf.second[3] };
 						}
 						else {
-							new_index = getIndex(ts_down.first.second.second, ts_down.first.second.first, act_col, bf.second[ts_down.second.first], !bringBackMode);
+							new_index = getIndexWhenColInsert(ts_down.first.second.second, ts_down.first.second.first, act_col, bf.second[ts_down.second.first], !bringBackMode);
 							updateJA(act_col, act_col, new_index, bf.first[2], !bringBackMode, false);
 							updateIA(ts_down.first.second.second, ts_down.first.second.first, bf.second[ts_down.second.first], !bringBackMode, new_index, false);
 							new_ti = { ts_down.second.second, ts_down.second.second, bf.second[ts_down.second.first], bf.second[1], bf.second[2] };
@@ -1578,14 +1585,14 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 				auto ts_up = checkTsUp(act_row, act_col, bf.first, bf.second, 2, newlyAdded);
 				if (!ts_up.first.first) {
-					//Insert new point at getIndex(bf.first[2],bf.second[ts_up.second.first])
+					//Insert new point at getIndexWhenColInsert(bf.first[2],bf.second[ts_up.second.first])
 					violated = true;
 					needsOneMoreIter = true;
 					int new_index;
 					std::vector<double> new_ti;
 					//if inserting with 1 above the middle point
 					if (ts_up.second.first == 3) {
-						new_index = getIndex(act_row, ts_up.first.second.first, act_col, bf.second[ts_up.second.first], false);
+						new_index = getIndexWhenColInsert(act_row, ts_up.first.second.first, act_col, bf.second[ts_up.second.first], false);
 						updateJA(act_col, act_col, new_index, bf.first[2], false, false);
 						updateIA(act_row, ts_up.first.second.first, bf.second[ts_up.second.first], false, new_index, false);
 						new_ti = { bf.second[1], bf.second[2], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
@@ -1596,7 +1603,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						auto act_vec = std::find(col_inds.begin(), col_inds.end(), i);
 						//If the first hit has same t as the one to be inserted and there is at least one row between them, then insert the point before the first hit
 						if (bf.second[3] == bf.second[4] && ts_up.first.second.first - act_row > 1) {
-							new_index = getIndex(act_row, ts_up.first.second.first, act_col, bf.second[3], false);
+							new_index = getIndexWhenColInsert(act_row, ts_up.first.second.first, act_col, bf.second[3], false);
 							updateJA(act_col, act_col, new_index, bf.first[2], false, false);
 							updateIA(act_row, ts_up.first.second.first, bf.second[3], false, new_index, false);
 							new_ti = { bf.second[1], bf.second[2], bf.second[3], ts_up.second.second, ts_up.second.second };
@@ -1604,13 +1611,13 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 						//If there is no point in the first t up which doesn't cause violation but the second up causes a violation
 						//In this case we insert a point on first t up
 						else if (act_vec == col_inds.end() - 1 || getRowOfExisting(*(act_vec + 1)) != ts_up.first.second.first) {
-							new_index = getIndex(act_row, ts_up.first.second.second, act_col, bf.second[3], false);
+							new_index = getIndexWhenColInsert(act_row, ts_up.first.second.second, act_col, bf.second[3], false);
 							updateJA(act_col, act_col, new_index, bf.first[2], false, false);
 							updateIA(act_row, ts_up.first.second.second, bf.second[3], false, new_index, false);
 							new_ti = { bf.second[1], bf.second[2], bf.second[3], ts_up.second.second, ts_up.second.second };
 						}
 						else {
-							new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, bf.second[ts_up.second.first], false);
+							new_index = getIndexWhenColInsert(ts_up.first.second.first, ts_up.first.second.second, act_col, bf.second[ts_up.second.first], false);
 							updateJA(act_col, act_col, new_index, bf.first[2], false, false);
 							updateIA(ts_up.first.second.first, ts_up.first.second.second, bf.second[ts_up.second.first], false, new_index, false);
 							new_ti = { bf.second[2], bf.second[3], bf.second[ts_up.second.first], ts_up.second.second, ts_up.second.second };
@@ -1628,7 +1635,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 				auto ss_down = checkSsDown(act_row, act_col, bf.first, bf.second, 2, newlyAdded);
 				if (!ss_down.first.first) {
-					//Insert new point at getIndex(bf.first[ss_down.second.first],bf.second[2])
+					//Insert new point at getIndexWhenColInsert(bf.first[ss_down.second.first],bf.second[2])
 					violated = true;
 					needsOneMoreIter = true;
 					int new_index;
@@ -1677,7 +1684,7 @@ std::pair<bool, std::pair<std::vector<int>, std::vector<int>>> MyViewer::checkFo
 
 				auto ss_up = checkSsUp(act_row, act_col, bf.first, bf.second, 2, newlyAdded);
 				if (!ss_up.first.first) {
-					//Insert new point at getIndex(bf.first[ss_up.second.first],bf.second[2])
+					//Insert new point at getIndexWhenColInsert(bf.first[ss_up.second.first],bf.second[2])
 					violated = true;
 					needsOneMoreIter = true;
 					//if inserting with 1 above the middle point
@@ -2312,7 +2319,7 @@ void MyViewer::postSelection(const QPoint& p) {
 				//Case when first in col has greater t than 0 but new_t is lower than this t
 				//We insert a point with t = 0 and then another one on the edge connecting these two
 				/*if (indOfFirstInCol == 0 && keep_surface) {
-					int addInd = getIndex(1, 1, JA[index_pair.first], 0.0, true);
+					int addInd = getIndexWhenColInsert(1, 1, JA[index_pair.first], 0.0, true);
 					insertRefined(new_s,0.0,addInd,addInd-1,addInd);
 				}*/
 				index_pair.second = index_pair.first;
@@ -2320,7 +2327,7 @@ void MyViewer::postSelection(const QPoint& p) {
 			}
 
 			//Finding new index
-			new_index = getIndex(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t, false); //last parameter could be both(?)
+			new_index = getIndexWhenColInsert(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t, false); //last parameter could be both(?)
 
 			int act_col;
 			if (!mid_insert) {
@@ -2339,7 +2346,7 @@ void MyViewer::postSelection(const QPoint& p) {
 				if (opp_check.first) {
 					new_t = opp_check.second;
 					//Updating index
-					new_index = getIndex(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t, false); //last parameter could be both(?)
+					new_index = getIndexWhenColInsert(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), JA[index_pair.first], new_t, false); //last parameter could be both(?)
 				}
 			}
 
@@ -3409,11 +3416,14 @@ void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<
 		}
 		max_dist_it = std::max_element(distances.begin(), distances.end());
 		max_dist_change = last_max_dist - *max_dist_it;
+		last_max_dist = *max_dist_it;
 	} while (max_dist_change > 0.0001);
 
 	std::vector<int> fit_corner_inds = { 0, 3, 12, 15 };
 	// Insert new point and update corner inds
-	insertNewPoint(fit_corner_inds);
+	int index_of_maxd = std::distance(distances.begin(), max_dist_it);
+	insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
+	// TODO update corner inds
 	
 	do {
 		fitTSpline(sample_points, us, vs, sample_corner_inds, si_array,
@@ -3428,10 +3438,13 @@ void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<
 		}
 		max_dist_it = std::max_element(distances.begin(), distances.end());
 		max_dist_change = last_max_dist - *max_dist_it;
+		last_max_dist = *max_dist_it;
 
 		if (max_dist_change < 0.0001) {
 			// Insert new point and update corner inds
-			insertNewPoint(fit_corner_inds);
+			int index_of_maxd = std::distance(distances.begin(), max_dist_it);
+			insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
+			// TODO update corner inds
 		}
 	} while (*max_dist_it > 0.0001);
 }
@@ -3656,11 +3669,11 @@ void MyViewer::bringBackIterations() {
 				bool wrong_at_4_still_needed_at_3 = origin_tarray[orig_ind][4] == ti_array[i][3] && rowsInOrig[i] + 1 != first_row_in_orig;
 				int new_index, orig_min_row;
 				if (ts_up.second.first == 3 || wrong_at_4_still_needed_at_3) {
-					new_index = getIndex(act_row, ts_up.first.second.first, act_col, origin_tarray[orig_ind][ts_up.second.first], false);
+					new_index = getIndexWhenColInsert(act_row, ts_up.first.second.first, act_col, origin_tarray[orig_ind][ts_up.second.first], false);
 					orig_min_row = rowsInOrig[i] + 1;
 				}
 				else {
-					new_index = getIndex(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[orig_ind][ts_up.second.first], false);
+					new_index = getIndexWhenColInsert(ts_up.first.second.first, ts_up.first.second.second, act_col, origin_tarray[orig_ind][ts_up.second.first], false);
 					orig_min_row = first_row_in_orig + 1;
 				}
 				updateOrigs(si_array[i][2], origin_tarray[orig_ind][ts_up.second.first], new_index, orig_min_row, colsInOrig[i], true);
@@ -3691,11 +3704,11 @@ void MyViewer::bringBackIterations() {
 				bool wrong_at_0_still_needed_at_1 = origin_tarray[orig_ind][0] == ti_array[i][1] && rowsInOrig[i] - 1 != first_row_in_orig;
 				int new_index, orig_min_row;
 				if (ts_down.second.first == 1 || wrong_at_0_still_needed_at_1) {
-					new_index = getIndex(ts_down.first.second.first, act_row, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
+					new_index = getIndexWhenColInsert(ts_down.first.second.first, act_row, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
 					orig_min_row = rowsInOrig[i] - 1;
 				}
 				else {
-					new_index = getIndex(ts_down.first.second.second, ts_down.first.second.first, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
+					new_index = getIndexWhenColInsert(ts_down.first.second.second, ts_down.first.second.first, act_col, origin_tarray[orig_ind][ts_down.second.first], false);
 					orig_min_row = first_row_in_orig - 1;
 				}
 				updateOrigs(si_array[i][2], origin_tarray[orig_ind][ts_down.second.first], new_index, orig_min_row, colsInOrig[i], true);
@@ -4018,7 +4031,168 @@ void MyViewer::calcPointsBasedOnM() {
 	}
 }
 
-void MyViewer::insertMaxDistanced() {
+void MyViewer::findRowBasedOnKnot(double v, int& ret_row, bool& new_row) {
+	int num_of_rows = IA.size() - 1;
+	for (int i = 0; i < num_of_rows; ++i) {
+		if (ti_array[IA[i]][2] >= v) {
+			ret_row = i;
+			new_row = (ti_array[IA[i]][2] > v);
+		}
+	}
+}
+
+void MyViewer::findColBasedOnKnot(double u, int& ret_col, bool& new_col) {
+	int max_col = *std::max_element(JA.begin(), JA.end());
+	for (int i = 0; i < max_col; ++i) {
+		auto col_inds = indicesOfColumn(i);
+		if (si_array[col_inds[0]][2] >= u) {
+			ret_col = i;
+			new_col = (si_array[col_inds[0]][2] > u);
+		}
+	}
+}
+
+// Has to be in existing row and col
+bool MyViewer::checkWhetherPointExists(int row, int col) {
+	for (int i = IA[row]; i < IA[row + 1]; ++i) {
+		if (JA[i] == col) return true;
+	}
+	return false;
+}
+
+// Has to update corner_inds, too
+void MyViewer::insertMaxDistancedWithoutOrig(double u, double v, std::vector<int>& corner_inds) {
+	// Cannot insert into zero interval this way
+	int act_row, act_col;
+	bool new_row, new_col;
+	findRowBasedOnKnot(v, act_row, new_row);
+	findColBasedOnKnot(u, act_col, new_col);
+
+	int new_index;
+	if (!new_row) {
+		new_index = getIndexWhenRowInsert(act_row, act_col, new_col);
+		updateIA(act_row, act_row, v, false, new_index, false);
+	}
+	else {
+		std::vector<double> test_s_vec = {-1, -1, u, 2, 2};
+		std::vector<double> test_t_vec = {-1, -1, v, 2, 2};
+		int row_down = checkTsDown(act_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+		int row_up = checkTsUp(act_row-1, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+		new_index = getIndexWhenColInsert(row_down, row_up, act_col, v, false);
+		updateIA(row_down, row_up, v, false, new_index, false);
+	}
+
+	if (!new_col) { updateJA(act_col, act_col, new_index, u, false, false); }
+	else {
+		std::vector<double> test_s_vec = { -1, -1, u, 2, 2 };
+		std::vector<double> test_t_vec = { -1, -1, v, 2, 2 };
+		int col_down = checkSsDown(act_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+		int col_up = checkSsUp(act_row, act_col-1, test_s_vec, test_t_vec, 1, {}).first.second.first;
+		updateJA(col_down, col_up, new_index, u, false, false);
+	}
+
+	// IA, JA get reverted
+	auto rec_edges = getFaceRectangle(new_index, act_row, act_col, u, v, new_row, new_col);
+	
+	// Search for middle points to be inserted
+	for (int i = 0; i < rec_edges.first; i++) {
+		int bot_row = rec_edges.second[4 * i];
+		int left_col = rec_edges.second[4 * i + 1];
+		int top_row = rec_edges.second[4 * i + 2];
+		int right_col = rec_edges.second[4 * i + 3];
+
+		double bot_t = ti_array[IA[bot_row]][2];
+		double top_t = ti_array[IA[top_row]][2];
+		auto left_col_inds = indicesOfColumn(left_col);
+		double left_s = si_array[left_col_inds[0]][2];
+		auto right_col_inds = indicesOfColumn(right_col);
+		double right_s = si_array[right_col_inds[0]][2];
+
+		double vert_length = top_t - bot_t;
+		double hor_length = right_s - left_s;
+		
+		// Inserting on vertical sides
+		if (vert_length > hor_length) {
+			double new_t = bot_t + vert_length / 2.0;
+			// Inserting on left col
+			findRowBasedOnKnot(v, act_row, new_row);
+			int row_down, row_up;
+			std::vector<double> test_s_vec = {-1, -1, left_s, 2, 2};
+			std::vector<double> test_t_vec = {-1, -1, new_t, 2, 2};
+			bool already_exists = new_row ? false : checkWhetherPointExists(act_row, left_col);
+			if (!already_exists) {
+				if (!new_row) {
+					row_down = checkTsDown(act_row, left_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+					row_up = checkTsUp(act_row, left_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+				}
+				else {
+					row_down = checkTsDown(act_row, left_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+					row_up = checkTsUp(act_row - 1, left_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+				}
+				new_index = getIndexWhenColInsert(row_down, row_up, left_col, new_t, false);
+				insertRefined(left_s, new_t, new_index, row_down, row_up, left_col, left_col, false);
+				std::for_each(corner_inds.begin(), corner_inds.end(), [new_index](int& corner_ind) {
+					if (corner_ind >= new_index) ++corner_ind;
+				});
+			}
+
+			// Inserting on right col
+			// Always existing row, because inserted after first one
+			already_exists = checkWhetherPointExists(act_row, right_col);
+			if (!already_exists) {
+				std::vector<double> test_s_vec = { -1, -1, right_s, 2, 2 };
+				
+				row_down = checkTsDown(act_row, right_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+				row_up = checkTsUp(act_row, right_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+				new_index = getIndexWhenColInsert(row_down, row_up, right_col, new_t, false);
+				insertRefined(right_s, new_t, new_index, row_down, row_up, right_col, right_col, false);
+				std::for_each(corner_inds.begin(), corner_inds.end(), [new_index](int& corner_ind) {
+					if (corner_ind >= new_index) ++corner_ind;
+				});
+			}
+		}
+		else {
+			double new_s = left_s + hor_length / 2.0;
+			// Inserting on bot row
+			findColBasedOnKnot(u, act_col, new_col);
+			int col_down, col_up;
+			std::vector<double> test_s_vec = { -1, -1, new_s, 2, 2 };
+			std::vector<double> test_t_vec = { -1, -1, bot_t, 2, 2 };
+			bool already_exists = new_col ? false : checkWhetherPointExists(bot_row, act_col);
+			if (!already_exists) {
+				if (!new_col) {
+					col_down = checkSsDown(bot_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+					col_up = checkSsUp(bot_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+				}
+				else {
+					col_down = checkSsDown(bot_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+					col_up = checkSsUp(bot_row, act_col - 1, test_s_vec, test_t_vec, 1, {}).first.second.first;
+				}
+				new_index = getIndexWhenRowInsert(bot_row, act_col, new_col);
+				insertRefined(new_s, bot_t, new_index, bot_row, bot_row, col_down, col_up, false);
+				std::for_each(corner_inds.begin(), corner_inds.end(), [new_index](int& corner_ind) {
+					if (corner_ind >= new_index) ++corner_ind;
+				});
+			}
+
+			// Always existing col, because inserted after first one
+			// Inserting on top row
+			already_exists = new_col ? false : checkWhetherPointExists(top_row, act_col);
+			if (!already_exists) {
+				std::vector<double> test_t_vec = { -1, -1, top_t, 2, 2 };
+				col_down = checkSsDown(top_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+				col_up = checkSsUp(top_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
+				new_index = getIndexWhenRowInsert(top_row, act_col, false);
+				insertRefined(new_s, top_t, new_index, top_row, top_row, col_down, col_up, false);
+				std::for_each(corner_inds.begin(), corner_inds.end(), [new_index](int& corner_ind) {
+					if (corner_ind >= new_index) ++corner_ind;
+				});
+			}
+		}
+	}
+}
+
+void MyViewer::insertMaxDistancedWithOrig() {
 	distMode = true;
 	bringBackMode = false;
 	int max_dist_ind = std::max_element(fitDistances.begin(), fitDistances.end()) - fitDistances.begin();
@@ -4271,7 +4445,7 @@ void MyViewer::keyPressEvent(QKeyEvent* e) {
 			update();
 			break;
 		case Qt::Key_5:
-			insertMaxDistanced();
+			insertMaxDistancedWithOrig();
 			update();
 			break;
 		case Qt::Key_F:

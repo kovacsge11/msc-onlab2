@@ -90,7 +90,8 @@ private:
   std::pair<std::vector<int>, std::vector<int>> insertAfterViol(int new_index, std::vector<double>& new_si, std::vector<double>& new_ti, std::vector<int>& excluded, std::vector<int>& newlyAdded);
   void checkViolations(std::vector<int>& excluded);
   std::vector<int> indicesOfColumn(int colindex, bool inOrig = false);
-  int getIndex(int first_row, int sec_row, int act_col, double t, bool maxFromEquals);
+  int getIndexWhenColInsert(int first_row, int sec_row, int act_col, double t, bool maxFromEquals);
+  int getIndexWhenRowInsert(int row, int act_col, bool new_col);
   std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals, bool use_orig_ind, int new_ind_to_be);
   int getRowOfExisting(int index, bool inOrig = false);
   std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s, bool maxFromEquals, bool use_orig_ind, int new_ind_to_be);
@@ -136,7 +137,11 @@ private:
   void bring4by4ToOrig();
   void bringToOrig();
   void calcPointsBasedOnM();
-  void insertMaxDistanced();
+  void findRowBasedOnKnot(double v, int& ret_row, bool& new_row);
+  void findColBasedOnKnot(double u, int& ret_col, bool& new_col);
+  bool checkWhetherPointExists(int row, int col);
+  void insertMaxDistancedWithoutOrig(double u, double v, std::vector<int>& corner_inds);
+  void insertMaxDistancedWithOrig();
   std::pair<int, std::vector<int>> getFaceRectangle(int index, int act_row, int act_col, double s, double t, bool new_row, bool new_col);
   bool expandRectangleVertically(int act_row, int right_col, int left_col, int excluded);
   bool expandRectangleHorizontally(int act_col, int top_row, int bot_row, int excluded);
