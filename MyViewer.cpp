@@ -890,11 +890,12 @@ int MyViewer::getIndexWhenColInsert(int first_row, int sec_row, int act_col, dou
 	}
 }
 
-int MyViewer::getIndexWhenRowInsert(int row, int act_col, bool new_col) {
+int MyViewer::getIndexWhenRowInsert(int row, int act_col) {
 	int i = IA[row];
-	for (; i < IA[row + 1] && JA[i] < act_col; ++i) {
+	if (JA[i] >= act_col) return i;
+	for (; i+1 < IA[row + 1] && JA[i+1] < act_col; ++i) {
 	}
-	return new_col ? i+1 : i;
+	return i+1;
 }
 
 void MyViewer::updateIA(int first_row, int sec_row, double t, bool maxFromEquals, int new_ind, bool use_orig_ind) {
@@ -1952,9 +1953,9 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		for (int i = IA[down_row]; i < IA[down_row + 1]; i++) {
 			//WARNING edges and indices updated temporarily but ti and si not
 			double temp_s = (i >= new_index) ? si_array[i - 1][2] : si_array[i][2];
-			if (abs(temp_s - s) < epsilon) {
+			if (std::fabs(temp_s - s) < epsilon) {
 				is_close = true;
-				if (abs(temp_s - s) < abs(close_value - s)) close_value = temp_s;
+				if (std::fabs(temp_s - s) < std::fabs(close_value - s)) close_value = temp_s;
 			}
 		}
 
@@ -1966,9 +1967,9 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		for (int i = IA[up_row]; i < IA[up_row + 1]; i++) {
 			//WARNING edges and indices updated temporarily but ti and si not
 			double temp_s = (i >= new_index) ? si_array[i - 1][2] : si_array[i][2];
-			if (abs(temp_s - s) < epsilon) {
+			if (std::fabs(temp_s - s) < epsilon) {
 				is_close = true;
-				if (abs(temp_s - s) < abs(close_value - s)) close_value = temp_s;
+				if (std::fabs(temp_s - s) < std::fabs(close_value - s)) close_value = temp_s;
 			}
 		}
 		return { is_close,close_value };
@@ -1985,9 +1986,9 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		for (auto i : col_indices) {
 			//WARNING edges and indices updated temporarily but ti and si not
 			double temp_t = (i >= new_index) ? ti_array[i - 1][2] : ti_array[i][2];
-			if (abs(temp_t - t) < epsilon) {
+			if (std::fabs(temp_t - t) < epsilon) {
 				is_close = true;
-				if (abs(temp_t - t) < abs(close_value - t)) close_value = temp_t;
+				if (std::fabs(temp_t - t) < std::fabs(close_value - t)) close_value = temp_t;
 			}
 		}
 
@@ -2000,9 +2001,9 @@ std::pair<bool, double> MyViewer::checkOpposite(int act_row, int act_col, double
 		for (auto i : col_indices) {
 			//WARNING edges and indices updated temporarily but ti and si not
 			double temp_t = (i >= new_index) ? ti_array[i - 1][2] : ti_array[i][2];
-			if (abs(temp_t - t) < epsilon) {
+			if (std::fabs(temp_t - t) < epsilon) {
 				is_close = true;
-				if (abs(temp_t - t) < abs(close_value - t)) close_value = temp_t;
+				if (std::fabs(temp_t - t) < std::fabs(close_value - t)) close_value = temp_t;
 			}
 		}
 		return { is_close,close_value };
@@ -3211,7 +3212,7 @@ void MyViewer::generatePoints(std::vector<Vec>& points, int n,
 				p += tspline_control_points[k] * B_k;
 				nominator += weights[k] * B_k;
 			}
-			if (abs(nominator) > 0.0) p /= nominator;
+			if (std::fabs(nominator) > 0.0) p /= nominator;
 			points.emplace_back(p);
 			return_us.emplace_back(s);
 			return_vs.emplace_back(t);
@@ -3331,59 +3332,7 @@ void MyViewer::exampleFitTSpline() {
 	std::vector<int> sample_corner_inds;
 	generatePoints(sample_points, 10, us, vs, sample_corner_inds);
 
-	IA = {0, 4, 9, 12, 17, 22};
-	JA = {0, 1, 3, 4,
-		  0, 1, 2, 3, 4,
-		  2, 3, 4,
-		  0, 1, 2, 3, 4,
-		  0, 1, 2, 3, 4};
-	si_array = { {0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
-				 {0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
-				 {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
-				 {0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1}, 
-				 {0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1} };
-	ti_array = { {0,0,0,0,1}, {0,0,0,0,1}, {0,0,0,0,0.5}, {0,0,0,0,0.5},
-				 {0,0,0,1,1}, {0,0,0,1,1}, {0,0,0,0.5,1}, {0,0,0,0.5,1}, {0,0,0,0.5,1},
-				 {0,0,0.5,1,1}, {0,0,0.5,1,1}, {0,0,0.5,1,1},
-				 {0,0,1,1,1}, {0,0,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1},
-				 {0,1,1,1,1}, {0,1,1,1,1}, {0.5,1,1,1,1}, {0.5,1,1,1,1}, {0.5,1,1,1,1} };
-
-	int example_size = 22;
-	blend_functions.resize(example_size);
-	for (int i = 0; i < example_size; i++) {
-		std::pair<std::vector<double>, std::vector<double>> blend_pair(si_array[i], ti_array[i]);
-		blend_functions[i] = { blend_pair };
-	}
-
-	std::vector<int> fit_corner_inds = {0,3,17,21};
-	std::vector<double> distances;
-	// Calculate initial distances
-	for (int i = 0; i < sample_points.size(); i++)
-	{
-		Vec point_with_new_params;
-		evaluateTSpline(us[i], vs[i], point_with_new_params);
-		distances.emplace_back((sample_points[i] - point_with_new_params).norm());
-	}
-	
-
-	auto max_dist_it = std::max_element(distances.begin(), distances.end());
-	double last_max_dist = *max_dist_it;
-	double max_dist_change = 0.0;
-	do {
-		fitTSpline(sample_points, us, vs, sample_corner_inds, si_array, ti_array, fit_corner_inds);
-		updateEdgeTopology();
-		for (int i = 0; i < sample_points.size(); i++)
-		{
-			newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);
-			Vec point_with_new_params;
-			evaluateTSpline(us[i], vs[i], point_with_new_params);
-			distances[i] = (sample_points[i] - point_with_new_params).norm();
-		}
-		max_dist_it = std::max_element(distances.begin(), distances.end());
-		max_dist_change = last_max_dist - *max_dist_it;
-	} while (max_dist_change > 0.0001);
-	
-	updateMesh();
+	fitPointCloud(sample_points, us, vs, sample_corner_inds);
 }
 
 void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<double>& us,
@@ -3423,7 +3372,6 @@ void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<
 	// Insert new point and update corner inds
 	int index_of_maxd = std::distance(distances.begin(), max_dist_it);
 	insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
-	// TODO update corner inds
 	
 	do {
 		fitTSpline(sample_points, us, vs, sample_corner_inds, si_array,
@@ -3444,9 +3392,12 @@ void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<
 			// Insert new point and update corner inds
 			int index_of_maxd = std::distance(distances.begin(), max_dist_it);
 			insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
-			// TODO update corner inds
 		}
-	} while (*max_dist_it > 0.0001);
+	} while (*max_dist_it > 0.01);
+
+	updateEdgeTopology();
+	updateMesh();
+	update();
 }
 
 double dot(const Vec& vec_1, const Vec& vec_2) {
@@ -3540,7 +3491,7 @@ void MyViewer::evaluateTSpline(double u, double v, Vec& return_p) {
 		return_p += tspline_control_points[k] * B_k;
 		nominator += weights[k] * B_k;
 	}
-	if (abs(nominator) > 0.0) return_p /= nominator;
+	if (std::fabs(nominator) > 0.0) return_p /= nominator;
 }
 
 void MyViewer::calculateDer(double u, double v, int grade_u, int grade_v, Vec& result) {
@@ -4037,6 +3988,7 @@ void MyViewer::findRowBasedOnKnot(double v, int& ret_row, bool& new_row) {
 		if (ti_array[IA[i]][2] >= v) {
 			ret_row = i;
 			new_row = (ti_array[IA[i]][2] > v);
+			return;
 		}
 	}
 }
@@ -4048,6 +4000,7 @@ void MyViewer::findColBasedOnKnot(double u, int& ret_col, bool& new_col) {
 		if (si_array[col_inds[0]][2] >= u) {
 			ret_col = i;
 			new_col = (si_array[col_inds[0]][2] > u);
+			return;
 		}
 	}
 }
@@ -4070,7 +4023,7 @@ void MyViewer::insertMaxDistancedWithoutOrig(double u, double v, std::vector<int
 
 	int new_index;
 	if (!new_row) {
-		new_index = getIndexWhenRowInsert(act_row, act_col, new_col);
+		new_index = getIndexWhenRowInsert(act_row, act_col);
 		updateIA(act_row, act_row, v, false, new_index, false);
 	}
 	else {
@@ -4115,7 +4068,7 @@ void MyViewer::insertMaxDistancedWithoutOrig(double u, double v, std::vector<int
 		if (vert_length > hor_length) {
 			double new_t = bot_t + vert_length / 2.0;
 			// Inserting on left col
-			findRowBasedOnKnot(v, act_row, new_row);
+			findRowBasedOnKnot(new_t, act_row, new_row);
 			int row_down, row_up;
 			std::vector<double> test_s_vec = {-1, -1, left_s, 2, 2};
 			std::vector<double> test_t_vec = {-1, -1, new_t, 2, 2};
@@ -4131,9 +4084,6 @@ void MyViewer::insertMaxDistancedWithoutOrig(double u, double v, std::vector<int
 				}
 				new_index = getIndexWhenColInsert(row_down, row_up, left_col, new_t, false);
 				insertRefined(left_s, new_t, new_index, row_down, row_up, left_col, left_col, false);
-				std::for_each(corner_inds.begin(), corner_inds.end(), [new_index](int& corner_ind) {
-					if (corner_ind >= new_index) ++corner_ind;
-				});
 			}
 
 			// Inserting on right col
@@ -4146,15 +4096,12 @@ void MyViewer::insertMaxDistancedWithoutOrig(double u, double v, std::vector<int
 				row_up = checkTsUp(act_row, right_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
 				new_index = getIndexWhenColInsert(row_down, row_up, right_col, new_t, false);
 				insertRefined(right_s, new_t, new_index, row_down, row_up, right_col, right_col, false);
-				std::for_each(corner_inds.begin(), corner_inds.end(), [new_index](int& corner_ind) {
-					if (corner_ind >= new_index) ++corner_ind;
-				});
 			}
 		}
 		else {
 			double new_s = left_s + hor_length / 2.0;
 			// Inserting on bot row
-			findColBasedOnKnot(u, act_col, new_col);
+			findColBasedOnKnot(new_s, act_col, new_col);
 			int col_down, col_up;
 			std::vector<double> test_s_vec = { -1, -1, new_s, 2, 2 };
 			std::vector<double> test_t_vec = { -1, -1, bot_t, 2, 2 };
@@ -4168,28 +4115,24 @@ void MyViewer::insertMaxDistancedWithoutOrig(double u, double v, std::vector<int
 					col_down = checkSsDown(bot_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
 					col_up = checkSsUp(bot_row, act_col - 1, test_s_vec, test_t_vec, 1, {}).first.second.first;
 				}
-				new_index = getIndexWhenRowInsert(bot_row, act_col, new_col);
+				new_index = getIndexWhenRowInsert(bot_row, act_col);
 				insertRefined(new_s, bot_t, new_index, bot_row, bot_row, col_down, col_up, false);
-				std::for_each(corner_inds.begin(), corner_inds.end(), [new_index](int& corner_ind) {
-					if (corner_ind >= new_index) ++corner_ind;
-				});
 			}
 
 			// Always existing col, because inserted after first one
 			// Inserting on top row
-			already_exists = new_col ? false : checkWhetherPointExists(top_row, act_col);
+			already_exists = checkWhetherPointExists(top_row, act_col);
 			if (!already_exists) {
 				std::vector<double> test_t_vec = { -1, -1, top_t, 2, 2 };
 				col_down = checkSsDown(top_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
 				col_up = checkSsUp(top_row, act_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
-				new_index = getIndexWhenRowInsert(top_row, act_col, false);
+				new_index = getIndexWhenRowInsert(top_row, act_col);
 				insertRefined(new_s, top_t, new_index, top_row, top_row, col_down, col_up, false);
-				std::for_each(corner_inds.begin(), corner_inds.end(), [new_index](int& corner_ind) {
-					if (corner_ind >= new_index) ++corner_ind;
-				});
 			}
 		}
 	}
+	int num_of_rows = IA.size() - 1;
+	corner_inds = {0, IA[1]-1, IA[num_of_rows-1], IA[num_of_rows]-1};
 }
 
 void MyViewer::insertMaxDistancedWithOrig() {

@@ -91,7 +91,7 @@ private:
   void checkViolations(std::vector<int>& excluded);
   std::vector<int> indicesOfColumn(int colindex, bool inOrig = false);
   int getIndexWhenColInsert(int first_row, int sec_row, int act_col, double t, bool maxFromEquals);
-  int getIndexWhenRowInsert(int row, int act_col, bool new_col);
+  int getIndexWhenRowInsert(int row, int act_col);
   std::pair<bool, int> getRowOfNew(int first_row, int sec_row, double t, bool maxFromEquals, bool use_orig_ind, int new_ind_to_be);
   int getRowOfExisting(int index, bool inOrig = false);
   std::pair<bool, int> getColOfNew(int first_col, int sec_col, double s, bool maxFromEquals, bool use_orig_ind, int new_ind_to_be);
