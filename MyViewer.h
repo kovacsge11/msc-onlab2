@@ -211,7 +211,7 @@ private:
   std::vector<double> distances;
   std::vector<double>::iterator max_dist_it;
   double last_max_dist, max_dist_change;
-  const double max_dist_boundary = 0.3, max_distchange_boundary = 0.001;
+  const double max_dist_boundary = 0.03, max_distchange_boundary = 0.001;
 
   bool keep_surface, mid_insert;
 

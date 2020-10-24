@@ -3385,6 +3385,9 @@ void MyViewer::exampleFitTSpline() {
 
 void MyViewer::fitPointCloudIter() {
 	if (*max_dist_it < max_dist_boundary) return;
+	// insert new point and update corner inds
+	int index_of_maxd = std::distance(distances.begin(), max_dist_it);
+	insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
 
 	fitTSpline(sample_points, us, vs, sample_corner_inds, si_array,
 		ti_array, fit_corner_inds);
@@ -3402,11 +3405,11 @@ void MyViewer::fitPointCloudIter() {
 	max_dist_change = last_max_dist - *max_dist_it;
 	last_max_dist = *max_dist_it;
 
-	if (max_dist_change < max_distchange_boundary) {
-		// insert new point and update corner inds
-		int index_of_maxd = std::distance(distances.begin(), max_dist_it);
-		insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
-	}
+	//if (max_dist_change < max_distchange_boundary) {
+	//	// insert new point and update corner inds
+	//	int index_of_maxd = std::distance(distances.begin(), max_dist_it);
+	//	insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
+	//}
 
 	updateEdgeTopology();
 	updateMesh();
