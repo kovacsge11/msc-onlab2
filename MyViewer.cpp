@@ -3363,6 +3363,7 @@ void MyViewer::exampleFitTSpline() {
 	fit4by4Bezier(sample_points, us, vs, sample_corner_inds);
 	bezierToTspline();
 	surface_points.clear();
+	distances.clear();
 	// Calculate initial distances
 	for (int i = 0; i < sample_points.size(); i++)
 	{
@@ -3384,13 +3385,14 @@ void MyViewer::exampleFitTSpline() {
 
 void MyViewer::fitPointCloudIter() {
 	if (*max_dist_it < max_dist_boundary) return;
+
 	fitTSpline(sample_points, us, vs, sample_corner_inds, si_array,
 		ti_array, fit_corner_inds);
 	updateEdgeTopology();
 	surface_points.clear();
 	for (int i = 0; i < sample_points.size(); i++)
 	{
-		newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);
+		/*newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);*/
 		Vec point_with_new_params;
 		evaluateTSpline(us[i], vs[i], point_with_new_params);
 		surface_points.emplace_back(point_with_new_params);
@@ -3401,7 +3403,7 @@ void MyViewer::fitPointCloudIter() {
 	last_max_dist = *max_dist_it;
 
 	if (max_dist_change < max_distchange_boundary) {
-		// Insert new point and update corner inds
+		// insert new point and update corner inds
 		int index_of_maxd = std::distance(distances.begin(), max_dist_it);
 		insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
 	}
