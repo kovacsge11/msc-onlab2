@@ -445,6 +445,7 @@ bool MyViewer::openTSpline(const std::string& filename) {
 	distMode = false;
 	distColorMode = false;
 	bringBackMode = false;
+	draw_point_clouds = false;
 	return true;
 }
 
@@ -570,6 +571,9 @@ void MyViewer::draw() {
 		drawBezierControlNet();
 	if (model_type == ModelType::TSPLINE_SURFACE && show_control_points)
 		drawTSplineControlNet(false, -1);
+	if (draw_point_clouds) {
+		drawPointClouds();
+	}
 
 	glPolygonMode(GL_FRONT_AND_BACK, !show_solid && show_wireframe ? GL_LINE : GL_FILL);
 	glEnable(GL_POLYGON_OFFSET_FILL);
@@ -685,6 +689,25 @@ void MyViewer::drawTSplineControlNet(bool with_names, int names_index) const {
 		else glColor3d(1.0, 0.0, 1.0);
 		Vec coords = { (tspline_control_points[i] / weights[i]) };
 		glVertex3dv(coords);
+	}
+	glEnd();
+	glPointSize(1.0);
+	glEnable(GL_LIGHTING);
+}
+
+void MyViewer::drawPointClouds() const {
+	glDisable(GL_LIGHTING);
+	//Drawing points
+	glLineWidth(1.0);
+	glPointSize(8.0);
+	glBegin(GL_POINTS);
+	glColor3d(1.0, 1.0, 1.0);
+	for (int i = 0; i < sample_points.size(); i++) {
+		glVertex3dv(sample_points[i]);
+	}
+	glColor3d(0.0, 1.0, 1.0);
+	for (int i = 0; i < surface_points.size(); i++) {
+		glVertex3dv(surface_points[i]);
 	}
 	glEnd();
 	glPointSize(1.0);
@@ -2530,13 +2553,13 @@ void MyViewer::bSplineBasis(double u, const std::vector<double>& knots, int degr
 	}
 
 	if (u < knots.front() || u > knots.back()) {
-		coeff.resize(degree_max+1 - degree, 0.0);
+		coeff.assign(degree_max+1 - degree, 0.0);
 		return;
 	}
 	if (u == knots.back())
 		i = end;
 	else i = (std::upper_bound(knots.begin(), knots.end(), u) - knots.begin()) - 1;
-	coeff.resize(knots.size()-1, 0.0);
+	coeff.assign(knots.size()-1, 0.0);
 	coeff[i] = 1.0;
 
 	for (int j = 1; j <= degree; ++j)
@@ -3257,20 +3280,24 @@ void MyViewer::fitTSpline(const std::vector<Vec>& S, const std::vector<double>& 
 	const std::vector<std::vector<double>>& param_si_array,
 	const std::vector<std::vector<double>>& param_ti_array, const std::vector<int>& fit_corner_inds) {
 	int new_cp_num = param_si_array.size();
-	tspline_control_points.resize(new_cp_num, Vec(0.0, 0.0, 0.0));
+	/*tspline_control_points.assign(new_cp_num, Vec(0.0, 0.0, 0.0));*/
 	fitSpline(S, sample_points_us, sample_points_vs, sample_corner_inds,
 		param_si_array, param_ti_array, fit_corner_inds, tspline_control_points);
-
-	weights.resize(new_cp_num, 1.0);
+	for (int i = 0; i < new_cp_num; ++i) {
+		// tspline_control_points[i] *= weights[i];
+		refined_points[i] = { tspline_control_points[i] };
+	}
+	
+	/*weights.resize(new_cp_num, 1.0);
 	refined_weights.resize(new_cp_num, { 1.0 });
 	refined_points.resize(new_cp_num);
 	refine_indexes.resize(new_cp_num);
 	for (int i=0; i < new_cp_num; ++i) {
 		refined_points[i] = { tspline_control_points[i] };
 		refine_indexes[i] = { {i} };
-	}
+	}*/
 
-	model_type = ModelType::TSPLINE_SURFACE;
+	/*model_type = ModelType::TSPLINE_SURFACE;*/
 	distMode = false;
 	distColorMode = false;
 	bringBackMode = false;
@@ -3326,13 +3353,62 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 }
 
 void MyViewer::exampleFitTSpline() {
-	std::vector<Vec> sample_points;
+	draw_point_clouds = true;
+	sample_points.clear();
 	int sample_num_1d = 10;
-	std::vector<double> us, vs;
-	std::vector<int> sample_corner_inds;
-	generatePoints(sample_points, 10, us, vs, sample_corner_inds);
+	us.clear(); vs.clear();
+	sample_corner_inds.clear();
+	generatePoints(sample_points, sample_num_1d, us, vs, sample_corner_inds);
 
-	fitPointCloud(sample_points, us, vs, sample_corner_inds);
+	fit4by4Bezier(sample_points, us, vs, sample_corner_inds);
+	bezierToTspline();
+	surface_points.clear();
+	// Calculate initial distances
+	for (int i = 0; i < sample_points.size(); i++)
+	{
+		Vec point_with_new_params;
+		evaluateTSpline(us[i], vs[i], point_with_new_params);
+		surface_points.emplace_back(point_with_new_params);
+		distances.emplace_back((sample_points[i] - point_with_new_params).norm());
+	}
+	fit_corner_inds = { 0, 3, 12, 15 };
+	max_dist_it = std::max_element(distances.begin(), distances.end());
+	last_max_dist = *max_dist_it;
+	max_dist_change = 0.0;
+
+	
+	updateEdgeTopology();
+	updateMesh();
+	update();
+}
+
+void MyViewer::fitPointCloudIter() {
+	if (*max_dist_it < max_dist_boundary) return;
+	fitTSpline(sample_points, us, vs, sample_corner_inds, si_array,
+		ti_array, fit_corner_inds);
+	updateEdgeTopology();
+	surface_points.clear();
+	for (int i = 0; i < sample_points.size(); i++)
+	{
+		newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);
+		Vec point_with_new_params;
+		evaluateTSpline(us[i], vs[i], point_with_new_params);
+		surface_points.emplace_back(point_with_new_params);
+		distances[i] = (sample_points[i] - point_with_new_params).norm();
+	}
+	max_dist_it = std::max_element(distances.begin(), distances.end());
+	max_dist_change = last_max_dist - *max_dist_it;
+	last_max_dist = *max_dist_it;
+
+	if (max_dist_change < max_distchange_boundary) {
+		// Insert new point and update corner inds
+		int index_of_maxd = std::distance(distances.begin(), max_dist_it);
+		insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
+	}
+
+	updateEdgeTopology();
+	updateMesh();
+	update();
 }
 
 void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<double>& us,
@@ -3352,27 +3428,7 @@ void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<
 	auto max_dist_it = std::max_element(distances.begin(), distances.end());
 	double last_max_dist = *max_dist_it;
 	double max_dist_change = 0.0;
-	do {
-		fit4by4Bezier(sample_points, us, vs, sample_corner_inds);
-		bezierToTspline();
-		updateEdgeTopology();
-		for (int i = 0; i < sample_points.size(); i++)
-		{
-			newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);
-			Vec point_with_new_params;
-			evaluateTSpline(us[i], vs[i], point_with_new_params);
-			distances[i] = (sample_points[i] - point_with_new_params).norm();
-		}
-		max_dist_it = std::max_element(distances.begin(), distances.end());
-		max_dist_change = last_max_dist - *max_dist_it;
-		last_max_dist = *max_dist_it;
-	} while (max_dist_change > 0.0001);
-
 	std::vector<int> fit_corner_inds = { 0, 3, 12, 15 };
-	// Insert new point and update corner inds
-	int index_of_maxd = std::distance(distances.begin(), max_dist_it);
-	insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
-	
 	do {
 		fitTSpline(sample_points, us, vs, sample_corner_inds, si_array,
 			ti_array, fit_corner_inds);
@@ -3388,12 +3444,12 @@ void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<
 		max_dist_change = last_max_dist - *max_dist_it;
 		last_max_dist = *max_dist_it;
 
-		if (max_dist_change < 0.0001) {
+		if (max_dist_change < max_distchange_boundary) {
 			// Insert new point and update corner inds
 			int index_of_maxd = std::distance(distances.begin(), max_dist_it);
 			insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
 		}
-	} while (*max_dist_it > 0.01);
+	} while (*max_dist_it > max_dist_boundary);
 
 	updateEdgeTopology();
 	updateMesh();
@@ -3410,10 +3466,10 @@ void MyViewer::bezierToTspline() {
 	ti_array.resize(16);
 	si_array.resize(16);
 	JA.resize(16);
-	weights.resize(16, 1.0);
+	weights.assign(16, 1.0);
 	blend_functions.resize(16);
 	refined_points.resize(16);
-	refined_weights.resize(16, { 1.0 });
+	refined_weights.assign(16, { 1.0 });
 	refine_indexes.resize(16);
 	for (int i = 0; i < 16; i++) {
 		tspline_control_points[i] = bezier_control_points[(i % 4) * 4 + i / 4];
@@ -4377,6 +4433,10 @@ void MyViewer::keyPressEvent(QKeyEvent* e) {
 			//TODO do this more user-friendly
 		case Qt::Key_E:
 			mid_insert = !mid_insert;
+			update();
+			break;
+		case Qt::Key_2:
+			fitPointCloudIter();
 			update();
 			break;
 		case Qt::Key_3:

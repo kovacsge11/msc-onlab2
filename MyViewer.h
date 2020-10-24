@@ -115,6 +115,7 @@ private:
 	  const std::vector<std::vector<double>>& param_ti_array, const std::vector<int>& fit_corner_inds,
 	  std::vector<Vec>& return_pts);
   void exampleFitTSpline();
+  void fitPointCloudIter();
   void fitPointCloud(const std::vector<Vec>& sample_points, std::vector<double>& us,
 	  std::vector<double>& vs, const std::vector<int>& sample_corner_inds);
   void generatePoints(std::vector<Vec>& points, int n,
@@ -151,6 +152,7 @@ private:
   Vec meanMapColor(double d) const;
   void drawBezierControlNet() const;
   void drawTSplineControlNet(bool with_names, int start_index) const;
+  void drawPointClouds() const;
   void drawAxes() const;
   void drawAxesWithNames() const;
   static Vec intersectLines(const Vec &ap, const Vec &ad, const Vec &bp, const Vec &bd);
@@ -201,6 +203,15 @@ private:
   std::vector<int> baseIndsInOrig, indsInOrig,IAOrig, JAOrig, rowsInOrig, colsInOrig;
   Eigen::MatrixXd M;
   std::vector<double> self_multiplier_for_temps;
+
+  std::vector<Vec> sample_points, surface_points;
+  bool draw_point_clouds = false;
+  std::vector<double> us, vs;
+  std::vector<int> sample_corner_inds, fit_corner_inds;
+  std::vector<double> distances;
+  std::vector<double>::iterator max_dist_it;
+  double last_max_dist, max_dist_change;
+  const double max_dist_boundary = 0.3, max_distchange_boundary = 0.001;
 
   bool keep_surface, mid_insert;
 
