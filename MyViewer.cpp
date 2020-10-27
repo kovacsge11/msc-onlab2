@@ -446,6 +446,7 @@ bool MyViewer::openTSpline(const std::string& filename) {
 	distColorMode = false;
 	bringBackMode = false;
 	draw_point_clouds = false;
+	new_point_added = false;
 	return true;
 }
 
@@ -3352,6 +3353,13 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 	}
 }
 
+double squaredDistance(const std::vector<double>& dist_vec) {
+	double sum = 0.0;
+	std::for_each(dist_vec.begin(), dist_vec.end(),
+		[&sum](const double& item) { sum += item * item; });
+	return sum;
+}
+
 void MyViewer::exampleFitTSpline() {
 	draw_point_clouds = true;
 	sample_points.clear();
@@ -3359,6 +3367,8 @@ void MyViewer::exampleFitTSpline() {
 	us.clear(); vs.clear();
 	sample_corner_inds.clear();
 	generatePoints(sample_points, sample_num_1d, us, vs, sample_corner_inds);
+	orig_us = us;
+	orig_vs = vs;
 
 	fit4by4Bezier(sample_points, us, vs, sample_corner_inds);
 	bezierToTspline();
@@ -3373,21 +3383,51 @@ void MyViewer::exampleFitTSpline() {
 		distances.emplace_back((sample_points[i] - point_with_new_params).norm());
 	}
 	fit_corner_inds = { 0, 3, 12, 15 };
-	max_dist_it = std::max_element(distances.begin(), distances.end());
-	last_max_dist = *max_dist_it;
-	max_dist_change = 0.0;
+	if (sq_dist_mode) {
+		last_sq_dist = squaredDistance(distances);
+		sq_dist_change = 0.0;
+	}
+	else {
+		max_dist_it = std::max_element(distances.begin(), distances.end());
+		last_max_dist = *max_dist_it;
+		max_dist_change = 0.0;
+	}
 
-	
 	updateEdgeTopology();
 	updateMesh();
 	update();
 }
 
 void MyViewer::fitPointCloudIter() {
-	if (*max_dist_it < max_dist_boundary) return;
-	// insert new point and update corner inds
-	int index_of_maxd = std::distance(distances.begin(), max_dist_it);
-	insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
+	if (sq_dist_mode) {
+		if (last_sq_dist < sq_dist_boundary) return;
+		if (!new_point_added && sq_dist_change < sq_distchange_boundary) {
+			// insert new point and update corner inds
+			max_dist_it = std::max_element(distances.begin(), distances.end());
+			int index_of_maxd = std::distance(distances.begin(), max_dist_it);
+			insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
+			us = orig_us;
+			vs = orig_vs;
+			new_point_added = true;
+		}
+		else {
+			new_point_added = false;
+		}
+	}
+	else {
+		if (*max_dist_it < max_dist_boundary) return;
+		if (!new_point_added && max_dist_change < max_distchange_boundary) {
+			// insert new point and update corner inds
+			int index_of_maxd = std::distance(distances.begin(), max_dist_it);
+			insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
+			us = orig_us;
+			vs = orig_vs;
+			new_point_added = true;
+		}
+		else {
+			new_point_added = false;
+		}
+	}
 
 	fitTSpline(sample_points, us, vs, sample_corner_inds, si_array,
 		ti_array, fit_corner_inds);
@@ -3395,21 +3435,23 @@ void MyViewer::fitPointCloudIter() {
 	surface_points.clear();
 	for (int i = 0; i < sample_points.size(); i++)
 	{
-		/*newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);*/
+		newtonRaphsonProjection(us[i], vs[i], sample_points[i], 10, 0.00001, 0.00001);
 		Vec point_with_new_params;
 		evaluateTSpline(us[i], vs[i], point_with_new_params);
 		surface_points.emplace_back(point_with_new_params);
 		distances[i] = (sample_points[i] - point_with_new_params).norm();
 	}
-	max_dist_it = std::max_element(distances.begin(), distances.end());
-	max_dist_change = last_max_dist - *max_dist_it;
-	last_max_dist = *max_dist_it;
 
-	//if (max_dist_change < max_distchange_boundary) {
-	//	// insert new point and update corner inds
-	//	int index_of_maxd = std::distance(distances.begin(), max_dist_it);
-	//	insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
-	//}
+	if (sq_dist_mode) {
+		double new_sq_dist = squaredDistance(distances);
+		sq_dist_change = last_sq_dist - new_sq_dist;
+		last_sq_dist = new_sq_dist;
+	}
+	else {
+		max_dist_it = std::max_element(distances.begin(), distances.end());
+		max_dist_change = last_max_dist - *max_dist_it;
+		last_max_dist = *max_dist_it;
+	}
 
 	updateEdgeTopology();
 	updateMesh();
@@ -3533,9 +3575,9 @@ void MyViewer::newtonRaphsonProjection(double& u, double& v, const Vec& p, int m
 		Vector2d delta = J.colPivHouseholderQr().solve(kappa);
 		Vector2d next = ((u_v + delta).cwiseMax(0)).cwiseMin(1);
 		delta = next - u_v;
+		if ((s_u * delta[0] - s_v * delta[1]).norm() < dist_tol) return;
 		u = next[0];
 		v = next[1];
-		if ((s_u * delta[0] - s_v * delta[1]).norm() < dist_tol) return;
 	}
 }
 
