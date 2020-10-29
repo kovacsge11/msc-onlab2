@@ -114,7 +114,8 @@ private:
 	  const std::vector<std::vector<double>>& param_si_array,
 	  const std::vector<std::vector<double>>& param_ti_array, const std::vector<int>& fit_corner_inds,
 	  std::vector<Vec>& return_pts);
-  void exampleFitTSpline();
+  void readObjWithUV();
+  void exampleFit();
   void fitPointCloudIter();
   void fitPointCloud(const std::vector<Vec>& sample_points, std::vector<double>& us,
 	  std::vector<double>& vs, const std::vector<int>& sample_corner_inds);

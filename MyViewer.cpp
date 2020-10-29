@@ -3313,10 +3313,12 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 	int param_cp_num = param_si_array.size();
 	MatrixXd A(num_sample_pts, param_cp_num), B(num_sample_pts, 3);
 
-	return_pts[fit_corner_inds[0]] = S[sample_corner_inds[0]];
-	return_pts[fit_corner_inds[1]] = S[sample_corner_inds[1]];
-	return_pts[fit_corner_inds[2]] = S[sample_corner_inds[2]];
-	return_pts[fit_corner_inds[3]] = S[sample_corner_inds[3]];
+	if (!sample_corner_inds.empty()) {
+		return_pts[fit_corner_inds[0]] = S[sample_corner_inds[0]];
+		return_pts[fit_corner_inds[1]] = S[sample_corner_inds[1]];
+		return_pts[fit_corner_inds[2]] = S[sample_corner_inds[2]];
+		return_pts[fit_corner_inds[3]] = S[sample_corner_inds[3]];
+	}
 
 	for (int i = 0; i < num_sample_pts; ++i) {
 		B.row(i) << S[i][0], S[i][1], S[i][2];
@@ -3331,25 +3333,33 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 		}
 	}
 
-	for (int i = 0; i < num_sample_pts; ++i) {
+	if (!sample_corner_inds.empty()) {
+		for (int i = 0; i < num_sample_pts; ++i) {
 			Vec temp = A(i, fit_corner_inds[0]) * return_pts[fit_corner_inds[0]] + A(i, fit_corner_inds[1]) * return_pts[fit_corner_inds[1]] +
 				A(i, fit_corner_inds[2]) * return_pts[fit_corner_inds[2]] + A(i, fit_corner_inds[3]) * return_pts[fit_corner_inds[3]];
 			B(i, 0) -= temp[0];
 			B(i, 1) -= temp[1];
 			B(i, 2) -= temp[2];
+		}
+
+		removeEigenMColumn(A, fit_corner_inds[3]);
+		removeEigenMColumn(A, fit_corner_inds[2]);
+		removeEigenMColumn(A, fit_corner_inds[1]);
+		removeEigenMColumn(A, fit_corner_inds[0]);
+
+		MatrixXd X = A.colPivHouseholderQr().solve(B);
+		for (int i = 0; i < param_cp_num - 4; i++) {
+			int pInd = i + 1;
+			if (i >= fit_corner_inds[1] - 1) pInd++;
+			if (i >= fit_corner_inds[2] - 2) pInd++;
+			return_pts[pInd] = Vec(X(i, 0), X(i, 1), X(i, 2));
+		}
 	}
-
-	removeEigenMColumn(A, fit_corner_inds[3]);
-	removeEigenMColumn(A, fit_corner_inds[2]);
-	removeEigenMColumn(A, fit_corner_inds[1]);
-	removeEigenMColumn(A, fit_corner_inds[0]);
-
-	MatrixXd X = A.colPivHouseholderQr().solve(B);
-	for (int i = 0; i < param_cp_num-4; i++) {
-		int pInd = i + 1;
-		if (i >= fit_corner_inds[1]-1) pInd++;
-		if (i >= fit_corner_inds[2]-2) pInd++;
-		return_pts[pInd] = Vec(X(i, 0), X(i, 1), X(i, 2));
+	else {
+		MatrixXd X = A.colPivHouseholderQr().solve(B);
+		for (int i = 0; i < param_cp_num; i++) {
+			return_pts[i] = Vec(X(i, 0), X(i, 1), X(i, 2));
+		}
 	}
 }
 
@@ -3360,13 +3370,47 @@ double squaredDistance(const std::vector<double>& dist_vec) {
 	return sum;
 }
 
-void MyViewer::exampleFitTSpline() {
+void MyViewer::readObjWithUV() {
+	const std::string obj_file_path = "D:/Geri/tanulas/BME/MSc/3dGeo/Onlab2/msc-onlab2/cagd5.obj";
+	const std::string uv_file_path = "D:/Geri/tanulas/BME/MSc/3dGeo/Onlab2/msc-onlab2/cagd5.uv";
+	const int num_of_points = 601;
+	try {
+		std::ifstream obj_f(obj_file_path.c_str());
+		obj_f.exceptions(std::ios::failbit | std::ios::badbit);
+		sample_points.resize(num_of_points);
+		std::string v_unnecessary_string;
+		for (int i = 0; i < num_of_points; ++i) {
+			
+			obj_f >> v_unnecessary_string >> sample_points[i][0] >> sample_points[i][1] >> sample_points[i][2];
+		}
+	}
+	catch (std::ifstream::failure&) {
+		// TODO
+	}
+
+	try {
+		std::ifstream uv_f(uv_file_path.c_str());
+		uv_f.exceptions(std::ios::failbit | std::ios::badbit);
+		us.resize(num_of_points);
+		vs.resize(num_of_points);
+		for (int i = 0; i < num_of_points; ++i) {
+			uv_f >> us[i] >> vs[i];
+		}
+	}
+	catch (std::ifstream::failure&) {
+		// TODO
+	}
+}
+
+void MyViewer::exampleFit() {
 	draw_point_clouds = true;
 	sample_points.clear();
 	int sample_num_1d = 10;
 	us.clear(); vs.clear();
 	sample_corner_inds.clear();
-	generatePoints(sample_points, sample_num_1d, us, vs, sample_corner_inds);
+	//generatePoints(sample_points, sample_num_1d, us, vs, sample_corner_inds);
+	readObjWithUV();
+
 	orig_us = us;
 	orig_vs = vs;
 
@@ -3395,7 +3439,7 @@ void MyViewer::exampleFitTSpline() {
 
 	updateEdgeTopology();
 	updateMesh();
-	update();
+	setupCamera();
 }
 
 void MyViewer::fitPointCloudIter() {
@@ -3455,7 +3499,6 @@ void MyViewer::fitPointCloudIter() {
 
 	updateEdgeTopology();
 	updateMesh();
-	update();
 }
 
 void MyViewer::fitPointCloud(const std::vector<Vec>& sample_points, std::vector<double>& us,
@@ -3536,7 +3579,7 @@ void MyViewer::bezierToTspline() {
 	updateEdgeTopology();
 
 	std::string newFileName = fileName;
-	newFileName.erase(newFileName.end() - 4, newFileName.end());
+	if (!newFileName.empty()) { newFileName.erase(newFileName.end() - 4, newFileName.end()); }
 	newFileName += "_bzr_to_tsp.tsp";
 	model_type = ModelType::TSPLINE_SURFACE;
 	/*saveTSpline(newFileName);
@@ -4487,7 +4530,7 @@ void MyViewer::keyPressEvent(QKeyEvent* e) {
 			update();
 			break;
 		case Qt::Key_3:
-			exampleFitTSpline();
+			exampleFit();
 			update();
 			break;
 		case Qt::Key_4:
