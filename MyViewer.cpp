@@ -3400,6 +3400,9 @@ void MyViewer::readObjWithUV() {
 	catch (std::ifstream::failure&) {
 		// TODO
 	}
+
+	sq_distchange_boundary *= 6;
+	sq_dist_boundary *= 6;
 }
 
 void MyViewer::exampleFit() {

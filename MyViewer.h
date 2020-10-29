@@ -216,7 +216,7 @@ private:
   double last_max_dist, max_dist_change;
   const double max_dist_boundary = 0.03, max_distchange_boundary = 0.01;
   double last_sq_dist, sq_dist_change;
-  const double sq_dist_boundary = 0.3, sq_distchange_boundary = 0.1;
+  double sq_dist_boundary = 0.3, sq_distchange_boundary = 0.1;
 
   bool keep_surface, mid_insert;
 
