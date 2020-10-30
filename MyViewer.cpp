@@ -1,3 +1,5 @@
+// -*- c-basic-offset: 4; indent-tabs-mode: t; tab-width: 4 -*-
+
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -3317,7 +3319,7 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 	std::vector<Vec>& return_pts) {
 	int num_sample_pts = S.size();
 	int param_cp_num = param_si_array.size();
-	double smoothing_lambda = 0.3;
+	double smoothing_lambda = 1000;
 	// MatrixXd A(num_sample_pts, param_cp_num), B(num_sample_pts, 3);
 	MatrixXd A = MatrixXd::Zero(num_sample_pts + param_cp_num, param_cp_num);
 	MatrixXd B = MatrixXd::Zero(num_sample_pts + param_cp_num, 3);
@@ -3351,20 +3353,15 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 		auto act_col_inds = indicesOfColumn(JA[i]);
 		int ind_in_col = std::distance(act_col_inds.begin(),
 			std::find(act_col_inds.begin(), act_col_inds.end(), i));
-		int num_of_neighbours = 4;
-		// If first or last in its row
-		if (IA[act_row] == i || IA[act_row + 1] - 1 == i) { num_of_neighbours -= 2; }
-		// If first or last in its col
-		if (ind_in_col == 0 || ind_in_col == act_col_inds.size() - 1) { num_of_neighbours -= 2; }
 
 		if (IA[act_row] != i && IA[act_row + 1] - 1 != i) {
 			double left_dist = (param_si_array[i][1] + param_si_array[i][2] + param_si_array[i][3]) / 3.0 -
 				(param_si_array[i - 1][1] + param_si_array[i - 1][2] + param_si_array[i - 1][3]) / 3.0;
 			double right_dist = (param_si_array[i + 1][1] + param_si_array[i + 1][2] + param_si_array[i + 1][3]) / 3.0 -
 				(param_si_array[i][1] + param_si_array[i][2] + param_si_array[i][3]) / 3.0;
-			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda * (param_si_array[i][1] + param_si_array[i][2] + param_si_array[i][3]) / 3.0;
-			A(num_sample_pts + i, i - 1) = smoothing_lambda * left_dist / (right_dist + left_dist);
-			A(num_sample_pts + i, i + 1) = smoothing_lambda * right_dist / (right_dist + left_dist);
+			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda;
+			A(num_sample_pts + i, i - 1) = smoothing_lambda * right_dist / (right_dist + left_dist);
+			A(num_sample_pts + i, i + 1) = smoothing_lambda * left_dist / (right_dist + left_dist);
 		}
 		if (ind_in_col != 0 && ind_in_col != act_col_inds.size() - 1) {
 			int down_ind = act_col_inds[ind_in_col - 1];
@@ -3373,9 +3370,9 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 				(param_ti_array[down_ind][1] + param_ti_array[down_ind][2] + param_ti_array[down_ind][3]) / 3.0;
 			double up_dist = (param_ti_array[up_ind][1] + param_ti_array[up_ind][2] + param_ti_array[up_ind][3]) / 3.0 -
 				(param_ti_array[i][1] + param_ti_array[i][2] + param_ti_array[i][3]) / 3.0;
-			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda * (param_ti_array[i][1] + param_ti_array[i][2] + param_ti_array[i][3]) / 3.0;
-			A(num_sample_pts + i, down_ind) = smoothing_lambda * down_dist / (up_dist + down_dist);
-			A(num_sample_pts + i, up_ind) = smoothing_lambda * up_dist / (up_dist + down_dist);
+			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda;
+			A(num_sample_pts + i, down_ind) = smoothing_lambda * up_dist / (up_dist + down_dist);
+			A(num_sample_pts + i, up_ind) = smoothing_lambda * down_dist / (up_dist + down_dist);
 		}
 	}
 
