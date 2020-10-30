@@ -3252,6 +3252,13 @@ void MyViewer::generatePoints(std::vector<Vec>& points, int n,
 //S the nxn incoming points
 void MyViewer::fit4by4Bezier(const std::vector<Vec>& S, const std::vector<double>& us,
 	const std::vector<double>& vs, const std::vector<int>& corner_inds) {
+	model_type = ModelType::BEZIER_SURFACE;
+	IA = {0, 4, 8, 12, 16};
+	JA = {0, 1, 2, 3,
+		  0, 1, 2, 3,
+		  0, 1, 2, 3,
+		  0, 1, 2, 3
+	};
 	std::vector<Vec> new_cps(16, Vec(0.0, 0.0, 0.0));
 	std::vector<std::vector<double>> siarr_4by4 = { {0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
 		{0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
@@ -3272,7 +3279,6 @@ void MyViewer::fit4by4Bezier(const std::vector<Vec>& S, const std::vector<double
 	}
 	degree[0] = 3;
 	degree[1] = 3;
-	model_type = ModelType::BEZIER_SURFACE;
 }
 
 // Fits points with weight one, all other variables e.g. IA, JA etc. must be set beforehand
@@ -3311,7 +3317,10 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 	std::vector<Vec>& return_pts) {
 	int num_sample_pts = S.size();
 	int param_cp_num = param_si_array.size();
-	MatrixXd A(num_sample_pts, param_cp_num), B(num_sample_pts, 3);
+	double smoothing_lambda = 0.3;
+	// MatrixXd A(num_sample_pts, param_cp_num), B(num_sample_pts, 3);
+	MatrixXd A = MatrixXd::Zero(num_sample_pts + param_cp_num, param_cp_num);
+	MatrixXd B = MatrixXd::Zero(num_sample_pts + param_cp_num, 3);
 
 	if (!sample_corner_inds.empty()) {
 		return_pts[fit_corner_inds[0]] = S[sample_corner_inds[0]];
@@ -3330,6 +3339,45 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 			bSplineBasis(sample_points_vs[i],
 				param_ti_array[k], 3, t_coeffs);
 			A(i, k) = s_coeffs[0] * t_coeffs[0];
+		}
+	}
+
+	for (int i = 0; i < param_cp_num; ++i) {
+		B.row(num_sample_pts + i) << 0.0, 0.0, 0.0;
+		
+		// Fill out neighbours
+		int max_col = *std::max_element(JA.begin(), JA.end());
+		int act_row = getRowOfExisting(i);
+		auto act_col_inds = indicesOfColumn(JA[i]);
+		int ind_in_col = std::distance(act_col_inds.begin(),
+			std::find(act_col_inds.begin(), act_col_inds.end(), i));
+		int num_of_neighbours = 4;
+		// If first or last in its row
+		if (IA[act_row] == i || IA[act_row + 1] - 1 == i) { num_of_neighbours -= 2; }
+		// If first or last in its col
+		if (ind_in_col == 0 || ind_in_col == act_col_inds.size() - 1) { num_of_neighbours -= 2; }
+
+		if (IA[act_row] != i && IA[act_row + 1] - 1 != i) {
+			double left_dist = param_si_array[i][2] - param_si_array[i-1][2];
+			double right_dist = param_si_array[i+1][2] - param_si_array[i][2];
+			if (left_dist == 0.0 || right_dist == 0.0) { num_of_neighbours -= 2; }
+			else {
+				A(num_sample_pts + i, i) += -1.0 * smoothing_lambda;
+				A(num_sample_pts + i, i - 1) = smoothing_lambda * left_dist / (right_dist + left_dist);
+				A(num_sample_pts + i, i + 1) = smoothing_lambda * right_dist / (right_dist + left_dist);
+			}
+		}
+		if (ind_in_col != 0 && ind_in_col != act_col_inds.size() - 1) {
+			int down_ind = act_col_inds[ind_in_col - 1];
+			int up_ind = act_col_inds[ind_in_col + 1];
+			double down_dist = param_ti_array[i][2] - param_ti_array[down_ind][2];
+			double up_dist = param_ti_array[up_ind][2] - param_ti_array[i][2];
+			if (down_dist == 0.0 || up_dist == 0.0) { num_of_neighbours -= 2; }
+			else {
+				A(num_sample_pts + i, i) += -1.0 * smoothing_lambda;
+				A(num_sample_pts + i, down_ind) = smoothing_lambda * down_dist / (up_dist + down_dist);
+				A(num_sample_pts + i, up_ind) = smoothing_lambda * up_dist / (up_dist + down_dist);
+			}
 		}
 	}
 
@@ -3411,8 +3459,8 @@ void MyViewer::exampleFit() {
 	int sample_num_1d = 10;
 	us.clear(); vs.clear();
 	sample_corner_inds.clear();
-	//generatePoints(sample_points, sample_num_1d, us, vs, sample_corner_inds);
-	readObjWithUV();
+	generatePoints(sample_points, sample_num_1d, us, vs, sample_corner_inds);
+	//readObjWithUV();
 
 	orig_us = us;
 	orig_vs = vs;
@@ -3440,6 +3488,7 @@ void MyViewer::exampleFit() {
 		max_dist_change = 0.0;
 	}
 
+	new_point_added = true;
 	updateEdgeTopology();
 	updateMesh();
 	setupCamera();
@@ -3463,7 +3512,7 @@ void MyViewer::fitPointCloudIter() {
 	}
 	else {
 		if (*max_dist_it < max_dist_boundary) return;
-		if (!new_point_added && max_dist_change < max_distchange_boundary) {
+		if (!new_point_added && max_dist_change < *max_dist_it*0.05) {
 			// insert new point and update corner inds
 			int index_of_maxd = std::distance(distances.begin(), max_dist_it);
 			insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
