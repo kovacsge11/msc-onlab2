@@ -3358,26 +3358,24 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 		if (ind_in_col == 0 || ind_in_col == act_col_inds.size() - 1) { num_of_neighbours -= 2; }
 
 		if (IA[act_row] != i && IA[act_row + 1] - 1 != i) {
-			double left_dist = param_si_array[i][2] - param_si_array[i-1][2];
-			double right_dist = param_si_array[i+1][2] - param_si_array[i][2];
-			if (left_dist == 0.0 || right_dist == 0.0) { num_of_neighbours -= 2; }
-			else {
-				A(num_sample_pts + i, i) += -1.0 * smoothing_lambda;
-				A(num_sample_pts + i, i - 1) = smoothing_lambda * left_dist / (right_dist + left_dist);
-				A(num_sample_pts + i, i + 1) = smoothing_lambda * right_dist / (right_dist + left_dist);
-			}
+			double left_dist = (param_si_array[i][1] + param_si_array[i][2] + param_si_array[i][3]) / 3.0 -
+				(param_si_array[i - 1][1] + param_si_array[i - 1][2] + param_si_array[i - 1][3]) / 3.0;
+			double right_dist = (param_si_array[i + 1][1] + param_si_array[i + 1][2] + param_si_array[i + 1][3]) / 3.0 -
+				(param_si_array[i][1] + param_si_array[i][2] + param_si_array[i][3]) / 3.0;
+			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda * (param_si_array[i][1] + param_si_array[i][2] + param_si_array[i][3]) / 3.0;
+			A(num_sample_pts + i, i - 1) = smoothing_lambda * left_dist / (right_dist + left_dist);
+			A(num_sample_pts + i, i + 1) = smoothing_lambda * right_dist / (right_dist + left_dist);
 		}
 		if (ind_in_col != 0 && ind_in_col != act_col_inds.size() - 1) {
 			int down_ind = act_col_inds[ind_in_col - 1];
 			int up_ind = act_col_inds[ind_in_col + 1];
-			double down_dist = param_ti_array[i][2] - param_ti_array[down_ind][2];
-			double up_dist = param_ti_array[up_ind][2] - param_ti_array[i][2];
-			if (down_dist == 0.0 || up_dist == 0.0) { num_of_neighbours -= 2; }
-			else {
-				A(num_sample_pts + i, i) += -1.0 * smoothing_lambda;
-				A(num_sample_pts + i, down_ind) = smoothing_lambda * down_dist / (up_dist + down_dist);
-				A(num_sample_pts + i, up_ind) = smoothing_lambda * up_dist / (up_dist + down_dist);
-			}
+			double down_dist = (param_ti_array[i][1] + param_ti_array[i][2] + param_ti_array[i][3]) / 3.0 -
+				(param_ti_array[down_ind][1] + param_ti_array[down_ind][2] + param_ti_array[down_ind][3]) / 3.0;
+			double up_dist = (param_ti_array[up_ind][1] + param_ti_array[up_ind][2] + param_ti_array[up_ind][3]) / 3.0 -
+				(param_ti_array[i][1] + param_ti_array[i][2] + param_ti_array[i][3]) / 3.0;
+			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda * (param_ti_array[i][1] + param_ti_array[i][2] + param_ti_array[i][3]) / 3.0;
+			A(num_sample_pts + i, down_ind) = smoothing_lambda * down_dist / (up_dist + down_dist);
+			A(num_sample_pts + i, up_ind) = smoothing_lambda * up_dist / (up_dist + down_dist);
 		}
 	}
 
