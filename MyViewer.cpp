@@ -3319,7 +3319,7 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 	std::vector<Vec>& return_pts) {
 	int num_sample_pts = S.size();
 	int param_cp_num = param_si_array.size();
-	double smoothing_lambda = 1000;
+	double smoothing_lambda = 0.3;
 	// MatrixXd A(num_sample_pts, param_cp_num), B(num_sample_pts, 3);
 	MatrixXd A = MatrixXd::Zero(num_sample_pts + param_cp_num, param_cp_num);
 	MatrixXd B = MatrixXd::Zero(num_sample_pts + param_cp_num, 3);
@@ -3377,7 +3377,7 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 	}
 
 	if (!sample_corner_inds.empty()) {
-		for (int i = 0; i < num_sample_pts; ++i) {
+		for (int i = 0; i < num_sample_pts + param_cp_num; ++i) {
 			Vec temp = A(i, fit_corner_inds[0]) * return_pts[fit_corner_inds[0]] + A(i, fit_corner_inds[1]) * return_pts[fit_corner_inds[1]] +
 				A(i, fit_corner_inds[2]) * return_pts[fit_corner_inds[2]] + A(i, fit_corner_inds[3]) * return_pts[fit_corner_inds[3]];
 			B(i, 0) -= temp[0];
@@ -3492,7 +3492,7 @@ void MyViewer::exampleFit() {
 void MyViewer::fitPointCloudIter() {
 	if (sq_dist_mode) {
 		if (last_sq_dist < sq_dist_boundary) return;
-		if (!new_point_added && sq_dist_change < sq_distchange_boundary) {
+		if (!new_point_added && sq_dist_change < last_sq_dist*0.1) {
 			// insert new point and update corner inds
 			max_dist_it = std::max_element(distances.begin(), distances.end());
 			int index_of_maxd = std::distance(distances.begin(), max_dist_it);
@@ -3507,7 +3507,7 @@ void MyViewer::fitPointCloudIter() {
 	}
 	else {
 		if (*max_dist_it < max_dist_boundary) return;
-		if (!new_point_added && max_dist_change < *max_dist_it*0.05) {
+		if (!new_point_added && max_dist_change < *max_dist_it*0.1) {
 			// insert new point and update corner inds
 			int index_of_maxd = std::distance(distances.begin(), max_dist_it);
 			insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
