@@ -3273,6 +3273,7 @@ void MyViewer::fit4by4Bezier(const std::vector<Vec>& S, const std::vector<double
 		{0,1,1,1,1}, {0,1,1,1,1}, {0,1,1,1,1}, {0,1,1,1,1}
 	};
 	std::vector<int> fit_corner_inds = {0, 3, 12, 15};
+	weights.assign(16, 1.0);
 	fitSpline(S, us, vs, corner_inds, siarr_4by4, tiarr_4by4, fit_corner_inds, new_cps);
 	
 	bezier_control_points.resize(16);
@@ -3325,10 +3326,10 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 	MatrixXd B = MatrixXd::Zero(num_sample_pts + param_cp_num, 3);
 
 	if (!sample_corner_inds.empty()) {
-		return_pts[fit_corner_inds[0]] = S[sample_corner_inds[0]];
-		return_pts[fit_corner_inds[1]] = S[sample_corner_inds[1]];
-		return_pts[fit_corner_inds[2]] = S[sample_corner_inds[2]];
-		return_pts[fit_corner_inds[3]] = S[sample_corner_inds[3]];
+		return_pts[fit_corner_inds[0]] = S[sample_corner_inds[0]] * weights[fit_corner_inds[0]];
+		return_pts[fit_corner_inds[1]] = S[sample_corner_inds[1]] * weights[fit_corner_inds[1]];
+		return_pts[fit_corner_inds[2]] = S[sample_corner_inds[2]] * weights[fit_corner_inds[2]];
+		return_pts[fit_corner_inds[3]] = S[sample_corner_inds[3]] * weights[fit_corner_inds[3]];
 	}
 
 	for (int i = 0; i < num_sample_pts; ++i) {
@@ -3395,13 +3396,13 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 			int pInd = i + 1;
 			if (i >= fit_corner_inds[1] - 1) pInd++;
 			if (i >= fit_corner_inds[2] - 2) pInd++;
-			return_pts[pInd] = Vec(X(i, 0), X(i, 1), X(i, 2));
+			return_pts[pInd] = Vec(X(i, 0), X(i, 1), X(i, 2)) * weights[pInd];
 		}
 	}
 	else {
 		MatrixXd X = A.colPivHouseholderQr().solve(B);
 		for (int i = 0; i < param_cp_num; i++) {
-			return_pts[i] = Vec(X(i, 0), X(i, 1), X(i, 2));
+			return_pts[i] = Vec(X(i, 0), X(i, 1), X(i, 2)) * weights[i];
 		}
 	}
 }
@@ -4276,6 +4277,15 @@ void MyViewer::insertMaxDistancedWithoutOrig(double u, double v, std::vector<int
 					row_up = checkTsUp(act_row - 1, left_col, test_s_vec, test_t_vec, 1, {}).first.second.first;
 				}
 				new_index = getIndexWhenColInsert(row_down, row_up, left_col, new_t, false);
+				// Refresh rec_edges
+				if (new_row && rec_edges.first - 1 > i) {
+					for (auto it = rec_edges.second.begin() + (i + 1) * 4;
+						it != rec_edges.second.end();
+						it += 4) {
+						if (*it >= act_row) { (*it)++; }
+						if (*(it+2) >= act_row) { (*(it+2))++; }
+					}
+				}
 				insertRefined(left_s, new_t, new_index, row_down, row_up, left_col, left_col, false);
 			}
 
@@ -4309,6 +4319,15 @@ void MyViewer::insertMaxDistancedWithoutOrig(double u, double v, std::vector<int
 					col_up = checkSsUp(bot_row, act_col - 1, test_s_vec, test_t_vec, 1, {}).first.second.first;
 				}
 				new_index = getIndexWhenRowInsert(bot_row, act_col);
+				// Refresh rec_edges
+				if (new_col && rec_edges.first - 1 > i) {
+					for (auto it = rec_edges.second.begin() + (i + 1) * 4;
+						it != rec_edges.second.end();
+						it += 4) {
+						if (*(it + 1) >= act_col) { (*(it + 1))++; }
+						if (*(it + 3) >= act_col) { (*(it + 3))++; }
+					}
+				}
 				insertRefined(new_s, bot_t, new_index, bot_row, bot_row, col_down, col_up, false);
 			}
 
