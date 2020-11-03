@@ -706,11 +706,17 @@ void MyViewer::drawPointClouds() const {
 	glBegin(GL_POINTS);
 	glColor3d(1.0, 1.0, 1.0);
 	for (int i = 0; i < sample_points.size(); i++) {
-		glVertex3dv(sample_points[i]);
+		if(i != index_of_maxd || sq_dist_mode) glVertex3dv(sample_points[i]);
 	}
 	glColor3d(0.0, 1.0, 1.0);
 	for (int i = 0; i < surface_points.size(); i++) {
-		glVertex3dv(surface_points[i]);
+		if (i != index_of_maxd || sq_dist_mode) glVertex3dv(surface_points[i]);
+	}
+	if (!sq_dist_mode) {
+		glColor3d(0.2, 1.0, 0.0);
+		glVertex3dv(sample_points[index_of_maxd]);
+		glColor3d(1.0, 0.2, 0.0);
+		glVertex3dv(surface_points[index_of_maxd]);
 	}
 	glEnd();
 	glPointSize(1.0);
@@ -3254,7 +3260,6 @@ void MyViewer::generatePoints(std::vector<Vec>& points, int n,
 //S the nxn incoming points
 void MyViewer::fit4by4Bezier(const std::vector<Vec>& S, const std::vector<double>& us,
 	const std::vector<double>& vs, const std::vector<int>& corner_inds) {
-	model_type = ModelType::BEZIER_SURFACE;
 	IA = {0, 4, 8, 12, 16};
 	JA = {0, 1, 2, 3,
 		  0, 1, 2, 3,
@@ -3280,6 +3285,7 @@ void MyViewer::fit4by4Bezier(const std::vector<Vec>& S, const std::vector<double
 	for (int i = 0; i < 16; i++) {
 		bezier_control_points[i] = new_cps[(i % 4) * 4 + i / 4];
 	}
+	model_type = ModelType::BEZIER_SURFACE;
 	degree[0] = 3;
 	degree[1] = 3;
 }
@@ -3320,16 +3326,16 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 	std::vector<Vec>& return_pts) {
 	int num_sample_pts = S.size();
 	int param_cp_num = param_si_array.size();
-	double smoothing_lambda = 0.3;
+	double smoothing_lambda = 1;
 	// MatrixXd A(num_sample_pts, param_cp_num), B(num_sample_pts, 3);
 	MatrixXd A = MatrixXd::Zero(num_sample_pts + param_cp_num, param_cp_num);
 	MatrixXd B = MatrixXd::Zero(num_sample_pts + param_cp_num, 3);
 
 	if (!sample_corner_inds.empty()) {
-		return_pts[fit_corner_inds[0]] = S[sample_corner_inds[0]] * weights[fit_corner_inds[0]];
-		return_pts[fit_corner_inds[1]] = S[sample_corner_inds[1]] * weights[fit_corner_inds[1]];
-		return_pts[fit_corner_inds[2]] = S[sample_corner_inds[2]] * weights[fit_corner_inds[2]];
-		return_pts[fit_corner_inds[3]] = S[sample_corner_inds[3]] * weights[fit_corner_inds[3]];
+		return_pts[fit_corner_inds[0]] = S[sample_corner_inds[0]];
+		return_pts[fit_corner_inds[1]] = S[sample_corner_inds[1]];
+		return_pts[fit_corner_inds[2]] = S[sample_corner_inds[2]];
+		return_pts[fit_corner_inds[3]] = S[sample_corner_inds[3]];
 	}
 
 	for (int i = 0; i < num_sample_pts; ++i) {
@@ -3343,6 +3349,16 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 				param_ti_array[k], 3, t_coeffs);
 			A(i, k) = s_coeffs[0] * t_coeffs[0];
 		}
+	}
+
+	VectorXd weight_vec(weights.size());
+	for (int i = 0; i < weights.size(); ++i) {
+		weight_vec[i] = weights[i];
+	}
+
+	for (int i = 0; i < num_sample_pts; ++i) {
+		double weight_nominator = A.row(i) * weight_vec;
+		B.row(i) /= weight_nominator;
 	}
 
 	for (int i = 0; i < param_cp_num; ++i) {
@@ -3360,9 +3376,9 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 				(param_si_array[i - 1][1] + param_si_array[i - 1][2] + param_si_array[i - 1][3]) / 3.0;
 			double right_dist = (param_si_array[i + 1][1] + param_si_array[i + 1][2] + param_si_array[i + 1][3]) / 3.0 -
 				(param_si_array[i][1] + param_si_array[i][2] + param_si_array[i][3]) / 3.0;
-			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda;
-			A(num_sample_pts + i, i - 1) = smoothing_lambda * right_dist / (right_dist + left_dist);
-			A(num_sample_pts + i, i + 1) = smoothing_lambda * left_dist / (right_dist + left_dist);
+			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda / weights[i];
+			A(num_sample_pts + i, i - 1) = smoothing_lambda * right_dist / ((right_dist + left_dist) * weights[i - 1]);
+			A(num_sample_pts + i, i + 1) = smoothing_lambda * left_dist / ((right_dist + left_dist) * weights[i + 1]);
 		}
 		if (ind_in_col != 0 && ind_in_col != act_col_inds.size() - 1) {
 			int down_ind = act_col_inds[ind_in_col - 1];
@@ -3371,10 +3387,20 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 				(param_ti_array[down_ind][1] + param_ti_array[down_ind][2] + param_ti_array[down_ind][3]) / 3.0;
 			double up_dist = (param_ti_array[up_ind][1] + param_ti_array[up_ind][2] + param_ti_array[up_ind][3]) / 3.0 -
 				(param_ti_array[i][1] + param_ti_array[i][2] + param_ti_array[i][3]) / 3.0;
-			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda;
-			A(num_sample_pts + i, down_ind) = smoothing_lambda * up_dist / (up_dist + down_dist);
-			A(num_sample_pts + i, up_ind) = smoothing_lambda * down_dist / (up_dist + down_dist);
+			A(num_sample_pts + i, i) += -1.0 * smoothing_lambda / weights[i];;
+			A(num_sample_pts + i, down_ind) = smoothing_lambda * up_dist / ((up_dist + down_dist) * weights[down_ind]);
+			A(num_sample_pts + i, up_ind) = smoothing_lambda * down_dist / ((up_dist + down_dist) * weights[up_ind]);
 		}
+	}
+	try
+	{
+		std::ofstream smooth_matr_file("smooth_matr.txt");
+		smooth_matr_file.exceptions(std::ios::failbit | std::ios::badbit);
+		smooth_matr_file << A.block(num_sample_pts, 0, param_cp_num, param_cp_num) << std::endl;
+	}
+	catch (const std::exception&)
+	{
+
 	}
 
 	if (!sample_corner_inds.empty()) {
@@ -3396,13 +3422,13 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 			int pInd = i + 1;
 			if (i >= fit_corner_inds[1] - 1) pInd++;
 			if (i >= fit_corner_inds[2] - 2) pInd++;
-			return_pts[pInd] = Vec(X(i, 0), X(i, 1), X(i, 2)) * weights[pInd];
+			return_pts[pInd] = Vec(X(i, 0), X(i, 1), X(i, 2));
 		}
 	}
 	else {
 		MatrixXd X = A.colPivHouseholderQr().solve(B);
 		for (int i = 0; i < param_cp_num; i++) {
-			return_pts[i] = Vec(X(i, 0), X(i, 1), X(i, 2)) * weights[i];
+			return_pts[i] = Vec(X(i, 0), X(i, 1), X(i, 2));
 		}
 	}
 }
@@ -3461,6 +3487,42 @@ void MyViewer::exampleFit() {
 	orig_us = us;
 	orig_vs = vs;
 
+	/*int cp_num = 21;
+	IA = { 0, 4, 9, 12, 17, 21 };
+	JA = { 0, 1, 3, 4,
+		  0, 1, 2, 3, 4,
+		  2, 3, 4,
+		  0, 1, 2, 3, 4,
+		  0, 1, 3, 4
+	};
+	si_array = { {0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
+		{0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
+		{0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
+		{0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
+		{0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1}
+	};
+	ti_array = { {0,0,0,0,1}, {0,0,0,0,1}, {0,0,0,0,0.5}, {0,0,0,0,0.5},
+		{0,0,0,1,1}, {0,0,0,1,1}, {0,0,0,0.5,1}, {0,0,0,0.5,1}, {0,0,0,0.5,1},
+		{0,0,0.5,1,1}, {0,0,0.5,1,1}, {0,0,0.5,1,1},
+		{0,0,1,1,1}, {0,0,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1},
+		{0,1,1,1,1}, {0,1,1,1,1}, {0.5,1,1,1,1}, {0.5,1,1,1,1}
+	};
+	std::vector<int> fit_corner_inds = { 0, 3, 17, 20 };
+	weights.assign(cp_num, 1.0);
+	tspline_control_points.resize(cp_num);
+	refined_points.resize(cp_num);
+	refined_weights.assign(cp_num,{1.0});
+	weights[6] = 0.75;
+	refined_weights[6] = { 0.75 };
+	weights[14] = 0.75;
+	refined_weights[14] = { 0.75 };
+	blend_functions.resize(cp_num);
+	for (int i = 0; i < cp_num; ++i) {
+		std::pair<std::vector<double>, std::vector<double>> blend_pair(si_array[i], ti_array[i]);
+		blend_functions[i] = { blend_pair };
+	}
+	fitTSpline(sample_points, us, vs, sample_corner_inds, si_array, ti_array, fit_corner_inds);*/
+
 	fit4by4Bezier(sample_points, us, vs, sample_corner_inds);
 	bezierToTspline();
 	surface_points.clear();
@@ -3480,6 +3542,7 @@ void MyViewer::exampleFit() {
 	}
 	else {
 		max_dist_it = std::max_element(distances.begin(), distances.end());
+		index_of_maxd = std::distance(distances.begin(), max_dist_it);
 		last_max_dist = *max_dist_it;
 		max_dist_change = 0.0;
 	}
@@ -3496,7 +3559,7 @@ void MyViewer::fitPointCloudIter() {
 		if (!new_point_added && sq_dist_change < last_sq_dist*0.1) {
 			// insert new point and update corner inds
 			max_dist_it = std::max_element(distances.begin(), distances.end());
-			int index_of_maxd = std::distance(distances.begin(), max_dist_it);
+			index_of_maxd = std::distance(distances.begin(), max_dist_it);
 			insertMaxDistancedWithoutOrig(us[index_of_maxd], vs[index_of_maxd], fit_corner_inds);
 			us = orig_us;
 			vs = orig_vs;
@@ -3541,6 +3604,7 @@ void MyViewer::fitPointCloudIter() {
 	}
 	else {
 		max_dist_it = std::max_element(distances.begin(), distances.end());
+		index_of_maxd = std::distance(distances.begin(), max_dist_it);
 		max_dist_change = last_max_dist - *max_dist_it;
 		last_max_dist = *max_dist_it;
 	}

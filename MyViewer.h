@@ -213,6 +213,7 @@ private:
   // new_point_added in order to look at actual N-R changes when checking whether needs new insertion
   bool sq_dist_mode = false, new_point_added = false;
   std::vector<double>::iterator max_dist_it;
+  int index_of_maxd;
   double last_max_dist, max_dist_change;
   const double max_dist_boundary = 0.03, max_distchange_boundary = 0.01;
   double last_sq_dist, sq_dist_change;
