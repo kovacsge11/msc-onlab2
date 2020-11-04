@@ -3326,8 +3326,6 @@ void MyViewer::fitSpline(const std::vector<Vec>& S, const std::vector<double>& s
 	std::vector<Vec>& return_pts) {
 	int num_sample_pts = S.size();
 	int param_cp_num = param_si_array.size();
-	double smoothing_lambda = 1;
-	// MatrixXd A(num_sample_pts, param_cp_num), B(num_sample_pts, 3);
 	MatrixXd A = MatrixXd::Zero(num_sample_pts + param_cp_num, param_cp_num);
 	MatrixXd B = MatrixXd::Zero(num_sample_pts + param_cp_num, 3);
 
@@ -3478,7 +3476,6 @@ void MyViewer::readObjWithUV() {
 void MyViewer::exampleFit() {
 	draw_point_clouds = true;
 	sample_points.clear();
-	int sample_num_1d = 10;
 	us.clear(); vs.clear();
 	sample_corner_inds.clear();
 	generatePoints(sample_points, sample_num_1d, us, vs, sample_corner_inds);
@@ -3486,42 +3483,6 @@ void MyViewer::exampleFit() {
 
 	orig_us = us;
 	orig_vs = vs;
-
-	/*int cp_num = 21;
-	IA = { 0, 4, 9, 12, 17, 21 };
-	JA = { 0, 1, 3, 4,
-		  0, 1, 2, 3, 4,
-		  2, 3, 4,
-		  0, 1, 2, 3, 4,
-		  0, 1, 3, 4
-	};
-	si_array = { {0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1},
-		{0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
-		{0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
-		{0,0,0,0,0.5}, {0,0,0,0.5,1}, {0,0,0.5,1,1}, {0,0.5,1,1,1}, {0.5,1,1,1,1},
-		{0,0,0,0,1}, {0,0,0,1,1}, {0,0,1,1,1}, {0,1,1,1,1}
-	};
-	ti_array = { {0,0,0,0,1}, {0,0,0,0,1}, {0,0,0,0,0.5}, {0,0,0,0,0.5},
-		{0,0,0,1,1}, {0,0,0,1,1}, {0,0,0,0.5,1}, {0,0,0,0.5,1}, {0,0,0,0.5,1},
-		{0,0,0.5,1,1}, {0,0,0.5,1,1}, {0,0,0.5,1,1},
-		{0,0,1,1,1}, {0,0,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1}, {0,0.5,1,1,1},
-		{0,1,1,1,1}, {0,1,1,1,1}, {0.5,1,1,1,1}, {0.5,1,1,1,1}
-	};
-	std::vector<int> fit_corner_inds = { 0, 3, 17, 20 };
-	weights.assign(cp_num, 1.0);
-	tspline_control_points.resize(cp_num);
-	refined_points.resize(cp_num);
-	refined_weights.assign(cp_num,{1.0});
-	weights[6] = 0.75;
-	refined_weights[6] = { 0.75 };
-	weights[14] = 0.75;
-	refined_weights[14] = { 0.75 };
-	blend_functions.resize(cp_num);
-	for (int i = 0; i < cp_num; ++i) {
-		std::pair<std::vector<double>, std::vector<double>> blend_pair(si_array[i], ti_array[i]);
-		blend_functions[i] = { blend_pair };
-	}
-	fitTSpline(sample_points, us, vs, sample_corner_inds, si_array, ti_array, fit_corner_inds);*/
 
 	fit4by4Bezier(sample_points, us, vs, sample_corner_inds);
 	bezierToTspline();

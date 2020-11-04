@@ -26,6 +26,10 @@ public:
   inline void setSlicingDir(double x, double y, double z);
   inline double getSlicingScaling() const;
   inline void setSlicingScaling(double scaling);
+  inline double getSmoothingLambda() const;
+  inline void setSmoothingLambda(double lambda);
+  inline int getSampleNumOneD() const;
+  inline void setSampleNumOneD(int sample_num);
   bool openMesh(const std::string &filename);
   bool openBezier(const std::string &filename);
   bool openTSpline(const std::string &filename);
@@ -212,10 +216,15 @@ private:
   std::vector<double> distances;
   // new_point_added in order to look at actual N-R changes when checking whether needs new insertion
   bool sq_dist_mode = false, new_point_added = false;
+  // The higher this lambda is the lower the importance of fitting
+  // and higher the importance of keeping a cleaner grid
+  double smoothing_lambda = 0.1;
+  // Sample num in one direction by point generation
+  int sample_num_1d = 10;
   std::vector<double>::iterator max_dist_it;
   int index_of_maxd;
   double last_max_dist, max_dist_change;
-  const double max_dist_boundary = 0.03, max_distchange_boundary = 0.01;
+  const double max_dist_boundary = 0.1, max_distchange_boundary = 0.05;
   double last_sq_dist, sq_dist_change;
   double sq_dist_boundary = 0.3, sq_distchange_boundary = 0.1;
 

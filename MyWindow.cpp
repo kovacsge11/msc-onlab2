@@ -51,6 +51,10 @@ MyWindow::MyWindow(QApplication *parent) :
   rangeAction->setStatusTip(tr("Set contouring direction and scaling"));
   connect(slicingAction, SIGNAL(triggered()), this, SLOT(setSlicing()));
 
+  auto fittingAction = new QAction(tr("Set &fitting parameters"), this);
+  rangeAction->setStatusTip(tr("Set smoothing lambda and sample num in one dimension"));
+  connect(fittingAction, SIGNAL(triggered()), this, SLOT(setFittingParams()));
+
   auto fileMenu = menuBar()->addMenu(tr("&File"));
   fileMenu->addAction(openAction);
   fileMenu->addAction(saveAction);
@@ -60,6 +64,9 @@ MyWindow::MyWindow(QApplication *parent) :
   visMenu->addAction(cutoffAction);
   visMenu->addAction(rangeAction);
   visMenu->addAction(slicingAction);
+
+  auto fittingMenu = menuBar()->addMenu(tr("&Fitting"));
+  fittingMenu->addAction(fittingAction);
 }
 
 MyWindow::~MyWindow() {
@@ -236,6 +243,46 @@ void MyWindow::setSlicing() {
     viewer->setSlicingScaling(sb_s->value());
     viewer->update();
   }
+}
+
+void MyWindow::setFittingParams() {
+	QDialog dlg(this);
+	auto *grid = new QGridLayout;
+	auto *text1 = new QLabel(tr("Smoothing lambda:")),
+		*text2 = new QLabel(tr("1d sample number:"));
+	auto *sb1 = new QDoubleSpinBox;
+	auto *sb2 = new QSpinBox;
+	auto *cancel = new QPushButton(tr("Cancel"));
+	auto *ok = new QPushButton(tr("Ok"));
+
+	// The range of the spinbox controls the number of displayable digits,
+	// so setting it to a large value results in a very wide window.
+	double lambda_max = 1000.0, lambda_min = 0.001;
+	int sample_min = 3, sample_max = 50;
+	sb1->setDecimals(3);
+	sb1->setRange(lambda_min, lambda_max);			 sb2->setRange(sample_min, sample_max);
+	sb1->setStepType(QAbstractSpinBox::StepType::AdaptiveDecimalStepType);
+	sb1->setValue(viewer->getSmoothingLambda());
+	sb2->setValue(viewer->getSampleNumOneD());
+	connect(cancel, SIGNAL(pressed()), &dlg, SLOT(reject()));
+	connect(ok, SIGNAL(pressed()), &dlg, SLOT(accept()));
+	ok->setDefault(true);
+
+	grid->addWidget(text1, 1, 1, Qt::AlignRight);
+	grid->addWidget(sb1, 1, 2);
+	grid->addWidget(text2, 2, 1, Qt::AlignRight);
+	grid->addWidget(sb2, 2, 2);
+	grid->addWidget(cancel, 3, 1);
+	grid->addWidget(ok, 3, 2);
+
+	dlg.setWindowTitle(tr("Set fitting parameters"));
+	dlg.setLayout(grid);
+
+	if (dlg.exec() == QDialog::Accepted) {
+		viewer->setSmoothingLambda(sb1->value());
+		viewer->setSampleNumOneD(sb2->value());
+		viewer->update();
+	}
 }
 
 void MyWindow::startComputation(QString message) {

@@ -39,3 +39,17 @@ void MyViewer::setSlicingScaling(double scaling) {
   slicing_scaling = scaling;
 }
 
+double MyViewer::getSmoothingLambda() const {
+	return smoothing_lambda;
+}
+void MyViewer::setSmoothingLambda(double lambda) {
+	smoothing_lambda = lambda;
+}
+
+int MyViewer::getSampleNumOneD() const {
+	return sample_num_1d;
+}
+
+void MyViewer::setSampleNumOneD(int sample_num) {
+	sample_num_1d = sample_num;
+}
