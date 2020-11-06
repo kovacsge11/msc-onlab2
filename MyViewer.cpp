@@ -2323,6 +2323,7 @@ void MyViewer::postSelection(const QPoint& p) {
 			ti_array.insert(ti_array.begin() + new_index, new_ti);
 			si_array.insert(si_array.begin() + new_index, new_si);
 			tspline_control_points.insert(tspline_control_points.begin() + new_index, Vec());
+			cpnum++;
 			index_pair.second++;
 
 			//Update neighbouring si-s
@@ -2515,6 +2516,7 @@ void MyViewer::postSelection(const QPoint& p) {
 			tspline_control_points.insert(tspline_control_points.begin() + new_index, Vec());
 			ti_array.insert(ti_array.begin() + new_index, new_ti);
 			si_array.insert(si_array.begin() + new_index, new_si);
+			cpnum++;
 			index_pair.second++;
 
 			// Refine points
