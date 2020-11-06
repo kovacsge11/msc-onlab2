@@ -2229,10 +2229,8 @@ void MyViewer::postSelection(const QPoint& p) {
 
 			new_si = { si_array[index_pair.first][1], si_array[index_pair.first][2], new_s, si_array[index_pair.second][2], si_array[index_pair.second][3] };
 
-
 			//Finding new ti
 			new_ti.clear();
-
 
 			//Check t-s downwards
 			int i = act_row;
@@ -2313,26 +2311,52 @@ void MyViewer::postSelection(const QPoint& p) {
 					temp_ind = IA[++i];
 				}
 			}
+
+			
+
 			//Update JA
 			updateJA(JA[index_pair.first], JA[index_pair.second], new_index, new_s, false, false); //last parameter could be both(?)
-			//Update neighbouring si-s
-			si_array[index_pair.first][3] = new_s;
-			si_array[index_pair.first][4] = si_array[index_pair.second][2];
-			if (index_pair.first != 0 && ti_array[index_pair.first][2] == ti_array[index_pair.first - 1][2]) {
-				si_array[index_pair.first - 1][3] = si_array[index_pair.first][2];
-				si_array[index_pair.first - 1][4] = new_s;
-			}
-			si_array[index_pair.second][1] = new_s;
-			si_array[index_pair.second][0] = si_array[index_pair.first][2];
-			if (index_pair.second != cpnum - 1 && ti_array[index_pair.second][2] == ti_array[index_pair.second + 1][2]) {
-				si_array[index_pair.second + 1][1] = si_array[index_pair.second][2];
-				si_array[index_pair.second + 1][0] = new_s;
-			}
-
-			//Updating IA and JA matrices too
 			//Update IA
 			for (int i = act_row + 1; i < IA.size(); i++) {
 				IA[i] += 1;
+			}
+			ti_array.insert(ti_array.begin() + new_index, new_ti);
+			si_array.insert(si_array.begin() + new_index, new_si);
+			tspline_control_points.insert(tspline_control_points.begin() + new_index, Vec());
+			index_pair.second++;
+
+			//Update neighbouring si-s
+			// Refine points
+			auto first_refine_values = refineBlend(si_array[index_pair.first], 3, new_s);
+			tspline_control_points[new_index] += tspline_control_points[index_pair.first] * first_refine_values.second.first;
+			tspline_control_points[index_pair.first] *= first_refine_values.first.first;
+			si_array[index_pair.first][3] = new_s;
+			si_array[index_pair.first][4] = si_array[index_pair.second][2];
+			if (index_pair.first != 0 && ti_array[index_pair.first][2] == ti_array[index_pair.first - 1][2]) {
+				auto before_first_refine_values = refineBlend(si_array[index_pair.first-1], 4, new_s);
+				si_array[index_pair.first - 1][3] = si_array[index_pair.first][2];
+				si_array[index_pair.first - 1][4] = new_s;
+
+				//Refine points
+				tspline_control_points[index_pair.first] += tspline_control_points[index_pair.first - 1]
+					* before_first_refine_values.second.first;
+				tspline_control_points[index_pair.first - 1] *= before_first_refine_values.first.first;
+			}
+
+			auto sec_refine_values = refineBlend(si_array[index_pair.second], 2, new_s);
+			tspline_control_points[new_index] += tspline_control_points[index_pair.second] * sec_refine_values.first.first;
+			tspline_control_points[index_pair.second] *= sec_refine_values.second.first;
+			si_array[index_pair.second][1] = new_s;
+			si_array[index_pair.second][0] = si_array[index_pair.first][2];
+			if (index_pair.second != cpnum - 1 && ti_array[index_pair.second][2] == ti_array[index_pair.second + 1][2]) {
+				auto after_sec_refine_values = refineBlend(si_array[index_pair.second + 1], 1, new_s);
+				si_array[index_pair.second + 1][1] = si_array[index_pair.second][2];
+				si_array[index_pair.second + 1][0] = new_s;
+
+				//Refine points
+				tspline_control_points[index_pair.second] += tspline_control_points[index_pair.second + 1]
+					* after_sec_refine_values.first.first;
+				tspline_control_points[index_pair.second + 1] *= after_sec_refine_values.second.first;
 			}
 		}
 		else {
@@ -2413,7 +2437,7 @@ void MyViewer::postSelection(const QPoint& p) {
 					}
 					//If first in act_col has bigger t than new_t
 					if (j == 0) {}
-					if (ti_array[is_of_col[j - 1]][2] < new_t) {
+					else if (ti_array[is_of_col[j - 1]][2] < new_t) {
 						//Check if not the case of last in col having smaller t than new_t
 						if (ti_array[is_of_col[j]][2] > new_t) {
 							//check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -2456,7 +2480,7 @@ void MyViewer::postSelection(const QPoint& p) {
 					}
 					//If first in act_col has bigger t than new_t
 					if (j == 0) {}
-					if (ti_array[is_of_col[j - 1]][2] < new_t) {
+					else if (ti_array[is_of_col[j - 1]][2] < new_t) {
 						//Check if not the case of last in col having smaller t than new_t
 						if (ti_array[is_of_col[j]][2] > new_t) {
 							//check whether there is an edge connecting temp_ind-1 and temp_ind,
@@ -2488,6 +2512,15 @@ void MyViewer::postSelection(const QPoint& p) {
 			//Update IA too
 			updateIA(getRowOfExisting(index_pair.first), getRowOfExisting(index_pair.second), new_t, false, new_index, false); //last parameter could be both(?)
 
+			tspline_control_points.insert(tspline_control_points.begin() + new_index, Vec());
+			ti_array.insert(ti_array.begin() + new_index, new_ti);
+			si_array.insert(si_array.begin() + new_index, new_si);
+			index_pair.second++;
+
+			// Refine points
+			auto first_refine_values = refineBlend(ti_array[index_pair.first], 3, new_t);
+			tspline_control_points[new_index] += tspline_control_points[index_pair.first] * first_refine_values.second.first;
+			tspline_control_points[index_pair.first] *= first_refine_values.first.first;
 			//Update neighbouring ti-s
 			ti_array[index_pair.first][3] = new_t;
 			ti_array[index_pair.first][4] = ti_array[index_pair.second][2];
@@ -2502,23 +2535,36 @@ void MyViewer::postSelection(const QPoint& p) {
 				}
 			}
 			if (k != 0) {
+				auto before_first_refine_values = refineBlend(ti_array[ts_of_actcol[k - 1]], 4, new_t);
 				ti_array[ts_of_actcol[k - 1]][3] = ti_array[ts_of_actcol[k]][2];
 				ti_array[ts_of_actcol[k - 1]][4] = new_t;
+
+				//Refine points
+				tspline_control_points[index_pair.first] += tspline_control_points[ts_of_actcol[k - 1]]
+					* before_first_refine_values.second.first;
+				tspline_control_points[ts_of_actcol[k - 1]] *= before_first_refine_values.first.first;
 			}
+
+			auto sec_refine_values = refineBlend(ti_array[index_pair.second], 2, new_t);
+			tspline_control_points[new_index] += tspline_control_points[index_pair.second] * sec_refine_values.first.first;
+			tspline_control_points[index_pair.second] *= sec_refine_values.second.first;
 			ti_array[index_pair.second][1] = new_t;
 			ti_array[index_pair.second][0] = ti_array[index_pair.first][2];
-			if (k + 1 != ts_of_actcol.size() - 1) {
-				ti_array[ts_of_actcol[k + 2]][1] = ti_array[ts_of_actcol[k + 1]][2];
-				ti_array[ts_of_actcol[k + 2]][0] = new_t;
+			if (k + 2 != ts_of_actcol.size() - 1) {
+				auto after_sec_refine_values = refineBlend(ti_array[ts_of_actcol[k + 3]], 1, new_t);
+				ti_array[ts_of_actcol[k + 3]][1] = ti_array[ts_of_actcol[k + 2]][2];
+				ti_array[ts_of_actcol[k + 3]][0] = new_t;
+
+				//Refine points
+				tspline_control_points[index_pair.second] += tspline_control_points[ts_of_actcol[k + 3]]
+					* after_sec_refine_values.first.first;
+				tspline_control_points[ts_of_actcol[k + 3]] *= after_sec_refine_values.second.first;
 			}
 
 
 		}
 		double weight = 1.0; //TODO other weight value??
 		weights.insert(weights.begin() + new_index, weight);
-		si_array.insert(si_array.begin() + new_index, new_si);
-		ti_array.insert(ti_array.begin() + new_index, new_ti);
-		tspline_control_points.insert(tspline_control_points.begin() + new_index, selectedPoint);
 		updateEdgeTopology();
 		updateMesh();
 		update();
